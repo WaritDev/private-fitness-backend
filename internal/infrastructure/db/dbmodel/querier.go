@@ -6,12 +6,15 @@ package dbmodel
 
 import (
 	"context"
-	"database/sql"
 )
 
 type Querier interface {
-	CreateUser(ctx context.Context, arg CreateUserParams) (sql.Result, error)
-	ListUsers(ctx context.Context) ([]User, error)
+	CreateCustomer(ctx context.Context) error
+	CreateUser(ctx context.Context) error
+	GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error)
+	ListDurations(ctx context.Context) ([]ListDurationsRow, error)
+	ListSessions(ctx context.Context) ([]ListSessionsRow, error)
+	ListUsers(ctx context.Context) ([]ListUsersRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

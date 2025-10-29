@@ -1,12 +1,12 @@
-CREATE TABLE IF NOT EXISTS products (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  type ENUM('DURATION', 'SESSION') NOT NULL,
-  category ENUM("ECONOMIC", "BUSINESS", "FIRST_CLASS") NOT NULL,
-  list_price decimal(10, 2) NOT NULL,
-  duration_days INT NULL,
-  session_amount INT NULL,
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMP DEFAULT now(),
-  updated_at TIMESTAMP DEFAULT now()
-);
+CREATE TABLE IF NOT EXISTS `products` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `name` TEXT NOT NULL,
+  `type` ENUM('DURATION', 'SESSION') NOT NULL,
+  `category` ENUM('ECONOMIC', 'BUSINESS', 'FIRST_CLASS') NOT NULL,
+  `list_price` DECIMAL(10,2) NOT NULL,
+  `duration_days` INT NULL,
+  `session_amount` INT NULL,
+  `is_active` TINYINT(1) DEFAULT 1,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -12,4 +12,11 @@ func RegisterApiRputer(app *fiber.App, handler *rest.Handler) {
 			"success": true,
 		})
 	})
+
+	// api 
+	apiGroup := app.Group("/api")
+
+	// Auth routes
+	authGroup := apiGroup.Group("/auth")
+	authGroup.Post("/login", handler.Auth.Login)
 }

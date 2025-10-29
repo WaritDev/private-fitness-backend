@@ -6,11 +6,601 @@ package dbmodel
 
 import (
 	"database/sql"
+	"database/sql/driver"
+	"fmt"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
+type CustomerDurationsStatus string
+
+const (
+	CustomerDurationsStatusACTIVE    CustomerDurationsStatus = "ACTIVE"
+	CustomerDurationsStatusEXPIRED   CustomerDurationsStatus = "EXPIRED"
+	CustomerDurationsStatusCANCELLED CustomerDurationsStatus = "CANCELLED"
+)
+
+func (e *CustomerDurationsStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CustomerDurationsStatus(s)
+	case string:
+		*e = CustomerDurationsStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CustomerDurationsStatus: %T", src)
+	}
+	return nil
+}
+
+type NullCustomerDurationsStatus struct {
+	CustomerDurationsStatus CustomerDurationsStatus `json:"customerDurationsStatus"`
+	Valid                   bool                    `json:"valid"` // Valid is true if CustomerDurationsStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCustomerDurationsStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.CustomerDurationsStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CustomerDurationsStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCustomerDurationsStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CustomerDurationsStatus), nil
+}
+
+func AllCustomerDurationsStatusValues() []CustomerDurationsStatus {
+	return []CustomerDurationsStatus{
+		CustomerDurationsStatusACTIVE,
+		CustomerDurationsStatusEXPIRED,
+		CustomerDurationsStatusCANCELLED,
+	}
+}
+
+type CustomerLogsLogType string
+
+const (
+	CustomerLogsLogTypeCHECKIN       CustomerLogsLogType = "CHECK_IN"
+	CustomerLogsLogTypeCHECKOUT      CustomerLogsLogType = "CHECK_OUT"
+	CustomerLogsLogTypeBOOKSESSION   CustomerLogsLogType = "BOOK_SESSION"
+	CustomerLogsLogTypeCANCELSESSION CustomerLogsLogType = "CANCEL_SESSION"
+)
+
+func (e *CustomerLogsLogType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CustomerLogsLogType(s)
+	case string:
+		*e = CustomerLogsLogType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CustomerLogsLogType: %T", src)
+	}
+	return nil
+}
+
+type NullCustomerLogsLogType struct {
+	CustomerLogsLogType CustomerLogsLogType `json:"customerLogsLogType"`
+	Valid               bool                `json:"valid"` // Valid is true if CustomerLogsLogType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCustomerLogsLogType) Scan(value interface{}) error {
+	if value == nil {
+		ns.CustomerLogsLogType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CustomerLogsLogType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCustomerLogsLogType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CustomerLogsLogType), nil
+}
+
+func AllCustomerLogsLogTypeValues() []CustomerLogsLogType {
+	return []CustomerLogsLogType{
+		CustomerLogsLogTypeCHECKIN,
+		CustomerLogsLogTypeCHECKOUT,
+		CustomerLogsLogTypeBOOKSESSION,
+		CustomerLogsLogTypeCANCELSESSION,
+	}
+}
+
+type CustomerSessionsStatus string
+
+const (
+	CustomerSessionsStatusACTIVE    CustomerSessionsStatus = "ACTIVE"
+	CustomerSessionsStatusEXPIRED   CustomerSessionsStatus = "EXPIRED"
+	CustomerSessionsStatusCANCELLED CustomerSessionsStatus = "CANCELLED"
+	CustomerSessionsStatusCOMPLETED CustomerSessionsStatus = "COMPLETED"
+)
+
+func (e *CustomerSessionsStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CustomerSessionsStatus(s)
+	case string:
+		*e = CustomerSessionsStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CustomerSessionsStatus: %T", src)
+	}
+	return nil
+}
+
+type NullCustomerSessionsStatus struct {
+	CustomerSessionsStatus CustomerSessionsStatus `json:"customerSessionsStatus"`
+	Valid                  bool                   `json:"valid"` // Valid is true if CustomerSessionsStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCustomerSessionsStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.CustomerSessionsStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CustomerSessionsStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCustomerSessionsStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CustomerSessionsStatus), nil
+}
+
+func AllCustomerSessionsStatusValues() []CustomerSessionsStatus {
+	return []CustomerSessionsStatus{
+		CustomerSessionsStatusACTIVE,
+		CustomerSessionsStatusEXPIRED,
+		CustomerSessionsStatusCANCELLED,
+		CustomerSessionsStatusCOMPLETED,
+	}
+}
+
+type ProductsCategory string
+
+const (
+	ProductsCategoryECONOMIC   ProductsCategory = "ECONOMIC"
+	ProductsCategoryBUSINESS   ProductsCategory = "BUSINESS"
+	ProductsCategoryFIRSTCLASS ProductsCategory = "FIRST_CLASS"
+)
+
+func (e *ProductsCategory) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ProductsCategory(s)
+	case string:
+		*e = ProductsCategory(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ProductsCategory: %T", src)
+	}
+	return nil
+}
+
+type NullProductsCategory struct {
+	ProductsCategory ProductsCategory `json:"productsCategory"`
+	Valid            bool             `json:"valid"` // Valid is true if ProductsCategory is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullProductsCategory) Scan(value interface{}) error {
+	if value == nil {
+		ns.ProductsCategory, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ProductsCategory.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullProductsCategory) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ProductsCategory), nil
+}
+
+func AllProductsCategoryValues() []ProductsCategory {
+	return []ProductsCategory{
+		ProductsCategoryECONOMIC,
+		ProductsCategoryBUSINESS,
+		ProductsCategoryFIRSTCLASS,
+	}
+}
+
+type ProductsType string
+
+const (
+	ProductsTypeDURATION ProductsType = "DURATION"
+	ProductsTypeSESSION  ProductsType = "SESSION"
+)
+
+func (e *ProductsType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ProductsType(s)
+	case string:
+		*e = ProductsType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ProductsType: %T", src)
+	}
+	return nil
+}
+
+type NullProductsType struct {
+	ProductsType ProductsType `json:"productsType"`
+	Valid        bool         `json:"valid"` // Valid is true if ProductsType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullProductsType) Scan(value interface{}) error {
+	if value == nil {
+		ns.ProductsType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ProductsType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullProductsType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ProductsType), nil
+}
+
+func AllProductsTypeValues() []ProductsType {
+	return []ProductsType{
+		ProductsTypeDURATION,
+		ProductsTypeSESSION,
+	}
+}
+
+type TrainingAvailabilitiesDayOfWeek string
+
+const (
+	TrainingAvailabilitiesDayOfWeekMONDAY    TrainingAvailabilitiesDayOfWeek = "MONDAY"
+	TrainingAvailabilitiesDayOfWeekTUESDAY   TrainingAvailabilitiesDayOfWeek = "TUESDAY"
+	TrainingAvailabilitiesDayOfWeekWEDNESDAY TrainingAvailabilitiesDayOfWeek = "WEDNESDAY"
+	TrainingAvailabilitiesDayOfWeekTHURSDAY  TrainingAvailabilitiesDayOfWeek = "THURSDAY"
+	TrainingAvailabilitiesDayOfWeekFRIDAY    TrainingAvailabilitiesDayOfWeek = "FRIDAY"
+	TrainingAvailabilitiesDayOfWeekSATURDAY  TrainingAvailabilitiesDayOfWeek = "SATURDAY"
+	TrainingAvailabilitiesDayOfWeekSUNDAY    TrainingAvailabilitiesDayOfWeek = "SUNDAY"
+)
+
+func (e *TrainingAvailabilitiesDayOfWeek) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TrainingAvailabilitiesDayOfWeek(s)
+	case string:
+		*e = TrainingAvailabilitiesDayOfWeek(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TrainingAvailabilitiesDayOfWeek: %T", src)
+	}
+	return nil
+}
+
+type NullTrainingAvailabilitiesDayOfWeek struct {
+	TrainingAvailabilitiesDayOfWeek TrainingAvailabilitiesDayOfWeek `json:"trainingAvailabilitiesDayOfWeek"`
+	Valid                           bool                            `json:"valid"` // Valid is true if TrainingAvailabilitiesDayOfWeek is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTrainingAvailabilitiesDayOfWeek) Scan(value interface{}) error {
+	if value == nil {
+		ns.TrainingAvailabilitiesDayOfWeek, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TrainingAvailabilitiesDayOfWeek.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTrainingAvailabilitiesDayOfWeek) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TrainingAvailabilitiesDayOfWeek), nil
+}
+
+func AllTrainingAvailabilitiesDayOfWeekValues() []TrainingAvailabilitiesDayOfWeek {
+	return []TrainingAvailabilitiesDayOfWeek{
+		TrainingAvailabilitiesDayOfWeekMONDAY,
+		TrainingAvailabilitiesDayOfWeekTUESDAY,
+		TrainingAvailabilitiesDayOfWeekWEDNESDAY,
+		TrainingAvailabilitiesDayOfWeekTHURSDAY,
+		TrainingAvailabilitiesDayOfWeekFRIDAY,
+		TrainingAvailabilitiesDayOfWeekSATURDAY,
+		TrainingAvailabilitiesDayOfWeekSUNDAY,
+	}
+}
+
+type TrainingSchedulesScheduleType string
+
+const (
+	TrainingSchedulesScheduleTypeAPPOINTMENT TrainingSchedulesScheduleType = "APPOINTMENT"
+	TrainingSchedulesScheduleTypeDAYOFF      TrainingSchedulesScheduleType = "DAY_OFF"
+)
+
+func (e *TrainingSchedulesScheduleType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TrainingSchedulesScheduleType(s)
+	case string:
+		*e = TrainingSchedulesScheduleType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TrainingSchedulesScheduleType: %T", src)
+	}
+	return nil
+}
+
+type NullTrainingSchedulesScheduleType struct {
+	TrainingSchedulesScheduleType TrainingSchedulesScheduleType `json:"trainingSchedulesScheduleType"`
+	Valid                         bool                          `json:"valid"` // Valid is true if TrainingSchedulesScheduleType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTrainingSchedulesScheduleType) Scan(value interface{}) error {
+	if value == nil {
+		ns.TrainingSchedulesScheduleType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TrainingSchedulesScheduleType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTrainingSchedulesScheduleType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TrainingSchedulesScheduleType), nil
+}
+
+func AllTrainingSchedulesScheduleTypeValues() []TrainingSchedulesScheduleType {
+	return []TrainingSchedulesScheduleType{
+		TrainingSchedulesScheduleTypeAPPOINTMENT,
+		TrainingSchedulesScheduleTypeDAYOFF,
+	}
+}
+
+type UsersGender string
+
+const (
+	UsersGenderMALE   UsersGender = "MALE"
+	UsersGenderFEMALE UsersGender = "FEMALE"
+	UsersGenderOTHER  UsersGender = "OTHER"
+)
+
+func (e *UsersGender) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = UsersGender(s)
+	case string:
+		*e = UsersGender(s)
+	default:
+		return fmt.Errorf("unsupported scan type for UsersGender: %T", src)
+	}
+	return nil
+}
+
+type NullUsersGender struct {
+	UsersGender UsersGender `json:"usersGender"`
+	Valid       bool        `json:"valid"` // Valid is true if UsersGender is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullUsersGender) Scan(value interface{}) error {
+	if value == nil {
+		ns.UsersGender, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.UsersGender.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullUsersGender) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.UsersGender), nil
+}
+
+func AllUsersGenderValues() []UsersGender {
+	return []UsersGender{
+		UsersGenderMALE,
+		UsersGenderFEMALE,
+		UsersGenderOTHER,
+	}
+}
+
+type UsersRole string
+
+const (
+	UsersRoleADMIN    UsersRole = "ADMIN"
+	UsersRoleTRAINER  UsersRole = "TRAINER"
+	UsersRoleSALES    UsersRole = "SALES"
+	UsersRoleCUSTOMER UsersRole = "CUSTOMER"
+	UsersRoleMANAGER  UsersRole = "MANAGER"
+)
+
+func (e *UsersRole) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = UsersRole(s)
+	case string:
+		*e = UsersRole(s)
+	default:
+		return fmt.Errorf("unsupported scan type for UsersRole: %T", src)
+	}
+	return nil
+}
+
+type NullUsersRole struct {
+	UsersRole UsersRole `json:"usersRole"`
+	Valid     bool      `json:"valid"` // Valid is true if UsersRole is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullUsersRole) Scan(value interface{}) error {
+	if value == nil {
+		ns.UsersRole, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.UsersRole.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullUsersRole) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.UsersRole), nil
+}
+
+func AllUsersRoleValues() []UsersRole {
+	return []UsersRole{
+		UsersRoleADMIN,
+		UsersRoleTRAINER,
+		UsersRoleSALES,
+		UsersRoleCUSTOMER,
+		UsersRoleMANAGER,
+	}
+}
+
+type Customer struct {
+	Username                     string `json:"username"`
+	HealthInfo                   string `json:"healthInfo"`
+	Address                      string `json:"address"`
+	CompanyName                  string `json:"companyName"`
+	CompanyPosition              string `json:"companyPosition"`
+	MaritalStatus                string `json:"maritalStatus"`
+	EmergencyContactName         string `json:"emergencyContactName"`
+	EmergencyContactRelationship string `json:"emergencyContactRelationship"`
+	EmergencyContactPhone        string `json:"emergencyContactPhone"`
+	MarketingSource              string `json:"marketingSource"`
+}
+
+type CustomerDuration struct {
+	ID               uint64                  `json:"id"`
+	CustomerUsername sql.NullString          `json:"customerUsername"`
+	SalesUsername    sql.NullString          `json:"salesUsername"`
+	ProductID        sql.NullInt32           `json:"productId"`
+	PurchaseDate     time.Time               `json:"purchaseDate"`
+	StartDate        time.Time               `json:"startDate"`
+	EndDate          time.Time               `json:"endDate"`
+	PricePaid        string                  `json:"pricePaid"`
+	DiscountAmount   sql.NullString          `json:"discountAmount"`
+	Status           CustomerDurationsStatus `json:"status"`
+	CreatedAt        sql.NullTime            `json:"createdAt"`
+	UpdatedAt        sql.NullTime            `json:"updatedAt"`
+}
+
+type CustomerLog struct {
+	ID               uint64              `json:"id"`
+	CustomerUsername sql.NullString      `json:"customerUsername"`
+	CreatedAt        time.Time           `json:"createdAt"`
+	LogType          CustomerLogsLogType `json:"logType"`
+}
+
+type CustomerSession struct {
+	ID               uint64                 `json:"id"`
+	CustomerUsername sql.NullString         `json:"customerUsername"`
+	TrainerUsername  sql.NullString         `json:"trainerUsername"`
+	SalesUsername    sql.NullString         `json:"salesUsername"`
+	ProductID        sql.NullInt32          `json:"productId"`
+	PurchaseDate     time.Time              `json:"purchaseDate"`
+	TotalSessions    int32                  `json:"totalSessions"`
+	UsedSessions     sql.NullInt32          `json:"usedSessions"`
+	PricePaid        string                 `json:"pricePaid"`
+	DiscountAmount   sql.NullString         `json:"discountAmount"`
+	Status           CustomerSessionsStatus `json:"status"`
+	CreatedAt        sql.NullTime           `json:"createdAt"`
+	UpdatedAt        sql.NullTime           `json:"updatedAt"`
+}
+
+type Product struct {
+	ID            uint64           `json:"id"`
+	Name          string           `json:"name"`
+	Type          ProductsType     `json:"type"`
+	Category      ProductsCategory `json:"category"`
+	ListPrice     string           `json:"listPrice"`
+	DurationDays  sql.NullInt32    `json:"durationDays"`
+	SessionAmount sql.NullInt32    `json:"sessionAmount"`
+	IsActive      sql.NullBool     `json:"isActive"`
+	CreatedAt     sql.NullTime     `json:"createdAt"`
+	UpdatedAt     sql.NullTime     `json:"updatedAt"`
+}
+
+type TrainingAvailability struct {
+	ID              uint64                          `json:"id"`
+	TrainerUsername sql.NullString                  `json:"trainerUsername"`
+	DayOfWeek       TrainingAvailabilitiesDayOfWeek `json:"dayOfWeek"`
+	StartTime       time.Time                       `json:"startTime"`
+	EndTime         time.Time                       `json:"endTime"`
+}
+
+type TrainingSchedule struct {
+	ID               uint64                        `json:"id"`
+	TrainerUsername  sql.NullString                `json:"trainerUsername"`
+	CustomerUsername sql.NullString                `json:"customerUsername"`
+	SessionID        sql.NullInt32                 `json:"sessionId"`
+	StartTime        time.Time                     `json:"startTime"`
+	EndTime          time.Time                     `json:"endTime"`
+	ScheduleType     TrainingSchedulesScheduleType `json:"scheduleType"`
+	CreatedAt        sql.NullTime                  `json:"createdAt"`
+	UpdatedAt        sql.NullTime                  `json:"updatedAt"`
+}
+
 type User struct {
-	ID        uint64       `json:"id"`
-	Username  string       `json:"username"`
-	Email     string       `json:"email"`
-	CreatedAt sql.NullTime `json:"createdAt"`
+	Username    string         `json:"username"`
+	Password    string         `json:"password"`
+	Email       string         `json:"email"`
+	Role        UsersRole      `json:"role"`
+	FirstName   string         `json:"firstName"`
+	LastName    string         `json:"lastName"`
+	Gender      UsersGender    `json:"gender"`
+	DateOfBirth time.Time      `json:"dateOfBirth"`
+	PhoneNumber string         `json:"phoneNumber"`
+	Gmail       string         `json:"gmail"`
+	Specialty   sql.NullString `json:"specialty"`
+	IsActive    sql.NullBool   `json:"isActive"`
+	CreatedAt   sql.NullTime   `json:"createdAt"`
+	UpdatedAt   sql.NullTime   `json:"updatedAt"`
+}
+
+
+type UsersCredentials struct {
+	Username string `json:"username" db:"username" form:"username"`
+	Password string `json:"password" db:"password" form:"password"`
+}
+
+type UsersPassport struct {
+	Username string `json:"username" db:"username"`
+	Password string `json:"password" db:"password"`
+}
+
+type UsersClaims struct {
+	Username string `json:"username"`
+	jwt.RegisteredClaims
+}
+
+type UsersLoginRes struct {
+	AccessToken string `json:"access_token"`
 }

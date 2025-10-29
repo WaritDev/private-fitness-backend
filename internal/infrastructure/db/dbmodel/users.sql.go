@@ -10,41 +10,63 @@ import (
 	"database/sql"
 )
 
-const createUser = `-- name: CreateUser :execresult
-INSERT INTO users (username, email)
-VALUES (?, ?)
+const createUser = `-- name: CreateUser :exec
+INSERT INTO users (username, password, email, role, first_name, last_name, gender, date_of_birth, phone_number, gmail, specialty, is_active)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 `
 
-type CreateUserParams struct {
-	Username string `json:"username"`
-	Email    string `json:"email"`
+func (q *Queries) CreateUser(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, createUser)
+	return err
 }
 
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (sql.Result, error) {
-	return q.db.ExecContext(ctx, createUser, arg.Username, arg.Email)
+const getUserByUsername = `-- name: GetUserByUsername :one
+SELECT username, password, role, first_name, last_name FROM users WHERE username = $1 LIMIT 1
+`
+
+type GetUserByUsernameRow struct {
+	Username  string    `json:"username"`
+	Password  string    `json:"password"`
+	Role      UsersRole `json:"role"`
+	FirstName string    `json:"firstName"`
+	LastName  string    `json:"lastName"`
+}
+
+func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error) {
+	row := q.db.QueryRowContext(ctx, getUserByUsername, username)
+	var i GetUserByUsernameRow
+	err := row.Scan(
+		&i.Username,
+		&i.Password,
+		&i.Role,
+		&i.FirstName,
+		&i.LastName,
+	)
+	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, username, email, created_at
+SELECT username, email, created_at
 FROM users
-ORDER BY id
+ORDER BY username
 `
 
-func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
+type ListUsersRow struct {
+	Username  string       `json:"username"`
+	Email     string       `json:"email"`
+	CreatedAt sql.NullTime `json:"createdAt"`
+}
+
+func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
 	rows, err := q.db.QueryContext(ctx, listUsers)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []User
+	var items []ListUsersRow
 	for rows.Next() {
-		var i User
-		if err := rows.Scan(
-			&i.ID,
-			&i.Username,
-			&i.Email,
-			&i.CreatedAt,
-		); err != nil {
+		var i ListUsersRow
+		if err := rows.Scan(&i.Username, &i.Email, &i.CreatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

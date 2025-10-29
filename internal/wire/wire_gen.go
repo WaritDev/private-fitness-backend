@@ -24,6 +24,9 @@ func InitializeHandler() *rest.Handler {
 	userRepository := psql.ProvideUserRepository(queries)
 	userUseCase := usecases.ProvideUserUseCase(userRepository)
 	userHandler := rest.ProvideUserHandler(userUseCase)
-	handler := rest.ProvideHandler(userHandler)
+	authRepository := psql.ProvideAuthRepository(queries)
+	authUseCase := usecases.ProvideAuthUseCase(authRepository, userRepository)
+	authHandler := rest.ProvideAuthHandler(authUseCase)
+	handler := rest.ProvideHandler(userHandler, authHandler)
 	return handler
 }
