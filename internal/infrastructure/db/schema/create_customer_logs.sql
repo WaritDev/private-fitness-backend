@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS customer_logs (
+  id SERIAL PRIMARY KEY,
+  customer_username VARCHAR(100) REFERENCES customers(username) ON DELETE CASCADE,
+  created_at TIMESTAMP NOT NULL DEFAULT now(),
+  log_type ENUM('CHECK_IN', 'CHECK_OUT', 'BOOK_SESSION', 'CANCEL_SESSION') NOT NULL
+);
