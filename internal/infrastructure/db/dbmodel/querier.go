@@ -6,12 +6,15 @@ package dbmodel
 
 import (
 	"context"
-	"database/sql"
 )
 
 type Querier interface {
-	CreateUser(ctx context.Context, arg CreateUserParams) (sql.Result, error)
-	ListUsers(ctx context.Context) ([]User, error)
+	ActiveMembersToday(ctx context.Context) (int64, error)
+	CheckinsToday(ctx context.Context) (int64, error)
+	CompletedPTInRange(ctx context.Context, arg CompletedPTInRangeParams) (int64, error)
+	NewMembersInRange(ctx context.Context, arg NewMembersInRangeParams) (int64, error)
+	TopSellingProducts(ctx context.Context, arg TopSellingProductsParams) ([]TopSellingProductsRow, error)
+	TotalRevenue(ctx context.Context, arg TotalRevenueParams) (int64, error)
 }
 
 var _ Querier = (*Queries)(nil)
