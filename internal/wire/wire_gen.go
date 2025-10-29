@@ -9,7 +9,7 @@ package wire
 import (
 	"github.com/WaritDev/private-fitness-backend/config"
 	"github.com/WaritDev/private-fitness-backend/domain/usecases"
-	"github.com/WaritDev/private-fitness-backend/internal/adapters/repositories/psql"
+	"github.com/WaritDev/private-fitness-backend/internal/adapters/repositories/sql"
 	"github.com/WaritDev/private-fitness-backend/internal/adapters/rest"
 	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db"
 )
@@ -21,9 +21,12 @@ func InitializeHandler() *rest.Handler {
 	configConfig := config.ProvideConfig()
 	sqlDB := db.ProvideMariaDB(context, configConfig)
 	queries := db.ProvideQueries(sqlDB)
-	userRepository := psql.ProvideUserRepository(queries)
+	userRepository := sql.ProvideUserRepository(queries)
 	userUseCase := usecases.ProvideUserUseCase(userRepository)
 	userHandler := rest.ProvideUserHandler(userUseCase)
-	handler := rest.ProvideHandler(userHandler)
+	managerDashboardRepository := sql.ProvideManagerDashboardRepository(sqlDB)
+	managerDashboardUsecase := usecases.ProvideManagerDashboardUsecase(managerDashboardRepository)
+	managerDashboardHandler := rest.ProvideManagerDashboardHandler(managerDashboardUsecase)
+	handler := rest.ProvideHandler(userHandler, managerDashboardHandler)
 	return handler
 }

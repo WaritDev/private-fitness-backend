@@ -3,7 +3,7 @@ package wire
 import (
 	"github.com/WaritDev/private-fitness-backend/config"
 	"github.com/WaritDev/private-fitness-backend/domain/usecases"
-	"github.com/WaritDev/private-fitness-backend/internal/adapters/repositories/psql"
+	"github.com/WaritDev/private-fitness-backend/internal/adapters/repositories/sql"
 	"github.com/WaritDev/private-fitness-backend/internal/adapters/rest"
 	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db"
 
@@ -21,13 +21,16 @@ var InfraSet = wire.NewSet(
 
 var ServiceSet = wire.NewSet(
 	usecases.ProvideUserUseCase,
+	usecases.ProvideManagerDashboardUsecase,
 )
 
 var RepositorySet = wire.NewSet(
-	psql.ProvideUserRepository,
+	sql.ProvideUserRepository,
+	sql.ProvideManagerDashboardRepository,
 )
 
 var HandlerSet = wire.NewSet(
 	rest.ProvideUserHandler,
 	rest.ProvideHandler,
+	rest.ProvideManagerDashboardHandler,
 )
