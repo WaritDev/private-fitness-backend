@@ -2,47 +2,27 @@ package migrations
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/WaritDev/private-fitness-backend/config"
 	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db"
 	"github.com/iancoleman/strcase"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Migration struct {
 	Title string
-	Up    func(*pgxpool.Pool) error
-	Down  func(*pgxpool.Pool) error
+	Up    func(*sql.DB) error
+	Down  func(*sql.DB) error
 }
 
 var Migrations []*Migration
 
 func MigrateSchema() {
-	ctx := context.Background()
-	cfg := config.ProvideConfig()
-
-	pgPool := db.GetPgPool()
-	if pgPool == nil {
-		panic("pgPool is nil")
-	}
-
-	_, err := pgPool.Exec(
-		ctx,
-		fmt.Sprintf(
-			`CREATE SCHEMA IF NOT EXISTS %s;`, cfg.Schema,
-		),
-	)
-	if err != nil {
-		panic(err)
-	}
-
-	log.Printf("🏗️ Schema %s migrated successfully", cfg.Schema)
+	log.Printf("🏗️ MariaDB uses database '%s' already. No schema step required.", "<db from DSN>")
 }
 
 func MakeMigration(migrationFilename *string) {
@@ -58,157 +38,127 @@ func MakeMigration(migrationFilename *string) {
 	if err != nil {
 		panic(err)
 	}
-
-	err = os.WriteFile(filepath, []byte(formattedTemplate), 0)
-	if err != nil {
+	if err = os.WriteFile(filepath, []byte(formattedTemplate), 0); err != nil {
 		panic(err)
 	}
 
 	log.Printf("📁 Migration file %s created successfully", formattedFilename)
 }
 
-const migrationTemplate = `
-package migrations
-import (
-	"context"
-	"github.com/jackc/pgx/v5/pgxpool"
-)
-func init() {
-	Migrations = append(Migrations, <migration_name>)
-}
-var <migration_name> = &Migration{
-	Title: "<filename>",
-	Up: func(pgPool *pgxpool.Pool) error {
-		_, err := pgPool.Exec(context.Background(),` + "`" + `
-		` + "`" + `)
-		if err != nil {
-			return err
-		}
-		return nil
-	},
-	Down: func(pgPool *pgxpool.Pool) error {
-		_, err := pgPool.Exec(context.Background(), ` + "`" + `
-		` + "`" + `)
-		if err != nil {
-			return err
-		}
-		return nil
-	},
-}
-`
+const migrationTemplate = "package migrations\n" +
+"import (\n" +
+"\t\"context\"\n" +
+"\t\"database/sql\"\n" +
+")\n" +
+"\n" +
+"func init() {\n" +
+"\tMigrations = append(Migrations, <migration_name>)\n" +
+"}\n" +
+"\n" +
+"var <migration_name> = &Migration{\n" +
+"\tTitle: \"<filename>\",\n" +
+"\tUp: func(db *sql.DB) error {\n" +
+"\t\t_, err := db.ExecContext(context.Background(), " + "`" + "\n" +
+"\t\t-- WRITE YOUR 'UP' SQL HERE (MariaDB)\n" +
+"\t\t" + "`" + ")\n" +
+"\t\tif err != nil {\n" +
+"\t\t\treturn err\n" +
+"\t\t}\n" +
+"\t\treturn nil\n" +
+"\t},\n" +
+"\tDown: func(db *sql.DB) error {\n" +
+"\t\t_, err := db.ExecContext(context.Background(), " + "`" + "\n" +
+"\t\t-- WRITE YOUR 'DOWN' SQL HERE (MariaDB)\n" +
+"\t\t" + "`" + ")\n" +
+"\t\tif err != nil {\n" +
+"\t\t\treturn err\n" +
+"\t\t}\n" +
+"\t\treturn nil\n" +
+"\t},\n" +
+"}\n"
 
 func MigrateUp() {
 	ctx := context.Background()
-
-	pgPool := db.GetPgPool()
-	if pgPool == nil {
-		panic("pgPool is nil")
+	sqldb := db.GetDB()
+	if sqldb == nil {
+		panic("db is nil")
 	}
 
-	_, err := pgPool.Exec(
-		ctx,
-		`CREATE TABLE IF NOT EXISTS migrations (
-			id SERIAL PRIMARY KEY,
-			title VARCHAR(255) NOT NULL,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			UNIQUE (title)
-		);`,
-	)
-	if err != nil {
-		if err.Error() == "ERROR: no schema has been selected to create in (SQLSTATE 3F000)" {
-			log.Fatalln("🚨 Schema not found. Please run `go run main.go -migrate:schema` to create schema")
-		}
-		panic(err)
-	}
-
-	migrations, err := pgPool.Query(
-		ctx,
-		`SELECT title FROM migrations ORDER BY title;`,
-	)
+	_, err := sqldb.ExecContext(ctx, `
+		CREATE TABLE IF NOT EXISTS migrations (
+			id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+			title VARCHAR(255) NOT NULL UNIQUE,
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+	`)
 	if err != nil {
 		panic(err)
 	}
-	defer migrations.Close()
 
-	// executedMigrations := make(map[string]bool)
-	executedMigrations := make(map[string]interface{})
-	for migrations.Next() {
+	rows, err := sqldb.QueryContext(ctx, `SELECT title FROM migrations ORDER BY title;`)
+	if err != nil {
+		panic(err)
+	}
+	defer rows.Close()
+
+	executed := make(map[string]struct{})
+	for rows.Next() {
 		var title string
-		if err := migrations.Scan(&title); err != nil {
+		if err := rows.Scan(&title); err != nil {
 			panic(err)
 		}
-		executedMigrations[title] = nil
+		executed[title] = struct{}{}
 	}
 
-	for _, migration := range Migrations {
-		_, exists := executedMigrations[migration.Title]
-		if !exists {
-			log.Printf("🚀 Migrating up %s ...", migration.Title)
-			err := migration.Up(pgPool)
-			if err != nil {
-				panic(err)
-			}
-
-			args := pgx.NamedArgs{
-				"title": migration.Title,
-			}
-			_, err = pgPool.Exec(
-				ctx,
-				`INSERT INTO migrations (title) VALUES (@title);`,
-				args,
-			)
-			if err != nil {
-				panic(err)
-			}
+	for _, m := range Migrations {
+		if _, ok := executed[m.Title]; ok {
+			continue
+		}
+		log.Printf("🚀 Migrating up %s ...", m.Title)
+		if err := m.Up(sqldb); err != nil {
+			panic(err)
+		}
+		if _, err := sqldb.ExecContext(ctx, `INSERT INTO migrations (title) VALUES (?)`, m.Title); err != nil {
+			panic(err)
 		}
 	}
 }
 
 func MigrateDown(step int) {
 	ctx := context.Background()
+	sqldb := db.GetDB()
+	if sqldb == nil {
+		panic("db is nil")
+	}
 
-	pgPool := db.GetPgPool()
-
-	currentMigrations, err := pgPool.Query(
-		ctx,
-		`SELECT title FROM migrations ORDER BY title DESC;`,
-	)
+	rows, err := sqldb.QueryContext(ctx, `SELECT title FROM migrations ORDER BY title DESC;`)
 	if err != nil {
 		panic(err)
 	}
-	defer currentMigrations.Close()
+	defer rows.Close()
 
-	executedMigrations := []string{}
-	for currentMigrations.Next() {
+	executed := []string{}
+	for rows.Next() {
 		var title string
-		if err := currentMigrations.Scan(&title); err != nil {
+		if err := rows.Scan(&title); err != nil {
 			panic(err)
 		}
-		executedMigrations = append(executedMigrations, title)
+		executed = append(executed, title)
 	}
 
-	if step > len(executedMigrations) {
-		step = len(executedMigrations)
+	if step > len(executed) {
+		step = len(executed)
 	}
 
 	for i := 0; i < step; i++ {
-		for _, migration := range Migrations {
-			if migration.Title == executedMigrations[i] {
-				log.Printf("🔙 Migrating down %s ...", migration.Title)
-				err := migration.Down(pgPool)
-				if err != nil {
+		target := executed[i]
+		for _, m := range Migrations {
+			if m.Title == target {
+				log.Printf("🔙 Migrating down %s ...", m.Title)
+				if err := m.Down(sqldb); err != nil {
 					panic(err)
 				}
-
-				args := pgx.NamedArgs{
-					"title": migration.Title,
-				}
-				_, err = pgPool.Exec(
-					ctx,
-					`DELETE FROM migrations WHERE title = @title;`,
-					args,
-				)
-				if err != nil {
+				if _, err := sqldb.ExecContext(ctx, `DELETE FROM migrations WHERE title = ?`, m.Title); err != nil {
 					panic(err)
 				}
 				break
@@ -217,24 +167,42 @@ func MigrateDown(step int) {
 	}
 }
 
+// ล้างทั้งฐาน (ดรอปทุกตารางใน DB ปัจจุบัน)
 func MigrateReset() {
 	ctx := context.Background()
-
-	pgPool := db.GetPgPool()
-	if pgPool == nil {
-		panic("pgPool is nil")
+	sqldb := db.GetDB()
+	if sqldb == nil {
+		panic("db is nil")
 	}
 
-	_, err := pgPool.Exec(
-		ctx,
-		fmt.Sprintf(
-			`DROP SCHEMA IF EXISTS %s CASCADE;`,
-			config.ProvideConfig().Schema,
-		),
-	)
+	log.Printf("🔥 Reset current MariaDB database (drop all tables)")
+	_, _ = sqldb.ExecContext(ctx, `SET FOREIGN_KEY_CHECKS=0;`)
+
+	// ดึงรายการตารางทั้งหมด
+	tables := []string{}
+	rows, err := sqldb.QueryContext(ctx, `SHOW TABLES;`)
 	if err != nil {
 		panic(err)
 	}
+	defer rows.Close()
 
-	log.Printf("🔥 Schema %s reset successfully", config.ProvideConfig().Schema)
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			panic(err)
+		}
+		tables = append(tables, name)
+	}
+
+	for _, t := range tables {
+		if t == "" {
+			continue
+		}
+		if _, err := sqldb.ExecContext(ctx, fmt.Sprintf("DROP TABLE IF EXISTS `%s`;", t)); err != nil {
+			panic(err)
+		}
+	}
+
+	_, _ = sqldb.ExecContext(ctx, `SET FOREIGN_KEY_CHECKS=1;`)
+	log.Printf("✅ Reset completed.")
 }

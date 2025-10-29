@@ -15,7 +15,7 @@ var ConfigSet = wire.NewSet(
 )
 
 var InfraSet = wire.NewSet(
-	db.ProvidePgxPool,
+	db.ProvideMariaDB,
 	db.ProvideQueries,
 )
 
