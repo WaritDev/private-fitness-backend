@@ -1,17 +1,24 @@
 services:
-  postgres:
-    image: postgres:16
-    container_name: postgres-private-fitness
+  mariadb:
+    image: mariadb:11.4
+    container_name: mariadb-private-fitness
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-rootpass}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-private_fitness}
+      MARIADB_USER: ${MARIADB_USER:-app}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:-apppass}
       TZ: Asia/Bangkok
+    command: ["mariadbd","--character-set-server=utf8mb4","--collation-server=utf8mb4_unicode_ci","--skip-character-set-client-handshake"]
     ports:
-      - "5432:5432"
+      - "3307:3306"
     volumes:
-      - postgres_data:/var/lib/postgresql/data"
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -u $$MARIADB_USER -p$$MARIADB_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
 
   api:
     build:
@@ -21,11 +28,18 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: "3306"
     depends_on:
-      - postgres
+      mariadb:
+        condition: service_healthy
     ports:
       - "8000:8000"
-    command: ["./server"]
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: ["air", "-c", ".air.toml"]
 
 volumes:
-  postgres_data:
+  mariadb_data:
