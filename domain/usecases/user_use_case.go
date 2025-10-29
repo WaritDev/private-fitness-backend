@@ -1,20 +1,14 @@
 package usecases
 
 import (
-    "context"
 
-    "github.com/WaritDev/private-fitness-backend/internal/adapters/repositories/psql"
-    "github.com/WaritDev/private-fitness-backend/internal/infrastructure/db/dbmodel"
+    "github.com/WaritDev/private-fitness-backend/internal/adapters/repositories/sql"
 )
 
 type UserUseCase struct {
-    repo *psql.UserRepository
+    repo *sql.UserRepository
 }
 
-func ProvideUserUseCase(repo *psql.UserRepository) *UserUseCase {
+func ProvideUserUseCase(repo *sql.UserRepository) *UserUseCase {
     return &UserUseCase{repo: repo}
-}
-
-func (u *UserUseCase) ListUsers(ctx context.Context) ([]dbmodel.User, error) {
-    return u.repo.List(ctx)
 }
