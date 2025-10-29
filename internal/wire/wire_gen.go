@@ -19,8 +19,8 @@ import (
 func InitializeHandler() *rest.Handler {
 	context := ProvideContext()
 	configConfig := config.ProvideConfig()
-	pool := db.ProvidePgxPool(context, configConfig)
-	queries := db.ProvideQueries(pool)
+	sqlDB := db.ProvideMariaDB(context, configConfig)
+	queries := db.ProvideQueries(sqlDB)
 	userRepository := psql.ProvideUserRepository(queries)
 	userUseCase := usecases.ProvideUserUseCase(userRepository)
 	userHandler := rest.ProvideUserHandler(userUseCase)
