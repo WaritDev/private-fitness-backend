@@ -26,7 +26,7 @@ func main() {
 		AllowOrigins: "http://localhost:4500",
 	}))
 
-	router.RegisterApiRputer(app, handler)
+	router.RegisterApiRouter(app, handler)
 
 	if err := app.Listen(fmt.Sprintf(":%s", cfg.Port)); err != nil {
 		panic(err)
