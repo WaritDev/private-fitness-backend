@@ -10,6 +10,6 @@ CREATE TABLE IF NOT EXISTS users (
     gmail VARCHAR(255) UNIQUE NOT NULL,
     specialty VARCHAR(100) NULL,
     is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT now(),
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
     updated_at TIMESTAMP DEFAULT now()
 );
