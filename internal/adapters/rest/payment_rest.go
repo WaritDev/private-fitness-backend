@@ -68,7 +68,6 @@ func (h *PaymentHandler) GetPaymentInfo(c *fiber.Ctx) error {
 	})
 }
 
-
 func (h *PaymentHandler) List(c *fiber.Ctx) error {
 	var req requests.ListPaymentAccountsRequest
 	if v := c.Query("page"); v != "" {
@@ -120,15 +119,70 @@ func (h *PaymentHandler) Update(c *fiber.Ctx) error {
 
 // DELETE /api/payments/:id
 func (h *PaymentHandler) Delete(c *fiber.Ctx) error {
-    idStr := c.Params("id")
-    id64, err := strconv.ParseInt(idStr, 10, 32)
-    if err != nil {
-        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id"})
-    }
+	idStr := c.Params("id")
+	id64, err := strconv.ParseInt(idStr, 10, 32)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id"})
+	}
 
-    res, err := h.paymentUC.Delete(c.Context(), int32(id64))
-    if err != nil {
-        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-    }
-    return c.Status(fiber.StatusOK).JSON(res)
+	res, err := h.paymentUC.Delete(c.Context(), int32(id64))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.Status(fiber.StatusOK).JSON(res)
+}
+
+// POST /api/payment/verify-slip - Verify payment slip using Slip2Go API
+func (h *PaymentHandler) VerifySlip(c *fiber.Ctx) error {
+	// Step 1: Get file from multipart/form-data
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Missing slip image file",
+		})
+	}
+
+	// Step 2: Open file to get io.Reader
+	file, err := fileHeader.Open()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Failed to open uploaded file",
+		})
+	}
+	defer file.Close()
+
+	// Step 3: Parse JSON payload from form data
+	payloadStr := c.FormValue("payload")
+	if payloadStr == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Missing payload data",
+		})
+	}
+
+	var payload requests.VerifySlipPayload
+	if err := c.App().Config().JSONDecoder([]byte(payloadStr), &payload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid payload format",
+		})
+	}
+
+	// Step 4: Call use case
+	result, err := h.paymentUC.VerifySlip(c.Context(), payload, file, fileHeader.Filename)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": err.Error(),
+		})
+	}
+
+	// Step 5: Return response based on verification result
+	if result.Status == "error" {
+		return c.Status(fiber.StatusBadRequest).JSON(result)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(result)
 }

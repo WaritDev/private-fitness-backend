@@ -22,6 +22,8 @@ type Querier interface {
 	CheckDayOffAppointmentOverlap(ctx context.Context, arg CheckDayOffAppointmentOverlapParams) (int64, error)
 	// Q3P.2: Check if day-off already exists for the same date
 	CheckDayOffDuplicate(ctx context.Context, arg CheckDayOffDuplicateParams) (int64, error)
+	// Q_VERIFY_2: Check duplicate payment slip (by customer + product + amount within 24 hours)
+	CheckDuplicatePayment(ctx context.Context, arg CheckDuplicatePaymentParams) (int64, error)
 	CheckGmailExists(ctx context.Context, lower string) (int64, error)
 	CheckGmailExistsExceptUsername(ctx context.Context, arg CheckGmailExistsExceptUsernameParams) (int64, error)
 	CheckGmailExistsUser(ctx context.Context, gmail string) (int64, error)
@@ -48,6 +50,8 @@ type Querier interface {
 	CountCustomerSessions(ctx context.Context) (int64, error)
 	CountCustomers(ctx context.Context) (int64, error)
 	CountPaymentAccounts(ctx context.Context) (int64, error)
+	// Q_VERIFY_6: Count payment verifications by status
+	CountPaymentVerificationsByStatus(ctx context.Context, verificationStatus PaymentVerificationsVerificationStatus) (int64, error)
 	CountProductReferences(ctx context.Context, arg CountProductReferencesParams) (CountProductReferencesRow, error)
 	CountProducts(ctx context.Context) (int64, error)
 	CountStaffs(ctx context.Context) (int64, error)
@@ -118,6 +122,8 @@ type Querier interface {
 	GetDurationDaysForDurationID(ctx context.Context, id int32) (sql.NullInt32, error)
 	// Q5S.1: ดึงข้อมูลสินค้าและบัญชีรับชำระเงินเพื่อแสดงหน้าชำระเงิน
 	GetPaymentInfoByProductId(ctx context.Context, id int32) (GetPaymentInfoByProductIdRow, error)
+	// Q_VERIFY_4: Get payment verification by ID
+	GetPaymentVerificationById(ctx context.Context, id int32) (PaymentVerification, error)
 	GetProductById(ctx context.Context, id int32) (Product, error)
 	GetStaffByUsername(ctx context.Context, username string) (GetStaffByUsernameRow, error)
 	// Use Case 1P: Manage Working Hours
@@ -135,6 +141,9 @@ type Querier interface {
 	// ใช้ session package ACTIVE ที่ใหม่ที่สุด
 	IncrementUsedSessionsByUsername(ctx context.Context, customerUsername sql.NullString) error
 	InsertPaymentAccount(ctx context.Context, arg InsertPaymentAccountParams) (sql.Result, error)
+	// Payment Slip Verification Queries
+	// Q_VERIFY_1: Insert payment verification log
+	InsertPaymentVerification(ctx context.Context, arg InsertPaymentVerificationParams) (sql.Result, error)
 	InsertProductDuration(ctx context.Context, arg InsertProductDurationParams) (sql.Result, error)
 	InsertProductSession(ctx context.Context, arg InsertProductSessionParams) (sql.Result, error)
 	ListAllProducts(ctx context.Context) ([]Product, error)
@@ -146,6 +155,8 @@ type Querier interface {
 	ListCustomers(ctx context.Context, arg ListCustomersParams) ([]ListCustomersRow, error)
 	ListDurations(ctx context.Context) ([]ListDurationsRow, error)
 	ListPaymentAccounts(ctx context.Context, arg ListPaymentAccountsParams) ([]ListPaymentAccountsRow, error)
+	// Q_VERIFY_5: List all payment verifications for a customer
+	ListPaymentVerificationsByCustomer(ctx context.Context, arg ListPaymentVerificationsByCustomerParams) ([]ListPaymentVerificationsByCustomerRow, error)
 	ListProducts(ctx context.Context, arg ListProductsParams) ([]ListProductsRow, error)
 	ListSessions(ctx context.Context) ([]ListSessionsRow, error)
 	ListStaffs(ctx context.Context, arg ListStaffsParams) ([]ListStaffsRow, error)
@@ -165,6 +176,8 @@ type Querier interface {
 	// อัปเดตตาราง customers
 	UpdateCustomersDetail(ctx context.Context, arg UpdateCustomersDetailParams) error
 	UpdatePaymentAccountByID(ctx context.Context, arg UpdatePaymentAccountByIDParams) error
+	// Q_VERIFY_3: Update payment verification status after Slip2Go verification
+	UpdatePaymentVerificationStatus(ctx context.Context, arg UpdatePaymentVerificationStatusParams) error
 	UpdateProductDuration(ctx context.Context, arg UpdateProductDurationParams) error
 	UpdateProductSession(ctx context.Context, arg UpdateProductSessionParams) error
 	UpdateStaffNoPassword(ctx context.Context, arg UpdateStaffNoPasswordParams) error

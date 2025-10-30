@@ -64,5 +64,16 @@ type PaymentAccountUpdatedResponse struct {
 }
 
 type PaymentAccountDeletedResponse struct {
-    Message string `json:"message"`
+	Message string `json:"message"`
+}
+
+// VerifySlipResponse - Response for payment slip verification
+type VerifySlipResponse struct {
+	Status  string `json:"status"`  // "success" or "error"
+	Message string `json:"message"` // Success/error message
+	Data    *struct {
+		VerificationID int64  `json:"verificationId,omitempty"` // Payment verification record ID
+		SlipID         string `json:"slipId,omitempty"`         // Slip2Go slip ID
+		Verified       bool   `json:"verified"`                 // Verification result
+	} `json:"data,omitempty"`
 }

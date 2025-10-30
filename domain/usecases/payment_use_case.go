@@ -3,8 +3,10 @@ package usecases
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"regexp"
 	"strconv"
@@ -12,15 +14,18 @@ import (
 	"github.com/WaritDev/private-fitness-backend/domain/repositories"
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
 	"github.com/WaritDev/private-fitness-backend/domain/responses"
+	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/slip2go"
 )
 
 type PaymentUseCase struct {
-	paymentRepo repositories.PaymentAccountRepository
+	paymentRepo   repositories.PaymentAccountRepository
+	slip2goClient *slip2go.Slip2GoClient
 }
 
 func ProvidePaymentUseCase(paymentRepo repositories.PaymentAccountRepository) *PaymentUseCase {
 	return &PaymentUseCase{
-		paymentRepo: paymentRepo,
+		paymentRepo:   paymentRepo,
+		slip2goClient: slip2go.NewSlip2GoClient(),
 	}
 }
 
@@ -78,9 +83,13 @@ func (u *PaymentUseCase) GetPaymentInfo(ctx context.Context, productID int32, di
 
 func (uc *PaymentUseCase) List(ctx context.Context, req requests.ListPaymentAccountsRequest) (responses.ListPaymentAccountsResponse, error) {
 	limit := req.Limit
-	if limit <= 0 || limit > 100 { limit = 10 }
+	if limit <= 0 || limit > 100 {
+		limit = 10
+	}
 	page := req.Page
-	if page <= 0 { page = 1 }
+	if page <= 0 {
+		page = 1
+	}
 	offset := (page - 1) * limit
 
 	rows, err := uc.paymentRepo.List(ctx, limit, offset)
@@ -110,7 +119,7 @@ func (uc *PaymentUseCase) List(ctx context.Context, req requests.ListPaymentAcco
 			Page:       page,
 			Limit:      limit,
 			TotalItems: total,
-			TotalPages: int32(math.Ceil(float64(total)/float64(limit))),
+			TotalPages: int32(math.Ceil(float64(total) / float64(limit))),
 		},
 	}, nil
 }
@@ -180,13 +189,123 @@ func (uc *PaymentUseCase) Update(
 }
 
 func (uc *PaymentUseCase) Delete(ctx context.Context, id int32) (responses.PaymentAccountDeletedResponse, error) {
-    if err := uc.paymentRepo.Delete(ctx, id); err != nil {
-        if err == sql.ErrNoRows {
-            return responses.PaymentAccountDeletedResponse{}, fmt.Errorf("payment account not found")
-        }
-        return responses.PaymentAccountDeletedResponse{}, err
-    }
-    return responses.PaymentAccountDeletedResponse{
-        Message: fmt.Sprintf("Payment Account: %d deleted successfully", id),
-    }, nil
+	if err := uc.paymentRepo.Delete(ctx, id); err != nil {
+		if err == sql.ErrNoRows {
+			return responses.PaymentAccountDeletedResponse{}, fmt.Errorf("payment account not found")
+		}
+		return responses.PaymentAccountDeletedResponse{}, err
+	}
+	return responses.PaymentAccountDeletedResponse{
+		Message: fmt.Sprintf("Payment Account: %d deleted successfully", id),
+	}, nil
+}
+
+// ========== Payment Slip Verification ==========
+
+// VerifySlip verifies payment slip using Slip2Go API
+func (uc *PaymentUseCase) VerifySlip(ctx context.Context, payload requests.VerifySlipPayload, fileData io.Reader, filename string) (*responses.VerifySlipResponse, error) {
+	// Step 1: Check for duplicate payment
+	duplicateCount, err := uc.paymentRepo.CheckDuplicatePayment(ctx, payload.Username, payload.ProductID, payload.Amount)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check duplicate payment: %w", err)
+	}
+
+	if duplicateCount > 0 {
+		return &responses.VerifySlipResponse{
+			Status:  "error",
+			Message: "Duplicate payment detected. This payment slip has already been verified within the last 24 hours.",
+		}, nil
+	}
+
+	// Step 2: Insert payment verification log (PENDING status)
+	verificationID, err := uc.paymentRepo.InsertPaymentVerification(ctx, repositories.InsertPaymentVerificationParams{
+		CustomerUsername:   payload.Username,
+		ProductID:          payload.ProductID,
+		Amount:             payload.Amount,
+		SlipFilePath:       filename,
+		VerificationStatus: "PENDING",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to insert payment verification: %w", err)
+	}
+
+	// Step 3: Call Slip2Go API to verify slip
+	slip2goReq := slip2go.VerifySlipRequest{
+		FileData:      fileData,
+		Filename:      filename,
+		AccountType:   payload.AccountType,
+		AccountName:   payload.AccountName,
+		AccountNumber: payload.AccountNumber,
+		Amount:        payload.Amount,
+		PaymentDate:   payload.PaymentDate,
+	}
+
+	slip2goResp, err := uc.slip2goClient.VerifySlip(slip2goReq)
+	if err != nil {
+		// Update verification status to REJECTED
+		uc.paymentRepo.UpdatePaymentVerificationStatus(ctx, repositories.UpdatePaymentVerificationParams{
+			ID:                 verificationID,
+			VerificationStatus: "REJECTED",
+			SlipID:             "",
+			Slip2GoResponse:    fmt.Sprintf("API Error: %s", err.Error()),
+		})
+
+		return &responses.VerifySlipResponse{
+			Status:  "error",
+			Message: fmt.Sprintf("Failed to verify slip: %s", err.Error()),
+		}, nil
+	}
+
+	// Step 4: Process Slip2Go response
+	slip2goRespJSON, _ := json.Marshal(slip2goResp)
+
+	if !slip2goResp.Result.Verified {
+		// Update verification status to REJECTED
+		uc.paymentRepo.UpdatePaymentVerificationStatus(ctx, repositories.UpdatePaymentVerificationParams{
+			ID:                 verificationID,
+			VerificationStatus: "REJECTED",
+			SlipID:             slip2goResp.Result.SlipID,
+			Slip2GoResponse:    string(slip2goRespJSON),
+		})
+
+		return &responses.VerifySlipResponse{
+			Status:  "error",
+			Message: "Payment slip verification failed. Please upload a valid payment slip.",
+			Data: &struct {
+				VerificationID int64  `json:"verificationId,omitempty"`
+				SlipID         string `json:"slipId,omitempty"`
+				Verified       bool   `json:"verified"`
+			}{
+				VerificationID: verificationID,
+				SlipID:         slip2goResp.Result.SlipID,
+				Verified:       false,
+			},
+		}, nil
+	}
+
+	// Step 5: Update verification status to VERIFIED
+	err = uc.paymentRepo.UpdatePaymentVerificationStatus(ctx, repositories.UpdatePaymentVerificationParams{
+		ID:                 verificationID,
+		VerificationStatus: "VERIFIED",
+		SlipID:             slip2goResp.Result.SlipID,
+		Slip2GoResponse:    string(slip2goRespJSON),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to update verification status: %w", err)
+	}
+
+	// Step 6: Return success response
+	return &responses.VerifySlipResponse{
+		Status:  "success",
+		Message: "Payment verified successfully. Your membership will be activated shortly.",
+		Data: &struct {
+			VerificationID int64  `json:"verificationId,omitempty"`
+			SlipID         string `json:"slipId,omitempty"`
+			Verified       bool   `json:"verified"`
+		}{
+			VerificationID: verificationID,
+			SlipID:         slip2goResp.Result.SlipID,
+			Verified:       true,
+		},
+	}, nil
 }

@@ -98,6 +98,7 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	// Payment routes (for Use Case: ยืนยันการชำระเงิน)
 	payments := apiGroup.Group("/payments")
 	payments.Get("/info/:productId", handler.Payment.GetPaymentInfo)
+	payments.Post("/verify-slip", handler.Payment.VerifySlip) // Payment slip verification with Slip2Go API
 	payments.Get("/", handler.Payment.List)
 	payments.Post("/create", handler.Payment.Create)
 	payments.Post("/:id/update", handler.Payment.Update)

@@ -221,6 +221,57 @@ func AllCustomersMaritalStatusValues() []CustomersMaritalStatus {
 	}
 }
 
+type PaymentVerificationsVerificationStatus string
+
+const (
+	PaymentVerificationsVerificationStatusPENDING  PaymentVerificationsVerificationStatus = "PENDING"
+	PaymentVerificationsVerificationStatusVERIFIED PaymentVerificationsVerificationStatus = "VERIFIED"
+	PaymentVerificationsVerificationStatusREJECTED PaymentVerificationsVerificationStatus = "REJECTED"
+)
+
+func (e *PaymentVerificationsVerificationStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PaymentVerificationsVerificationStatus(s)
+	case string:
+		*e = PaymentVerificationsVerificationStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PaymentVerificationsVerificationStatus: %T", src)
+	}
+	return nil
+}
+
+type NullPaymentVerificationsVerificationStatus struct {
+	PaymentVerificationsVerificationStatus PaymentVerificationsVerificationStatus `json:"paymentVerificationsVerificationStatus"`
+	Valid                                  bool                                   `json:"valid"` // Valid is true if PaymentVerificationsVerificationStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPaymentVerificationsVerificationStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.PaymentVerificationsVerificationStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PaymentVerificationsVerificationStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPaymentVerificationsVerificationStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PaymentVerificationsVerificationStatus), nil
+}
+
+func AllPaymentVerificationsVerificationStatusValues() []PaymentVerificationsVerificationStatus {
+	return []PaymentVerificationsVerificationStatus{
+		PaymentVerificationsVerificationStatusPENDING,
+		PaymentVerificationsVerificationStatusVERIFIED,
+		PaymentVerificationsVerificationStatusREJECTED,
+	}
+}
+
 type ProductsCategory string
 
 const (
@@ -593,6 +644,20 @@ type PaymentAccount struct {
 	BankName       string `json:"bankName"`
 	QrCodeImageUrl string `json:"qrCodeImageUrl"`
 	IsActive       bool   `json:"isActive"`
+}
+
+type PaymentVerification struct {
+	ID                 int32                                  `json:"id"`
+	CustomerUsername   string                                 `json:"customerUsername"`
+	ProductID          int32                                  `json:"productId"`
+	Amount             string                                 `json:"amount"`
+	SlipFilePath       sql.NullString                         `json:"slipFilePath"`
+	SlipID             sql.NullString                         `json:"slipId"`
+	VerificationStatus PaymentVerificationsVerificationStatus `json:"verificationStatus"`
+	Slip2goResponse    sql.NullString                         `json:"slip2goResponse"`
+	VerifiedAt         sql.NullTime                           `json:"verifiedAt"`
+	CreatedAt          sql.NullTime                           `json:"createdAt"`
+	UpdatedAt          sql.NullTime                           `json:"updatedAt"`
 }
 
 type Product struct {

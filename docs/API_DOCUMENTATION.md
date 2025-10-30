@@ -504,6 +504,150 @@ console.log('QR Code:', data.result.qrCodeUrl);
 
 ---
 
+### 4.2 Verify Payment Slip (ตรวจสอบสลิปการโอนเงิน)
+
+**Endpoint:** `POST /api/payments/verify-slip`
+
+**Description:** ตรวจสอบความถูกต้องของสลิปการโอนเงินผ่าน Slip2Go API  
+**Use Case:** ยืนยันการชำระเงิน (Payment Verification)
+
+**Request Format:** `multipart/form-data`
+
+**Request Fields:**
+- `file` (file): ไฟล์รูปภาพสลิปการโอนเงิน (image/jpeg, image/png)
+- `payload` (JSON string): ข้อมูลการตรวจสอบ
+
+**Payload Structure:**
+```json
+{
+  "username": "cust01",
+  "productId": 11,
+  "amount": 2599.50,
+  "accountName": "Private Fitness - Main Account",
+  "accountNumber": "123-4-56789-0",
+  "accountType": "01004",
+  "paymentDate": "2025-10-31"
+}
+```
+
+**Payload Fields:**
+- `username` (string, required): Username ของลูกค้าที่ทำการโอนเงิน
+- `productId` (integer, required): Product ID ที่ซื้อ
+- `amount` (float, required): จำนวนเงินที่โอน
+- `accountName` (string, required): ชื่อบัญชีปลายทาง
+- `accountNumber` (string, required): เลขบัญชีปลายทาง
+- `accountType` (string, required): รหัสธนาคาร (e.g., "01004" for SCB)
+- `paymentDate` (string, optional): วันที่โอนเงิน (YYYY-MM-DD format)
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "success",
+  "message": "Payment verified successfully. Your membership will be activated shortly.",
+  "data": {
+    "verificationId": 123,
+    "slipId": "SLIP_ABC123XYZ",
+    "verified": true
+  }
+}
+```
+
+**Error Response - Duplicate Payment (400 Bad Request):**
+```json
+{
+  "status": "error",
+  "message": "Duplicate payment detected. This payment slip has already been verified within the last 24 hours."
+}
+```
+
+**Error Response - Verification Failed (400 Bad Request):**
+```json
+{
+  "status": "error",
+  "message": "Payment slip verification failed. Please upload a valid payment slip.",
+  "data": {
+    "verificationId": 124,
+    "slipId": "SLIP_DEF456GHI",
+    "verified": false
+  }
+}
+```
+
+**Frontend Integration Example:**
+```javascript
+// Step 1: Prepare form data
+const formData = new FormData();
+
+// Add slip image file
+const fileInput = document.getElementById('slipFile');
+formData.append('file', fileInput.files[0]);
+
+// Add JSON payload
+const payload = {
+  username: 'cust01',
+  productId: 11,
+  amount: 2599.50,
+  accountName: 'Private Fitness - Main Account',
+  accountNumber: '123-4-56789-0',
+  accountType: '01004', // SCB bank code
+  paymentDate: '2025-10-31'
+};
+formData.append('payload', JSON.stringify(payload));
+
+// Step 2: Send request
+const response = await fetch('http://localhost:8000/api/payments/verify-slip', {
+  method: 'POST',
+  body: formData
+  // Note: Do NOT set Content-Type header, browser will set it automatically with boundary
+});
+
+const result = await response.json();
+
+// Step 3: Handle response
+if (result.status === 'success') {
+  alert('✅ Payment verified successfully!');
+  console.log('Verification ID:', result.data.verificationId);
+  console.log('Slip ID:', result.data.slipId);
+  // Redirect to success page or activate membership
+} else {
+  alert('❌ Verification failed: ' + result.message);
+}
+```
+
+**Business Logic:**
+1. ตรวจสอบการโอนเงินซ้ำ (Duplicate Check):
+   - เช็คภายใน 24 ชั่วโมง
+   - ลูกค้าคนเดียวกัน + สินค้าเดียวกัน + จำนวนเงินเท่ากัน
+   - สถานะเป็น VERIFIED แล้ว
+2. บันทึกข้อมูลการตรวจสอบ (สถานะ PENDING)
+3. เรียก Slip2Go API เพื่อตรวจสอบสลิป:
+   - ตรวจสอบจำนวนเงิน
+   - ตรวจสอบบัญชีปลายทาง
+   - ตรวจสอบวันที่โอนเงิน (ถ้ามี)
+4. อัปเดตสถานะเป็น VERIFIED หรือ REJECTED ตามผลจาก Slip2Go
+5. ส่งผลลัพธ์กลับไปยัง Frontend
+
+**Mock Mode for Development:**
+ตั้งค่า environment variable `MOCK_SLIP2GO=true` เพื่อใช้โหมดทดสอบ (ไม่ใช้ API จริง):
+```bash
+# ใน .env
+MOCK_SLIP2GO=true
+```
+
+เมื่อเปิดโหมด Mock:
+- ระบบจะ return ผลตรวจสอบ verified=true ทันที
+- ไม่มีการเรียก Slip2Go API จริง
+- ประหยัด API quota (Slip2Go มี 100 ครั้งทดสอบฟรี)
+- เหมาะสำหรับ development และ testing
+
+**ข้อควรระวัง:**
+- ไฟล์รูปสลิปต้องเป็น image format (JPEG, PNG)
+- ต้องระบุ `accountType` ให้ถูกต้องตามรหัสธนาคาร (เช่น SCB = "01004")
+- การตรวจสอบซ้ำทำงานภายใน 24 ชั่วโมง ถ้าต้องการทดสอบซ้ำให้เปลี่ยนจำนวนเงินเล็กน้อย
+- ควรแสดง loading indicator ระหว่างรอผลตรวจสอบ (อาจใช้เวลา 3-5 วินาที)
+
+---
+
 ## 5. Customer Registration APIs
 
 ### 5.1 Register Customer Duration (รายเดือน/รายปี)
