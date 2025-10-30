@@ -173,3 +173,41 @@ func (r *CustomerSessionRepository) DecrementUsedSessions(ctx context.Context, t
 	}
 	return nil
 }
+
+// GetCustomerActiveSessions - ดึงข้อมูล Session packages ที่ยัง ACTIVE ของลูกค้า
+func (r *CustomerSessionRepository) GetCustomerActiveSessions(ctx context.Context, customerUsername string) ([]repositories.ActiveSessionPackageInfo, error) {
+	rows, err := r.q.GetCustomerActiveSessions(ctx, sql.NullString{String: customerUsername, Valid: true})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get customer active sessions: %w", err)
+	}
+
+	result := make([]repositories.ActiveSessionPackageInfo, len(rows))
+	for i, row := range rows {
+		var trainerUsername string
+		if row.TrainerUsername.Valid {
+			trainerUsername = row.TrainerUsername.String
+		}
+
+		var customerUser string
+		if row.CustomerUsername.Valid {
+			customerUser = row.CustomerUsername.String
+		}
+
+		result[i] = repositories.ActiveSessionPackageInfo{
+			ID:                row.ID,
+			CustomerUsername:  customerUser,
+			TrainerUsername:   trainerUsername,
+			ProductID:         row.ProductID.Int32,
+			ProductName:       row.ProductName,
+			TotalSessions:     row.TotalSessions,
+			UsedSessions:      row.UsedSessions.Int32,
+			SessionsRemaining: row.SessionsRemaining,
+			PurchaseDate:      row.PurchaseDate,
+			PricePaid:         row.PricePaid,
+			DiscountAmount:    row.DiscountAmount.String,
+			Status:            string(row.Status),
+		}
+	}
+
+	return result, nil
+}

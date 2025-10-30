@@ -22,6 +22,9 @@ type CustomerSessionRepository interface {
 
 	// DecrementUsedSessions - ยกเลิกการจอง: ลดจำนวนครั้งที่ใช้ไป (used_sessions - 1)
 	DecrementUsedSessions(ctx context.Context, tx *sql.Tx, sessionID int32) error
+
+	// GetCustomerActiveSessions - ดึงข้อมูล Session packages ที่ยัง ACTIVE ของลูกค้า
+	GetCustomerActiveSessions(ctx context.Context, customerUsername string) ([]ActiveSessionPackageInfo, error)
 }
 
 // ActiveSessionInfo - ข้อมูล Session package ที่ active
@@ -31,6 +34,23 @@ type ActiveSessionInfo struct {
 	TrainerUsername  string
 	TotalSessions    int32
 	UsedSessions     int32
+}
+
+// ActiveSessionPackageInfo - ข้อมูล Session package ที่ ACTIVE พร้อมรายละเอียดจาก products
+type ActiveSessionPackageInfo struct {
+	ID                int32
+	CustomerUsername  string
+	TrainerUsername   string
+	ProductID         int32
+	ProductName       string
+	TotalSessions     int32
+	UsedSessions      int32
+	SessionsRemaining int32
+	PurchaseDate      time.Time
+	PricePaid         string
+	DiscountAmount    string
+	Status            string
+	CreatedAt         time.Time
 }
 
 // RegisterSessionParams - Parameters สำหรับ RegisterCustomerSession

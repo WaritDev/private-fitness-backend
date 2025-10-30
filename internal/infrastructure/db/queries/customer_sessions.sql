@@ -53,3 +53,28 @@ UPDATE customer_sessions
 SET used_sessions = used_sessions - 1
 WHERE id = ?
   AND used_sessions > 0;
+
+-- name: GetCustomerActiveSessions :many
+-- ดึงข้อมูล Session packages ที่ยัง ACTIVE ของลูกค้า
+-- JOIN กับ PRODUCTS เพื่อดึงชื่อแพ็กเกจและคำนวณ sessions คงเหลือ
+SELECT 
+  cs.id,
+  cs.customer_username,
+  cs.trainer_username,
+  cs.product_id,
+  p.name AS product_name,
+  cs.total_sessions,
+  cs.used_sessions,
+  (cs.total_sessions - cs.used_sessions) AS sessions_remaining,
+  cs.purchase_date,
+  cs.price_paid,
+  cs.discount_amount,
+  cs.status,
+  cs.created_at
+FROM customer_sessions cs
+JOIN products p ON cs.product_id = p.id
+WHERE cs.customer_username = ?
+  AND cs.status = 'ACTIVE'
+ORDER BY cs.created_at DESC;
+
+-- name: GetCustomerSessionByProductIdAndCustomerUsername :one

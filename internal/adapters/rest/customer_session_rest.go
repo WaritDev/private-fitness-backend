@@ -120,3 +120,38 @@ func (h *CustomerSessionHandler) CheckPermission(c *fiber.Ctx) error {
 		},
 	})
 }
+
+// GetActiveSessions - GET /api/customers/sessions/active/:username
+// ดึงข้อมูล Session packages ที่ ACTIVE ของลูกค้า
+func (h *CustomerSessionHandler) GetActiveSessions(c *fiber.Ctx) error {
+	// Get customer username from path parameter
+	customerUsername := c.Params("username")
+
+	if customerUsername == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":      "error",
+			"status_code": fiber.StatusBadRequest,
+			"message":     "Username is required",
+			"result":      nil,
+		})
+	}
+
+	// Get active sessions
+	sessions, err := h.useCase.GetCustomerActiveSessions(c.Context(), customerUsername)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":      "error",
+			"status_code": fiber.StatusInternalServerError,
+			"message":     err.Error(),
+			"result":      nil,
+		})
+	}
+
+	// Success response
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      "success",
+		"status_code": fiber.StatusOK,
+		"message":     "Active sessions retrieved successfully",
+		"result":      sessions,
+	})
+}

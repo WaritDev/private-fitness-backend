@@ -127,6 +127,83 @@ func (q *Queries) GetActiveSessionByCustomer(ctx context.Context, customerUserna
 	return i, err
 }
 
+const getCustomerActiveSessions = `-- name: GetCustomerActiveSessions :many
+SELECT 
+  cs.id,
+  cs.customer_username,
+  cs.trainer_username,
+  cs.product_id,
+  p.name AS product_name,
+  cs.total_sessions,
+  cs.used_sessions,
+  (cs.total_sessions - cs.used_sessions) AS sessions_remaining,
+  cs.purchase_date,
+  cs.price_paid,
+  cs.discount_amount,
+  cs.status,
+  cs.created_at
+FROM customer_sessions cs
+JOIN products p ON cs.product_id = p.id
+WHERE cs.customer_username = ?
+  AND cs.status = 'ACTIVE'
+ORDER BY cs.created_at DESC
+`
+
+type GetCustomerActiveSessionsRow struct {
+	ID                int32                  `json:"id"`
+	CustomerUsername  sql.NullString         `json:"customerUsername"`
+	TrainerUsername   sql.NullString         `json:"trainerUsername"`
+	ProductID         sql.NullInt32          `json:"productId"`
+	ProductName       string                 `json:"productName"`
+	TotalSessions     int32                  `json:"totalSessions"`
+	UsedSessions      sql.NullInt32          `json:"usedSessions"`
+	SessionsRemaining int32                  `json:"sessionsRemaining"`
+	PurchaseDate      time.Time              `json:"purchaseDate"`
+	PricePaid         string                 `json:"pricePaid"`
+	DiscountAmount    sql.NullString         `json:"discountAmount"`
+	Status            CustomerSessionsStatus `json:"status"`
+	CreatedAt         sql.NullTime           `json:"createdAt"`
+}
+
+// ดึงข้อมูล Session packages ที่ยัง ACTIVE ของลูกค้า
+// JOIN กับ PRODUCTS เพื่อดึงชื่อแพ็กเกจและคำนวณ sessions คงเหลือ
+func (q *Queries) GetCustomerActiveSessions(ctx context.Context, customerUsername sql.NullString) ([]GetCustomerActiveSessionsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getCustomerActiveSessions, customerUsername)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCustomerActiveSessionsRow
+	for rows.Next() {
+		var i GetCustomerActiveSessionsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CustomerUsername,
+			&i.TrainerUsername,
+			&i.ProductID,
+			&i.ProductName,
+			&i.TotalSessions,
+			&i.UsedSessions,
+			&i.SessionsRemaining,
+			&i.PurchaseDate,
+			&i.PricePaid,
+			&i.DiscountAmount,
+			&i.Status,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const incrementUsedSessions = `-- name: IncrementUsedSessions :exec
 UPDATE customer_sessions
 SET used_sessions = used_sessions + 1

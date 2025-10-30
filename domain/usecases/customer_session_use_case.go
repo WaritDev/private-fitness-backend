@@ -157,3 +157,37 @@ func (u *CustomerSessionUseCase) CheckBookingPermission(ctx context.Context, cus
 
 	return hasPermission, nil
 }
+
+// GetCustomerActiveSessions - ดึงข้อมูล Session packages ที่ ACTIVE ของลูกค้า
+func (u *CustomerSessionUseCase) GetCustomerActiveSessions(ctx context.Context, customerUsername string) ([]responses.CustomerSessionPackageResponse, error) {
+	packages, err := u.sessionRepo.GetCustomerActiveSessions(ctx, customerUsername)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get customer active sessions: %w", err)
+	}
+
+	result := make([]responses.CustomerSessionPackageResponse, len(packages))
+	for i, pkg := range packages {
+		// Parse DECIMAL strings to float64
+		var pricePaid, discountAmount float64
+		fmt.Sscanf(pkg.PricePaid, "%f", &pricePaid)
+		fmt.Sscanf(pkg.DiscountAmount, "%f", &discountAmount)
+
+		result[i] = responses.CustomerSessionPackageResponse{
+			ID:                pkg.ID,
+			CustomerUsername:  pkg.CustomerUsername,
+			TrainerUsername:   pkg.TrainerUsername,
+			ProductID:         pkg.ProductID,
+			ProductName:       pkg.ProductName,
+			TotalSessions:     pkg.TotalSessions,
+			UsedSessions:      pkg.UsedSessions,
+			SessionsRemaining: pkg.SessionsRemaining,
+			PurchaseDate:      pkg.PurchaseDate,
+			PricePaid:         pricePaid,
+			DiscountAmount:    discountAmount,
+			Status:            pkg.Status,
+			CreatedAt:         pkg.CreatedAt,
+		}
+	}
+
+	return result, nil
+}

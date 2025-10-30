@@ -31,8 +31,8 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	customers := apiGroup.Group("/customers")
 	customers.Get("/", handler.Customer.ListCustomers)
 	customers.Post("/:username/update", handler.Customer.UpdateCustomer)
-	customers.Delete("/:username", handler.Customer.DeleteCustomer)  
-	
+	customers.Delete("/:username", handler.Customer.DeleteCustomer)
+
 	// Auth routes
 	authGroup := apiGroup.Group("/auth")
 	authGroup.Post("/login", handler.Auth.Login)
@@ -69,7 +69,8 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	// Customer registration routes (after Sales pre-entry)
 	customers.Post("/sessions/register", handler.CustomerSession.Register)
 	customers.Post("/durations/register", handler.CustomerDuration.Register)
-	customers.Get("/sessions/check-permission", handler.CustomerSession.CheckPermission) // Check booking permission
+	customers.Get("/sessions/check-permission", handler.CustomerSession.CheckPermission)   // Check booking permission
+	customers.Get("/sessions/active/:username", handler.CustomerSession.GetActiveSessions) // Get active session packages
 
 	// Booking routes (Use Case 3C: จองเวลาออกกำลังกายกับเทรนเนอร์)
 	bookings := apiGroup.Group("/bookings")

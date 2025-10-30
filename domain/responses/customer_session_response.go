@@ -21,3 +21,26 @@ type TrainingScheduleInfo struct {
 	EndTime    time.Time `json:"endTime"`
 	DayOfWeek  string    `json:"dayOfWeek"`
 }
+
+// CheckPermissionResponse - Response สำหรับตรวจสอบสิทธิ์การจอง
+type CheckPermissionResponse struct {
+	HasPermission bool   `json:"hasPermission"`
+	Message       string `json:"message"`
+}
+
+// CustomerSessionPackageResponse - Response สำหรับข้อมูล Session package
+type CustomerSessionPackageResponse struct {
+	ID                int32     `json:"id"`
+	CustomerUsername  string    `json:"customerUsername"`
+	TrainerUsername   string    `json:"trainerUsername"`
+	ProductID         int32     `json:"productId"`
+	ProductName       string    `json:"productName"`
+	TotalSessions     int32     `json:"totalSessions"`
+	UsedSessions      int32     `json:"usedSessions"`
+	SessionsRemaining int32     `json:"sessionsRemaining"`
+	PurchaseDate      time.Time `json:"purchaseDate"`
+	PricePaid         float64   `json:"pricePaid"`
+	DiscountAmount    float64   `json:"discountAmount"`
+	Status            string    `json:"status"`
+	CreatedAt         time.Time `json:"createdAt"`
+}
