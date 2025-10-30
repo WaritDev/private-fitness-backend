@@ -170,3 +170,13 @@ func (h *ProductHandler) Delete(c *fiber.Ctx) error {
 
     return c.Status(fiber.StatusOK).JSON(res)
 }
+
+// GET /api/products/:id
+func (h *ProductHandler) GetByID(c *fiber.Ctx) error {
+	id := c.Params("id", "")
+	resp, err := h.UC.GetByID(c.Context(), id)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"message": err.Error()})
+	}
+	return c.JSON(resp)
+}

@@ -74,6 +74,7 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	products.Post("/create", handler.Product.Create)
 	products.Post("/:id/update", handler.Product.Update)
 	products.Delete("/:id", handler.Product.Delete)
+	products.Get("/:id", handler.Product.GetByID)
 
 	// Dynamic route must be last
 	products.Get("/:id", handler.Product.GetProductByID)
