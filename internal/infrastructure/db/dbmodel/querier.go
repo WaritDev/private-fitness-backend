@@ -124,6 +124,8 @@ type Querier interface {
 	UpdateCustomersDetail(ctx context.Context, arg UpdateCustomersDetailParams) error
 	UpdateStaffNoPassword(ctx context.Context, arg UpdateStaffNoPasswordParams) error
 	UpdateStaffWithPassword(ctx context.Context, arg UpdateStaffWithPasswordParams) error
+	// Q0S.2: Update updated_at when user logs in (track last active time)
+	UpdateUserLoginTimestamp(ctx context.Context, username string) error
 }
 
 var _ Querier = (*Queries)(nil)

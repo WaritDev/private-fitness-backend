@@ -126,6 +126,11 @@ func (r *UserRepository) CreateUserWithCustomer(ctx context.Context, user reposi
 	return nil
 }
 
+// UpdateLoginTimestamp updates the updated_at timestamp when user logs in (Q0S.2)
+func (r *UserRepository) UpdateLoginTimestamp(ctx context.Context, username string) error {
+	return r.q.UpdateUserLoginTimestamp(ctx, username)
+}
+
 func stringOrEmpty(s *string) string {
 	if s == nil {
 		return ""

@@ -28,3 +28,8 @@ SELECT COUNT(phone_number) as count
 FROM users
 WHERE phone_number = ?;
 
+-- name: UpdateUserLoginTimestamp :exec
+-- Q0S.2: Update updated_at when user logs in (track last active time)
+UPDATE users
+SET updated_at = CURRENT_TIMESTAMP
+WHERE username = ?;

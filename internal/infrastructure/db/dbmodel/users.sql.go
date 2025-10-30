@@ -148,3 +148,15 @@ func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
 	}
 	return items, nil
 }
+
+const updateUserLoginTimestamp = `-- name: UpdateUserLoginTimestamp :exec
+UPDATE users
+SET updated_at = CURRENT_TIMESTAMP
+WHERE username = ?
+`
+
+// Q0S.2: Update updated_at when user logs in (track last active time)
+func (q *Queries) UpdateUserLoginTimestamp(ctx context.Context, username string) error {
+	_, err := q.db.ExecContext(ctx, updateUserLoginTimestamp, username)
+	return err
+}
