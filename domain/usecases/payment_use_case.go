@@ -2,10 +2,15 @@ package usecases
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
+	"math"
+	"regexp"
 	"strconv"
 
 	"github.com/WaritDev/private-fitness-backend/domain/repositories"
+	"github.com/WaritDev/private-fitness-backend/domain/requests"
 	"github.com/WaritDev/private-fitness-backend/domain/responses"
 )
 
@@ -69,4 +74,119 @@ func (u *PaymentUseCase) GetPaymentInfo(ctx context.Context, productID int32, di
 	}
 
 	return response, nil
+}
+
+func (uc *PaymentUseCase) List(ctx context.Context, req requests.ListPaymentAccountsRequest) (responses.ListPaymentAccountsResponse, error) {
+	limit := req.Limit
+	if limit <= 0 || limit > 100 { limit = 10 }
+	page := req.Page
+	if page <= 0 { page = 1 }
+	offset := (page - 1) * limit
+
+	rows, err := uc.paymentRepo.List(ctx, limit, offset)
+	if err != nil {
+		return responses.ListPaymentAccountsResponse{}, err
+	}
+	total, err := uc.paymentRepo.Count(ctx)
+	if err != nil {
+		return responses.ListPaymentAccountsResponse{}, err
+	}
+
+	items := make([]responses.PaymentAccountItem, 0, len(rows))
+	for _, r := range rows {
+		items = append(items, responses.PaymentAccountItem{
+			ID:            r.ID,
+			AccountName:   r.AccountName,
+			AccountNumber: r.AccountNumber,
+			BankName:      r.BankName,
+			QRCodeURL:     r.QrCodeImageUrl,
+			IsActive:      r.Column6,
+		})
+	}
+
+	return responses.ListPaymentAccountsResponse{
+		Data: items,
+		Meta: responses.PageMeta{
+			Page:       page,
+			Limit:      limit,
+			TotalItems: total,
+			TotalPages: int32(math.Ceil(float64(total)/float64(limit))),
+		},
+	}, nil
+}
+
+var reURL = regexp.MustCompile(`^(https?://)[^\s]+$`)
+var reAcctNo = regexp.MustCompile(`^[0-9\- ]{6,30}$`)
+
+func (uc *PaymentUseCase) Create(ctx context.Context, req requests.CreatePaymentAccountRequest) (responses.PaymentAccountCreatedResponse, error) {
+	if req.AccountName == "" {
+		return responses.PaymentAccountCreatedResponse{}, errors.New("accountName cannot be empty")
+	}
+	if req.AccountNumber == "" || !reAcctNo.MatchString(req.AccountNumber) {
+		return responses.PaymentAccountCreatedResponse{}, errors.New("invalid accountNumber")
+	}
+	if req.BankName == "" {
+		return responses.PaymentAccountCreatedResponse{}, errors.New("bankName cannot be empty")
+	}
+	if req.QRCodeURL == "" || !reURL.MatchString(req.QRCodeURL) {
+		return responses.PaymentAccountCreatedResponse{}, errors.New("invalid qrCodeUrl")
+	}
+
+	id, err := uc.paymentRepo.Insert(ctx, repositories.CreatePaymentAccountParams{
+		AccountName:   req.AccountName,
+		AccountNumber: req.AccountNumber,
+		BankName:      req.BankName,
+		QRCodeURL:     req.QRCodeURL,
+		IsActive:      req.IsActive,
+	})
+	if err != nil {
+		return responses.PaymentAccountCreatedResponse{}, err
+	}
+
+	return responses.PaymentAccountCreatedResponse{
+		Message: "Payment Account created successfully",
+		ID:      id,
+	}, nil
+}
+
+func (uc *PaymentUseCase) Update(
+	ctx context.Context,
+	id int32,
+	req requests.UpdatePaymentAccountRequest,
+) (responses.PaymentAccountUpdatedResponse, error) {
+
+	if req.AccountName == "" || req.AccountNumber == "" || req.BankName == "" {
+		return responses.PaymentAccountUpdatedResponse{}, errors.New("missing required fields")
+	}
+	if req.QRCodeURL == "" || !reURL.MatchString(req.QRCodeURL) {
+		return responses.PaymentAccountUpdatedResponse{}, errors.New("invalid qrCodeUrl")
+	}
+
+	err := uc.paymentRepo.Update(ctx, repositories.UpdatePaymentAccountParams{
+		ID:            id,
+		AccountName:   req.AccountName,
+		AccountNumber: req.AccountNumber,
+		BankName:      req.BankName,
+		QRCodeURL:     req.QRCodeURL,
+		IsActive:      req.IsActive,
+	})
+	if err != nil {
+		return responses.PaymentAccountUpdatedResponse{}, err
+	}
+
+	return responses.PaymentAccountUpdatedResponse{
+		Message: fmt.Sprintf("Payment Account: %d updated successfully", id),
+	}, nil
+}
+
+func (uc *PaymentUseCase) Delete(ctx context.Context, id int32) (responses.PaymentAccountDeletedResponse, error) {
+    if err := uc.paymentRepo.Delete(ctx, id); err != nil {
+        if err == sql.ErrNoRows {
+            return responses.PaymentAccountDeletedResponse{}, fmt.Errorf("payment account not found")
+        }
+        return responses.PaymentAccountDeletedResponse{}, err
+    }
+    return responses.PaymentAccountDeletedResponse{
+        Message: fmt.Sprintf("Payment Account: %d deleted successfully", id),
+    }, nil
 }
