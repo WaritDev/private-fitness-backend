@@ -20,8 +20,10 @@ type Querier interface {
 	ListSessions(ctx context.Context) ([]ListSessionsRow, error)
 	ListUsers(ctx context.Context) ([]ListUsersRow, error)
 	NewMembersInRange(ctx context.Context, arg NewMembersInRangeParams) (int64, error)
-	TopSellingProducts(ctx context.Context, arg TopSellingProductsParams) ([]TopSellingProductsRow, error)
-	TotalRevenue(ctx context.Context, arg TotalRevenueParams) (int64, error)
+	RevenueDurations(ctx context.Context, arg RevenueDurationsParams) (int64, error)
+	RevenueSessions(ctx context.Context, arg RevenueSessionsParams) (int64, error)
+	TopSellingProductsDurations(ctx context.Context, arg TopSellingProductsDurationsParams) ([]TopSellingProductsDurationsRow, error)
+	TopSellingProductsSessions(ctx context.Context, arg TopSellingProductsSessionsParams) ([]TopSellingProductsSessionsRow, error)
 }
 
 var _ Querier = (*Queries)(nil)
