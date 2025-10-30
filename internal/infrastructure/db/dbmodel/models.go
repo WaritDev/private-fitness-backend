@@ -168,6 +168,59 @@ func AllCustomerSessionsStatusValues() []CustomerSessionsStatus {
 	}
 }
 
+type CustomersMaritalStatus string
+
+const (
+	CustomersMaritalStatusSINGLE   CustomersMaritalStatus = "SINGLE"
+	CustomersMaritalStatusMARRIED  CustomersMaritalStatus = "MARRIED"
+	CustomersMaritalStatusDIVORCED CustomersMaritalStatus = "DIVORCED"
+	CustomersMaritalStatusWIDOWED  CustomersMaritalStatus = "WIDOWED"
+)
+
+func (e *CustomersMaritalStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CustomersMaritalStatus(s)
+	case string:
+		*e = CustomersMaritalStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CustomersMaritalStatus: %T", src)
+	}
+	return nil
+}
+
+type NullCustomersMaritalStatus struct {
+	CustomersMaritalStatus CustomersMaritalStatus `json:"customersMaritalStatus"`
+	Valid                  bool                   `json:"valid"` // Valid is true if CustomersMaritalStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCustomersMaritalStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.CustomersMaritalStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CustomersMaritalStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCustomersMaritalStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CustomersMaritalStatus), nil
+}
+
+func AllCustomersMaritalStatusValues() []CustomersMaritalStatus {
+	return []CustomersMaritalStatus{
+		CustomersMaritalStatusSINGLE,
+		CustomersMaritalStatusMARRIED,
+		CustomersMaritalStatusDIVORCED,
+		CustomersMaritalStatusWIDOWED,
+	}
+}
+
 type ProductsCategory string
 
 const (
@@ -483,20 +536,20 @@ func AllUsersRoleValues() []UsersRole {
 }
 
 type Customer struct {
-	Username                     string `json:"username"`
-	HealthInfo                   string `json:"healthInfo"`
-	Address                      string `json:"address"`
-	CompanyName                  string `json:"companyName"`
-	CompanyPosition              string `json:"companyPosition"`
-	MaritalStatus                string `json:"maritalStatus"`
-	EmergencyContactName         string `json:"emergencyContactName"`
-	EmergencyContactRelationship string `json:"emergencyContactRelationship"`
-	EmergencyContactPhone        string `json:"emergencyContactPhone"`
-	MarketingSource              string `json:"marketingSource"`
+	Username                     string                 `json:"username"`
+	HealthInfo                   string                 `json:"healthInfo"`
+	Address                      string                 `json:"address"`
+	CompanyName                  string                 `json:"companyName"`
+	CompanyPosition              string                 `json:"companyPosition"`
+	MaritalStatus                CustomersMaritalStatus `json:"maritalStatus"`
+	EmergencyContactName         string                 `json:"emergencyContactName"`
+	EmergencyContactRelationship string                 `json:"emergencyContactRelationship"`
+	EmergencyContactPhone        string                 `json:"emergencyContactPhone"`
+	MarketingSource              string                 `json:"marketingSource"`
 }
 
 type CustomerDuration struct {
-	ID               uint64                  `json:"id"`
+	ID               int32                   `json:"id"`
 	CustomerUsername sql.NullString          `json:"customerUsername"`
 	SalesUsername    sql.NullString          `json:"salesUsername"`
 	ProductID        sql.NullInt32           `json:"productId"`
@@ -511,14 +564,14 @@ type CustomerDuration struct {
 }
 
 type CustomerLog struct {
-	ID               uint64              `json:"id"`
+	ID               int32               `json:"id"`
 	CustomerUsername sql.NullString      `json:"customerUsername"`
-	CreatedAt        time.Time           `json:"createdAt"`
+	CreatedAt        sql.NullTime        `json:"createdAt"`
 	LogType          CustomerLogsLogType `json:"logType"`
 }
 
 type CustomerSession struct {
-	ID               uint64                 `json:"id"`
+	ID               int32                  `json:"id"`
 	CustomerUsername sql.NullString         `json:"customerUsername"`
 	TrainerUsername  sql.NullString         `json:"trainerUsername"`
 	SalesUsername    sql.NullString         `json:"salesUsername"`
@@ -534,7 +587,7 @@ type CustomerSession struct {
 }
 
 type Product struct {
-	ID            uint64           `json:"id"`
+	ID            int32            `json:"id"`
 	Name          string           `json:"name"`
 	Type          ProductsType     `json:"type"`
 	Category      ProductsCategory `json:"category"`
@@ -547,15 +600,15 @@ type Product struct {
 }
 
 type TrainingAvailability struct {
-	ID              uint64                          `json:"id"`
-	TrainerUsername sql.NullString                  `json:"trainerUsername"`
+	ID              int32                           `json:"id"`
+	TrainerUsername string                          `json:"trainerUsername"`
 	DayOfWeek       TrainingAvailabilitiesDayOfWeek `json:"dayOfWeek"`
 	StartTime       time.Time                       `json:"startTime"`
 	EndTime         time.Time                       `json:"endTime"`
 }
 
 type TrainingSchedule struct {
-	ID               uint64                        `json:"id"`
+	ID               int32                         `json:"id"`
 	TrainerUsername  sql.NullString                `json:"trainerUsername"`
 	CustomerUsername sql.NullString                `json:"customerUsername"`
 	SessionID        sql.NullInt32                 `json:"sessionId"`
@@ -568,6 +621,7 @@ type TrainingSchedule struct {
 
 type User struct {
 	Username    string         `json:"username"`
+	Password    string         `json:"password"`
 	Email       string         `json:"email"`
 	Role        UsersRole      `json:"role"`
 	FirstName   string         `json:"firstName"`

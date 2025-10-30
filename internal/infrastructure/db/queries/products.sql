@@ -1,37 +1,32 @@
 -- name: ListDurations :many
 SELECT
-  Product_Id,
-  Name,
-  Product_Type,
-  Product_Category,
-  List_Price,
-  Duration_Days,
-  Session_Amount,
-  Is_Active
-FROM
-  PRODUCTS
+  id,             
+  name,             
+  type,            
+  category,         
+  list_price,       
+  duration_days,    
+  session_amount,   
+  is_active
+FROM products
 WHERE
-  Product_Type = 'DURATION'
-  AND Is_Active = 1
-ORDER BY
-  List_Price ASC
-
+  type = 'DURATION'
+  AND is_active = TRUE
+ORDER BY list_price ASC;
 
 -- name: ListSessions :many
 SELECT
-  Product_Id,
-  Name,
-  Product_Type,
-  Product_Category,
-  List_Price,
-  Duration_Days,
-  Session_Amount,
-  Is_Active
-FROM
-  PRODUCTS
+  id,
+  name,
+  type,
+  category,
+  list_price,
+  duration_days,
+  session_amount,
+  is_active
+FROM products
 WHERE
-  Product_Type = 'SESSION'
-  AND Is_Active = 1
-ORDER BY
-  List_Price ASC
+  type = 'SESSION'
+  AND is_active = TRUE
+ORDER BY list_price ASC;
 

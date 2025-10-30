@@ -1,6 +1,7 @@
-CREATE TABLE IF NOT EXISTS customer_logs (
-  id SERIAL PRIMARY KEY,
-  customer_username VARCHAR(100) REFERENCES customers(username) ON DELETE CASCADE,
-  created_at TIMESTAMP NOT NULL DEFAULT now(),
-  log_type ENUM('CHECK_IN', 'CHECK_OUT', 'BOOK_SESSION', 'CANCEL_SESSION') NOT NULL
-);
+CREATE TABLE IF NOT EXISTS `customer_logs` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `customer_username` VARCHAR(100),
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `log_type` ENUM('CHECK_IN','CHECK_OUT','BOOK_SESSION','CANCEL_SESSION') NOT NULL,
+  CONSTRAINT `fk_log_customer` FOREIGN KEY (`customer_username`) REFERENCES `customers`(`username`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
