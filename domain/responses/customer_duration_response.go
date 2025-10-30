@@ -1,6 +1,12 @@
 package responses
 
+import "github.com/WaritDev/private-fitness-backend/internal/infrastructure/db/dbmodel"
 import "time"
+
+type ListCustomerDurationsResponse struct {
+	Data []dbmodel.ListCustomerDurationsRow `json:"data"`
+	Meta PageMeta                           `json:"meta"`
+}
 
 // RegisterCustomerDurationResponse - Use Case 2.1C: Response after successful duration package registration
 type RegisterCustomerDurationResponse struct {

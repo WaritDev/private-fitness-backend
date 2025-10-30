@@ -21,3 +21,17 @@ type PurchaseSuccessResponse struct {
 	DurationID int32  `json:"durationId"`
 	Message    string `json:"message"`
 }
+type CustomerDurationUpdatedResponse struct {
+	Message string `json:"message"`
+}
+
+type UpdateCustomerDurationRequest struct {
+	StartDate      string   `json:"startDate"`
+	PricePaid      float64  `json:"pricePaid"`
+	DiscountAmount *float64 `json:"discountAmount"`
+	Status         string   `json:"status"`
+}
+
+type CustomerDurationDeletedResponse struct {
+	Message string `json:"message"`
+}

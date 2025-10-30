@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
@@ -162,6 +163,54 @@ func (h *CustomerDurationHandler) GetMyDurations(c *fiber.Ctx) error {
 	})
 }
 
+func (h *CustomerDurationHandler) ListDurations(c *fiber.Ctx) error {
+	var q requests.ListCustomerDurationsRequest
+	if err := c.QueryParser(&q); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	resp, err := h.UC.List(c.Context(), q)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	return c.Status(fiber.StatusOK).JSON(resp)
+}
+
+func (h *CustomerDurationHandler) Update(c *fiber.Ctx) error {
+	idStr := c.Params("id")
+	id64, err := strconv.ParseInt(idStr, 10, 32)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid id")
+	}
+
+	var body requests.UpdateCustomerDurationRequest
+	if err := c.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	resp, err := h.UC.UpdateDuration(c.Context(), int32(id64), body)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	return c.Status(fiber.StatusOK).JSON(resp)
+}
+
+func (h *CustomerDurationHandler) Delete(c *fiber.Ctx) error {
+	idStr := c.Params("id")
+	id64, err := strconv.ParseInt(idStr, 10, 32)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid id")
+	}
+
+	resp, err := h.UC.Delete(c.Context(), int32(id64))
+	if err != nil {
+		if err.Error() == "duration package not found" {
+			return fiber.NewError(fiber.StatusNotFound, err.Error())
+		}
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	return c.Status(fiber.StatusOK).JSON(resp)
+}
 // Register - POST /api/customers/durations/register
 // Use Case 2.1C: ลงทะเบียนผู้ใช้งานสำหรับแพ็กเกจ Duration
 func (h *CustomerDurationHandler) Register(c *fiber.Ctx) error {

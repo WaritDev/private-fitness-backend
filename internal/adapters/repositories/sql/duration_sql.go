@@ -3,6 +3,7 @@ package sql
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/WaritDev/private-fitness-backend/domain/repositories"
@@ -117,6 +118,60 @@ func (r *CustomerDurationRepository) mapToCustomerDurationInfo(row dbmodel.Custo
 	}
 }
 
+func (r *CustomerDurationRepository) List(ctx context.Context, limit, offset int32) ([]dbmodel.ListCustomerDurationsRow, error) {
+	return r.q.ListCustomerDurations(ctx, dbmodel.ListCustomerDurationsParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+}
+
+func (r *CustomerDurationRepository) Count(ctx context.Context) (int64, error) {
+	return r.q.CountCustomerDurations(ctx)
+}
+
+func (r *CustomerDurationRepository) GetDurationDaysForDurationID(ctx context.Context, durationID int32) (int32, error) {
+	val, err := r.q.GetDurationDaysForDurationID(ctx, durationID)
+	if err != nil {
+		return 0, err
+	}
+	if !val.Valid {
+		return 0, errors.New("duration_days is NULL")
+	}
+	return val.Int32, nil
+}
+
+func (r *CustomerDurationRepository) UpdateEditableFields(
+	ctx context.Context,
+	p repositories.UpdateCustomerDurationEditableFieldsParams,
+) error {
+	var disc sql.NullString
+	if p.DiscountAmount != nil {
+		disc = sql.NullString{String: *p.DiscountAmount, Valid: true}
+	} else {
+		disc = sql.NullString{Valid: false} // จะอัปเดตเป็น NULL
+	}
+
+	statusEnum := dbmodel.CustomerDurationsStatus(p.Status)
+	return r.q.UpdateCustomerDurationEditableFields(ctx, dbmodel.UpdateCustomerDurationEditableFieldsParams{
+		STRTODATE:      p.StartDateYMD,
+		STRTODATE_2:    p.StartDateYMD,
+		PricePaid:      p.PricePaid,
+		DiscountAmount: disc,
+		Status:         statusEnum,
+		ID:             p.ID,
+	})
+}
+
+func (r *CustomerDurationRepository) Delete(ctx context.Context, id int32) error {
+	res, err := r.q.DeleteCustomerDurationByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if rows, _ := res.RowsAffected(); rows == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
 // RegisterDuration - Use Case 2.1C: Transaction: Create User → Customer → CustomerDuration
 func (r *CustomerDurationRepository) RegisterDuration(ctx context.Context, tx *sql.Tx, params repositories.RegisterDurationParams) (int32, error) {
 	// Use transaction queries
