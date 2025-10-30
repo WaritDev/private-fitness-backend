@@ -34,3 +34,42 @@ JOIN payment_accounts pa ON pa.id = p.payment_account_id
 WHERE p.id = ?
   AND p.is_active = TRUE
   AND pa.is_active = TRUE;
+
+-- name: ListPaymentAccounts :many
+SELECT
+  pa.id,
+  pa.account_name,
+  pa.account_number,
+  pa.bank_name,
+  pa.qr_code_image_url,
+  (pa.is_active = 1)
+FROM payment_accounts pa
+ORDER BY pa.is_active DESC, pa.id DESC
+LIMIT ? OFFSET ?;
+
+-- name: CountPaymentAccounts :one
+SELECT COUNT(pa.id) AS total_items
+FROM payment_accounts pa;
+
+-- name: InsertPaymentAccount :execresult
+INSERT INTO payment_accounts (
+  account_name,
+  account_number,
+  bank_name,
+  qr_code_image_url,
+  is_active
+) VALUES (?, ?, ?, ?, ?);
+
+-- name: UpdatePaymentAccountByID :exec
+UPDATE payment_accounts
+SET
+  account_name      = ?,
+  account_number    = ?,
+  bank_name         = ?,
+  qr_code_image_url = ?,
+  is_active         = ?
+WHERE id = ?;
+
+-- name: DeletePaymentAccountByID :execresult
+DELETE FROM payment_accounts
+WHERE id = ?;

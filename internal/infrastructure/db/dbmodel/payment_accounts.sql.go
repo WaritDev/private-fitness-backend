@@ -10,6 +10,18 @@ import (
 	"database/sql"
 )
 
+const countPaymentAccounts = `-- name: CountPaymentAccounts :one
+SELECT COUNT(pa.id) AS total_items
+FROM payment_accounts pa
+`
+
+func (q *Queries) CountPaymentAccounts(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countPaymentAccounts)
+	var total_items int64
+	err := row.Scan(&total_items)
+	return total_items, err
+}
+
 const createPaymentAccount = `-- name: CreatePaymentAccount :exec
 INSERT INTO payment_accounts (
   account_name,
@@ -43,6 +55,15 @@ func (q *Queries) CreatePaymentAccount(ctx context.Context, arg CreatePaymentAcc
 		arg.IsActive,
 	)
 	return err
+}
+
+const deletePaymentAccountByID = `-- name: DeletePaymentAccountByID :execresult
+DELETE FROM payment_accounts
+WHERE id = ?
+`
+
+func (q *Queries) DeletePaymentAccountByID(ctx context.Context, id int32) (sql.Result, error) {
+	return q.db.ExecContext(ctx, deletePaymentAccountByID, id)
 }
 
 const getPaymentInfoByProductId = `-- name: GetPaymentInfoByProductId :one
@@ -103,4 +124,121 @@ func (q *Queries) GetPaymentInfoByProductId(ctx context.Context, id int32) (GetP
 		&i.AccountActive,
 	)
 	return i, err
+}
+
+const insertPaymentAccount = `-- name: InsertPaymentAccount :execresult
+INSERT INTO payment_accounts (
+  account_name,
+  account_number,
+  bank_name,
+  qr_code_image_url,
+  is_active
+) VALUES (?, ?, ?, ?, ?)
+`
+
+type InsertPaymentAccountParams struct {
+	AccountName    string `json:"accountName"`
+	AccountNumber  string `json:"accountNumber"`
+	BankName       string `json:"bankName"`
+	QrCodeImageUrl string `json:"qrCodeImageUrl"`
+	IsActive       bool   `json:"isActive"`
+}
+
+func (q *Queries) InsertPaymentAccount(ctx context.Context, arg InsertPaymentAccountParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, insertPaymentAccount,
+		arg.AccountName,
+		arg.AccountNumber,
+		arg.BankName,
+		arg.QrCodeImageUrl,
+		arg.IsActive,
+	)
+}
+
+const listPaymentAccounts = `-- name: ListPaymentAccounts :many
+SELECT
+  pa.id,
+  pa.account_name,
+  pa.account_number,
+  pa.bank_name,
+  pa.qr_code_image_url,
+  (pa.is_active = 1)
+FROM payment_accounts pa
+ORDER BY pa.is_active DESC, pa.id DESC
+LIMIT ? OFFSET ?
+`
+
+type ListPaymentAccountsParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+type ListPaymentAccountsRow struct {
+	ID             int32  `json:"id"`
+	AccountName    string `json:"accountName"`
+	AccountNumber  string `json:"accountNumber"`
+	BankName       string `json:"bankName"`
+	QrCodeImageUrl string `json:"qrCodeImageUrl"`
+	Column6        bool   `json:"column6"`
+}
+
+func (q *Queries) ListPaymentAccounts(ctx context.Context, arg ListPaymentAccountsParams) ([]ListPaymentAccountsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listPaymentAccounts, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPaymentAccountsRow
+	for rows.Next() {
+		var i ListPaymentAccountsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.AccountName,
+			&i.AccountNumber,
+			&i.BankName,
+			&i.QrCodeImageUrl,
+			&i.Column6,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updatePaymentAccountByID = `-- name: UpdatePaymentAccountByID :exec
+UPDATE payment_accounts
+SET
+  account_name      = ?,
+  account_number    = ?,
+  bank_name         = ?,
+  qr_code_image_url = ?,
+  is_active         = ?
+WHERE id = ?
+`
+
+type UpdatePaymentAccountByIDParams struct {
+	AccountName    string `json:"accountName"`
+	AccountNumber  string `json:"accountNumber"`
+	BankName       string `json:"bankName"`
+	QrCodeImageUrl string `json:"qrCodeImageUrl"`
+	IsActive       bool   `json:"isActive"`
+	ID             int32  `json:"id"`
+}
+
+func (q *Queries) UpdatePaymentAccountByID(ctx context.Context, arg UpdatePaymentAccountByIDParams) error {
+	_, err := q.db.ExecContext(ctx, updatePaymentAccountByID,
+		arg.AccountName,
+		arg.AccountNumber,
+		arg.BankName,
+		arg.QrCodeImageUrl,
+		arg.IsActive,
+		arg.ID,
+	)
+	return err
 }
