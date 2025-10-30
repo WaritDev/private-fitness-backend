@@ -56,3 +56,76 @@ SELECT
 FROM customer_durations
 WHERE id = ?
 LIMIT 1;
+
+-- name: ListCustomerDurations :many
+SELECT
+  cd.id,
+  cd.customer_username,
+  u.first_name  AS customer_first_name,
+  u.last_name   AS customer_last_name,
+  cd.product_id,
+  p.name        AS product_name,
+  p.type,
+  p.category,
+  p.duration_days,
+  cd.sales_username,
+  cd.purchase_date,
+  cd.start_date,
+  cd.end_date,
+  cd.price_paid,
+  cd.discount_amount,
+  cd.status
+FROM customer_durations cd
+JOIN customers c ON c.username = cd.customer_username
+JOIN users     u ON u.username = c.username
+JOIN products  p ON p.id = cd.product_id
+ORDER BY cd.created_at DESC, cd.id DESC
+LIMIT ? OFFSET ?;
+
+-- name: CountCustomerDurations :one
+SELECT COUNT(cd.id) AS total_items
+FROM customer_durations cd
+JOIN customers c ON c.username = cd.customer_username
+JOIN users     u ON u.username = c.username
+JOIN products  p ON p.id = cd.product_id;
+
+-- name: GetCustomerDurationByID :one
+SELECT
+  cd.id,
+  cd.customer_username,
+  cd.product_id,
+  cd.sales_username,
+  cd.purchase_date,
+  cd.start_date,
+  cd.end_date,
+  cd.price_paid,
+  cd.discount_amount,
+  cd.status
+FROM customer_durations cd
+WHERE cd.id = ?;
+
+-- name: GetDurationDaysForDurationID :one
+SELECT p.duration_days
+FROM customer_durations cd
+JOIN products p ON p.id = cd.product_id
+WHERE cd.id = ?
+  AND p.type = 'DURATION'
+  AND p.is_active = 1
+  AND p.duration_days IS NOT NULL
+LIMIT 1;
+
+-- name: UpdateCustomerDurationEditableFields :exec
+UPDATE customer_durations cd
+JOIN products p ON p.id = cd.product_id
+SET
+  cd.start_date      = STR_TO_DATE(?, '%Y-%m-%d'),
+  cd.end_date        = DATE_ADD(STR_TO_DATE(?, '%Y-%m-%d'), INTERVAL (p.duration_days - 1) DAY),
+  cd.price_paid      = ?,
+  cd.discount_amount = ?,
+  cd.status          = ?,
+  cd.updated_at      = NOW()
+WHERE cd.id = ?;
+
+-- name: DeleteCustomerDurationByID :execresult
+DELETE FROM customer_durations
+WHERE id = ?;
