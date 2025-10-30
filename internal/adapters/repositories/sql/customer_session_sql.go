@@ -263,3 +263,7 @@ func (r *CustomerSessionRepository) Delete(ctx context.Context, id int32) error 
 	}
 	return nil
 }
+
+func (r *CustomerSessionRepository) GetByID(ctx context.Context, id int32) (dbmodel.GetCustomerSessionByIDRow, error) {
+	return r.q.GetCustomerSessionByID(ctx, id)
+}

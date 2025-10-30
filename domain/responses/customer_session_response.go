@@ -61,3 +61,17 @@ type CustomerSessionUpdatedResponse struct {
 type CustomerSessionDeletedResponse struct {
     Message string `json:"message"`
 }
+
+type CustomerSession struct {
+	ID               string `json:"id"`
+	CustomerUsername string `json:"customerUsername"`
+	TrainerUsername  string `json:"trainerUsername"`
+	ProductID        string `json:"productId"`
+	SalesUsername    string `json:"salesUsername"`
+	PurchaseDate     string `json:"purchaseDate"`
+	TotalSessions    int32  `json:"totalSessions"`
+	UsedSessions     int32  `json:"usedSessions"`
+	PricePaid        int64  `json:"pricePaid"`
+	DiscountAmount   int64  `json:"discountAmount"`
+	Status           string `json:"status"`
+}
