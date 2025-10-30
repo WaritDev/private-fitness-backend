@@ -1,8 +1,10 @@
 package rest
 
 import (
+	"net/http"
 	"strconv"
 
+	"github.com/WaritDev/private-fitness-backend/domain/requests"
 	"github.com/WaritDev/private-fitness-backend/domain/usecases"
 	"github.com/gofiber/fiber/v2"
 )
@@ -64,4 +66,69 @@ func (h *PaymentHandler) GetPaymentInfo(c *fiber.Ctx) error {
 		"message":     "Payment info retrieved successfully",
 		"result":      result,
 	})
+}
+
+
+func (h *PaymentHandler) List(c *fiber.Ctx) error {
+	var req requests.ListPaymentAccountsRequest
+	if v := c.Query("page"); v != "" {
+		_ = c.QueryParser(&req)
+	} else {
+		_ = c.BodyParser(&req)
+	}
+
+	res, err := h.paymentUC.List(c.Context(), req)
+	if err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.Status(http.StatusOK).JSON(res)
+}
+
+func (h *PaymentHandler) Create(c *fiber.Ctx) error {
+	var req requests.CreatePaymentAccountRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	res, err := h.paymentUC.Create(c.Context(), req)
+	if err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.Status(http.StatusOK).JSON(res)
+}
+
+// POST /api/payments/:id/update
+func (h *PaymentHandler) Update(c *fiber.Ctx) error {
+	idStr := c.Params("id")
+	id64, err := strconv.ParseInt(idStr, 10, 32)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id"})
+	}
+
+	var req requests.UpdatePaymentAccountRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	res, err := h.paymentUC.Update(c.Context(), int32(id64), req)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(res)
+}
+
+// DELETE /api/payments/:id
+func (h *PaymentHandler) Delete(c *fiber.Ctx) error {
+    idStr := c.Params("id")
+    id64, err := strconv.ParseInt(idStr, 10, 32)
+    if err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id"})
+    }
+
+    res, err := h.paymentUC.Delete(c.Context(), int32(id64))
+    if err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+    }
+    return c.Status(fiber.StatusOK).JSON(res)
 }
