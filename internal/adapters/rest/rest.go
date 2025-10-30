@@ -18,6 +18,7 @@ func ProvideHandler(
 	product *ProductHandler,
 	trainer *TrainerHandler,
 	payment *PaymentHandler,
+	staff *StaffHandler,
 ) *Handler {
 	return &Handler{
 		User:    user,
@@ -26,5 +27,6 @@ func ProvideHandler(
 		Product: product,
 		Trainer: trainer,
 		Payment: payment,
+		Staff: staff,
 	}
 }
