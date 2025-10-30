@@ -66,6 +66,42 @@ func (q *Queries) DeletePaymentAccountByID(ctx context.Context, id int32) (sql.R
 	return q.db.ExecContext(ctx, deletePaymentAccountByID, id)
 }
 
+const getPaymentAccountByID = `-- name: GetPaymentAccountByID :one
+SELECT
+  pa.id,
+  pa.account_name,
+  pa.account_number,
+  pa.bank_name,
+  pa.qr_code_image_url,
+  (pa.is_active = 1)
+FROM payment_accounts pa
+WHERE id = ?
+LIMIT 1
+`
+
+type GetPaymentAccountByIDRow struct {
+	ID             int32  `json:"id"`
+	AccountName    string `json:"accountName"`
+	AccountNumber  string `json:"accountNumber"`
+	BankName       string `json:"bankName"`
+	QrCodeImageUrl string `json:"qrCodeImageUrl"`
+	Column6        bool   `json:"column6"`
+}
+
+func (q *Queries) GetPaymentAccountByID(ctx context.Context, id int32) (GetPaymentAccountByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getPaymentAccountByID, id)
+	var i GetPaymentAccountByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.AccountName,
+		&i.AccountNumber,
+		&i.BankName,
+		&i.QrCodeImageUrl,
+		&i.Column6,
+	)
+	return i, err
+}
+
 const getPaymentInfoByProductId = `-- name: GetPaymentInfoByProductId :one
 SELECT 
   p.id AS product_id,

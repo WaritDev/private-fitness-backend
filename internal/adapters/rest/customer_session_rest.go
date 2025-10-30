@@ -1,7 +1,10 @@
 package rest
 
 import (
+	"database/sql"
+	"errors"
 	"strconv"
+	"strings"
 
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
 	"github.com/WaritDev/private-fitness-backend/domain/usecases"
@@ -206,4 +209,21 @@ func (h *CustomerSessionHandler) Delete(c *fiber.Ctx) error {
     }
 
     return c.Status(fiber.StatusOK).JSON(res)
+}
+
+func (h *CustomerSessionHandler) GetByID(c *fiber.Ctx) error {
+	id := strings.TrimSpace(c.Params("id"))
+	if id == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "id required"})
+	}
+
+	resp, err := h.useCase.GetByID(c.Context(), id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"message": "customer_session not found"})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": err.Error()})
+	}
+
+	return c.JSON(resp)
 }

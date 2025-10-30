@@ -66,3 +66,12 @@ type PaymentAccountUpdatedResponse struct {
 type PaymentAccountDeletedResponse struct {
     Message string `json:"message"`
 }
+
+type PaymentAccount struct {
+	ID              string `json:"id"`
+	AccountName     string `json:"accountName"`
+	AccountNumber   string `json:"accountNumber"`
+	BankName        string `json:"bankName"`
+	QRCodeImageURL  string `json:"qrCodeImageUrl"`
+	IsActive        bool   `json:"isActive"`
+}

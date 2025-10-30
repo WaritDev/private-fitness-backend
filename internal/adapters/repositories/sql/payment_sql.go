@@ -97,3 +97,7 @@ func (r *PaymentAccountRepository) Delete(ctx context.Context, id int32) error {
     }
     return err
 }
+
+func (r *PaymentAccountRepository) GetByID(ctx context.Context, id int32) (dbmodel.GetPaymentAccountByIDRow, error) {
+	return r.q.GetPaymentAccountByID(ctx, id)
+}

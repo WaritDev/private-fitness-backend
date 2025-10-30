@@ -14,6 +14,7 @@ import (
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
 	"github.com/WaritDev/private-fitness-backend/domain/responses"
 	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db/dbmodel"
+	"github.com/WaritDev/private-fitness-backend/utils"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -291,4 +292,45 @@ func (uc *CustomerSessionUseCase) Delete(
     return responses.CustomerSessionDeletedResponse{
         Message: fmt.Sprintf("Sessions Course ID: %d deleted successfully", id),
     }, nil
+}
+
+func (uc *CustomerSessionUseCase) GetByID(ctx context.Context, id string) (responses.CustomerSession, error) {
+	if strings.TrimSpace(id) == "" {
+		return responses.CustomerSession{}, errors.New("id required")
+	}
+
+	id32, err := utils.Atoi32(id)
+	if err != nil {
+		return responses.CustomerSession{}, errors.New("invalid id")
+	}
+
+	row, err := uc.sessionRepo.GetByID(ctx, id32)
+	if err != nil {
+		return responses.CustomerSession{}, err
+	}
+
+	// --- แปลง DECIMAL(x,2) -> int64 ---
+	pricePaid, err := utils.ParseDecimalToInt64(row.PricePaid, 2)
+	if err != nil {
+		return responses.CustomerSession{}, err
+	}
+	discount, err := utils.ParseDecimalToInt64(row.DiscountAmount.String, 2)
+	if err != nil {
+		return responses.CustomerSession{}, err
+	}
+
+	resp := responses.CustomerSession{
+		ID:               utils.Itoa(row.ID),
+		CustomerUsername: utils.NS(row.CustomerUsername),   // NullString -> string
+		TrainerUsername:  utils.NS(row.TrainerUsername),    // NullString -> string
+		SalesUsername:    utils.NS(row.SalesUsername),      // NullString -> string
+		ProductID:        utils.Itoa(utils.NI32(row.ProductID)), // NullInt32 -> int32 -> string
+		PurchaseDate:     utils.ToYMD(row.PurchaseDate),    // time.Time -> YYYY-MM-DD
+		TotalSessions:    row.TotalSessions,                // int32
+		UsedSessions:     utils.NI32(row.UsedSessions),     // NullInt32 -> int32
+		PricePaid:        pricePaid,                        // int64
+		DiscountAmount:   discount,                         // int64
+		Status:           strings.ToUpper(string(row.Status)),
+	}
+	return resp, nil
 }

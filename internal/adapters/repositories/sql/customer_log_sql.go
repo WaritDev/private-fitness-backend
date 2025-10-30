@@ -63,3 +63,7 @@ func (r *CustomerLogRepository) DeleteByID(ctx context.Context, id int32) (int64
 	}
 	return res.RowsAffected()
 }
+
+func (r *CustomerLogRepository) GetByID(ctx context.Context, id int32) (dbmodel.GetCustomerLogByIDRow, error) {
+	return r.q.GetCustomerLogByID(ctx, id)
+}

@@ -2,6 +2,7 @@ package usecases
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"math"
 	"strings"
@@ -263,4 +264,54 @@ func (uc *StaffUsecase) DeleteStaff(ctx context.Context, targetUsername string) 
 	return responses.StaffDeletedResponse{
 		Message: "Username: " + targetUsername + " deleted successfully",
 	}, nil
+}
+
+func (uc *StaffUsecase) GetStaffByUsername(ctx context.Context, username string) (responses.Staff, error) {
+	if strings.TrimSpace(username) == "" {
+		return responses.Staff{}, errors.New("username required")
+	}
+
+	row, err := uc.repo.GetByUsername(ctx, username)
+	if err != nil {
+		return responses.Staff{}, err
+	}
+
+	// --- แปลงวันที่ให้เป็น YYYY-MM-DD (รองรับ type ต่าง ๆ ที่ sqlc อาจสร้าง) ---
+	var ymd string
+	switch v := any(row.DateOfBirth).(type) {
+	case time.Time:
+		ymd = v.Format("2006-01-02")
+	case *time.Time:
+		if v != nil {
+			ymd = v.Format("2006-01-02")
+		}
+	case sql.NullTime:
+		if v.Valid {
+			ymd = v.Time.Format("2006-01-02")
+		}
+	case *sql.NullTime:
+		if v != nil && v.Valid {
+			ymd = v.Time.Format("2006-01-02")
+		}
+	}
+
+	resp := responses.Staff{
+		Username:    row.Username,
+		Role:        strings.ToUpper(string(row.Role)),
+		FirstName:   row.FirstName,
+		LastName:    row.LastName,
+		Gender:      strings.ToUpper(string(row.Gender)),
+		DateOfBirth: ymd,
+		PhoneNumber: row.PhoneNumber,
+		Gmail:       row.Gmail,
+		Specialty: responses.NullString{
+			String: row.Specialty.String,
+			Valid:  row.Specialty.Valid,
+		},
+		IsActive: responses.NullBool{
+			Bool:  row.IsActive.Bool,
+			Valid: row.IsActive.Valid,
+		},
+	}
+	return resp, nil
 }

@@ -22,6 +22,7 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	staffs.Post("/create", handler.Staff.CreateStaff)
 	staffs.Post("/:username/update", handler.Staff.UpdateStaff)
 	staffs.Delete("/:username", handler.Staff.DeleteStaff)
+	staffs.Get("/:username", handler.Staff.GetStaffByUsername)
 
 	// Manager routes
 	managers := apiGroup.Group("/manager")
@@ -32,24 +33,28 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	customers.Get("/", handler.Customer.ListCustomers)
 	customers.Post("/:username/update", handler.Customer.UpdateCustomer)
 	customers.Delete("/:username", handler.Customer.DeleteCustomer)
+	customers.Get("/:username", handler.Customer.GetByUsername)
 
 	// Customer Duration routes
 	durations := apiGroup.Group("/customer-durations")
 	durations.Get("/", handler.CustomerDuration.ListDurations)
 	durations.Post("/:id/update", handler.CustomerDuration.Update)
 	durations.Delete("/:id", handler.CustomerDuration.Delete)
+	durations.Get("/:id", handler.CustomerDuration.GetByID)
 
 	// Customer Session routes
 	sessions := apiGroup.Group("/customer-sessions")
 	sessions.Get("/", handler.CustomerSession.ListSessions)
 	sessions.Post("/:id/update", handler.CustomerSession.Update)
 	sessions.Delete("/:id", handler.CustomerSession.Delete)
+	sessions.Get("/:id", handler.CustomerSession.GetByID)
 
 	// Customer Log routes
 	customerLogs := apiGroup.Group("/customer-logs")
 	customerLogs.Get("/", handler.CustomerLog.List)
 	customerLogs.Post("/:id/update", handler.CustomerLog.Update)
 	customerLogs.Delete("/:id", handler.CustomerLog.Delete)
+	customerLogs.Get("/:id", handler.CustomerLog.GetByID)
 
 	// Auth routes
 	authGroup := apiGroup.Group("/auth")
@@ -70,6 +75,7 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	products.Post("/create", handler.Product.Create)
 	products.Post("/:id/update", handler.Product.Update)
 	products.Delete("/:id", handler.Product.Delete)
+	products.Get("/:id", handler.Product.GetByID)
 
 	// Dynamic route must be last
 	products.Get("/:id", handler.Product.GetProductByID)
@@ -102,6 +108,7 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	payments.Post("/create", handler.Payment.Create)
 	payments.Post("/:id/update", handler.Payment.Update)
 	payments.Delete("/:id", handler.Payment.Delete)
+	payments.Get("/:id", handler.Payment.GetByID)
 
 	// Customer registration routes (after Sales pre-entry)
 	customers.Post("/sessions/register", handler.CustomerSession.Register)

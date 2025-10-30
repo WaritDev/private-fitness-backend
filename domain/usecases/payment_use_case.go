@@ -8,10 +8,12 @@ import (
 	"math"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/WaritDev/private-fitness-backend/domain/repositories"
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
 	"github.com/WaritDev/private-fitness-backend/domain/responses"
+	"github.com/WaritDev/private-fitness-backend/utils"
 )
 
 type PaymentUseCase struct {
@@ -189,4 +191,33 @@ func (uc *PaymentUseCase) Delete(ctx context.Context, id int32) (responses.Payme
     return responses.PaymentAccountDeletedResponse{
         Message: fmt.Sprintf("Payment Account: %d deleted successfully", id),
     }, nil
+}
+
+func (uc *PaymentUseCase) GetByID(ctx context.Context, paymentID string) (responses.PaymentAccount, error) {
+	if strings.TrimSpace(paymentID) == "" {
+		return responses.PaymentAccount{}, errors.New("paymentId required")
+	}
+
+	id32, err := utils.Atoi32(paymentID)
+	if err != nil {
+		return responses.PaymentAccount{}, errors.New("invalid paymentId")
+	}
+
+	row, err := uc.paymentRepo.GetByID(ctx, id32)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return responses.PaymentAccount{}, errors.New("payment account not found")
+		}
+		return responses.PaymentAccount{}, err
+	}
+
+	out := responses.PaymentAccount{
+		ID:             utils.Itoa(row.ID),
+		AccountName:    row.AccountName,
+		AccountNumber:  row.AccountNumber,
+		BankName:       row.BankName,
+		QRCodeImageURL: row.QrCodeImageUrl,
+		IsActive:       row.Column6,
+	}
+	return out, nil
 }

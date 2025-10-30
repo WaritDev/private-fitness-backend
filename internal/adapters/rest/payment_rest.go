@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"database/sql"
 	"net/http"
 	"strconv"
 
@@ -131,4 +132,16 @@ func (h *PaymentHandler) Delete(c *fiber.Ctx) error {
         return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
     }
     return c.Status(fiber.StatusOK).JSON(res)
+}
+
+func (h *PaymentHandler) GetByID(c *fiber.Ctx) error {
+	id := c.Params("id")
+	resp, err := h.paymentUC.GetByID(c.Context(), id)
+	if err != nil {
+		if err.Error() == "payment account not found" || err == sql.ErrNoRows {
+			return fiber.NewError(fiber.StatusNotFound, err.Error())
+		}
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	return c.JSON(resp)
 }
