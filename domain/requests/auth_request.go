@@ -14,7 +14,7 @@ type SignupRequest struct {
 	Gender      string `json:"gender"`
 	DateOfBirth string `json:"dateOfBirth"`
 	PhoneNumber string `json:"phone" validate:"required,min=1"`
-	Email       string `json:"email" validate:"required,email"`
+	Gmail       string `json:"gmail" validate:"required,gmail"`
 
 	// Customer-specific info
 	MarketingSource              string `json:"marketingSource"`

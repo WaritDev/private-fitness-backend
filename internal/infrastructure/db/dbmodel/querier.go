@@ -11,7 +11,7 @@ import (
 
 type Querier interface {
 	ActiveMembersToday(ctx context.Context) (int64, error)
-	CheckEmailExists(ctx context.Context, email string) (int64, error)
+	CheckGmailExists(ctx context.Context, gmail string) (int64, error)
 	CheckPhoneNumberExists(ctx context.Context, phoneNumber string) (int64, error)
 	// ตรวจสอบว่ามีนัดซ้อนทับหรือไม่
 	CheckScheduleOverlap(ctx context.Context, arg CheckScheduleOverlapParams) (int64, error)

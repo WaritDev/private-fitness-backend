@@ -24,7 +24,7 @@ func (u *UserUseCase) CheckPhoneNumberExists(ctx context.Context, phoneNumber st
 	return u.repo.CheckPhoneNumberExists(ctx, phoneNumber)
 }
 
-// CheckEmailExists checks if email is already registered (Q3S.2)
-func (u *UserUseCase) CheckEmailExists(ctx context.Context, email string) (bool, error) {
-	return u.repo.CheckEmailExists(ctx, email)
+// CheckGmailExists checks if gmail is already registered (Q3S.2)
+func (u *UserUseCase) CheckGmailExists(ctx context.Context, gmail string) (bool, error) {
+	return u.repo.CheckGmailExists(ctx, gmail)
 }

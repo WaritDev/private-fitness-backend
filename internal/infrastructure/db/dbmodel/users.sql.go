@@ -11,14 +11,14 @@ import (
 	"time"
 )
 
-const checkEmailExists = `-- name: CheckEmailExists :one
-SELECT COUNT(email) as count
+const checkGmailExists = `-- name: CheckGmailExists :one
+SELECT COUNT(gmail) as count
 FROM users
-WHERE email = ?
+WHERE gmail = ?
 `
 
-func (q *Queries) CheckEmailExists(ctx context.Context, email string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, checkEmailExists, email)
+func (q *Queries) CheckGmailExists(ctx context.Context, gmail string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, checkGmailExists, gmail)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -51,14 +51,13 @@ func (q *Queries) CheckUsernameExists(ctx context.Context, username string) (int
 }
 
 const createUser = `-- name: CreateUser :exec
-INSERT INTO users (username, password, email, role, first_name, last_name, gender, date_of_birth, phone_number, gmail, specialty, is_active)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO users (username, password, role, first_name, last_name, gender, date_of_birth, phone_number, gmail, specialty, is_active)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type CreateUserParams struct {
 	Username    string         `json:"username"`
 	Password    string         `json:"password"`
-	Email       string         `json:"email"`
 	Role        UsersRole      `json:"role"`
 	FirstName   string         `json:"firstName"`
 	LastName    string         `json:"lastName"`
@@ -74,7 +73,6 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 	_, err := q.db.ExecContext(ctx, createUser,
 		arg.Username,
 		arg.Password,
-		arg.Email,
 		arg.Role,
 		arg.FirstName,
 		arg.LastName,
@@ -117,14 +115,14 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUs
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT username, email, created_at
+SELECT username, gmail, created_at
 FROM users
 ORDER BY username
 `
 
 type ListUsersRow struct {
 	Username  string    `json:"username"`
-	Email     string    `json:"email"`
+	Gmail     string    `json:"gmail"`
 	CreatedAt time.Time `json:"createdAt"`
 }
 
@@ -137,7 +135,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
 	var items []ListUsersRow
 	for rows.Next() {
 		var i ListUsersRow
-		if err := rows.Scan(&i.Username, &i.Email, &i.CreatedAt); err != nil {
+		if err := rows.Scan(&i.Username, &i.Gmail, &i.CreatedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

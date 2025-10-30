@@ -48,20 +48,20 @@ func (h *UserHandler) CheckPhoneNumber(c *fiber.Ctx) error {
 	})
 }
 
-// GET /api/users/check-email?email=test@example.com
+// GET /api/users/check-gmail?gmail=test@example.com
 // ตรวจสอบว่าอีเมลซ้ำหรือไม่ (Q3S.2)
-func (h *UserHandler) CheckEmail(c *fiber.Ctx) error {
-	email := c.Query("email")
-	if email == "" {
+func (h *UserHandler) CheckGmail(c *fiber.Ctx) error {
+	gmail := c.Query("gmail")
+	if gmail == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":      "Bad Request",
 			"status_code": fiber.StatusBadRequest,
-			"message":     "Email is required",
+			"message":     "Gmail is required",
 			"result":      nil,
 		})
 	}
 
-	exists, err := h.UC.CheckEmailExists(c.Context(), email)
+	exists, err := h.UC.CheckGmailExists(c.Context(), gmail)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":      "Internal Server Error",
@@ -74,11 +74,11 @@ func (h *UserHandler) CheckEmail(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      "OK",
 		"status_code": fiber.StatusOK,
-		"message":     "Email check completed",
+		"message":     "Gmail check completed",
 		"result": fiber.Map{
 			"exists":    exists,
 			"available": !exists,
-			"email":     email,
+			"gmail":     gmail,
 		},
 	})
 }

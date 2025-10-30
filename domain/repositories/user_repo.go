@@ -15,7 +15,7 @@ type CreateUserParams struct {
 	Gender      *string
 	DateOfBirth *string
 	PhoneNumber *string
-	Email       *string
+	Gmail       *string
 }
 
 type CreateCustomerParams struct {
@@ -36,6 +36,6 @@ type UserRepo interface {
 	GetByUsername(ctx context.Context, username string) (dbmodel.GetUserByUsernameRow, error)
 	CheckUsernameExists(ctx context.Context, username string) (bool, error)
 	CheckPhoneNumberExists(ctx context.Context, phoneNumber string) (bool, error)
-	CheckEmailExists(ctx context.Context, email string) (bool, error)
+	CheckGmailExists(ctx context.Context, email string) (bool, error)
 	CreateUserWithCustomer(ctx context.Context, user CreateUserParams, customer CreateCustomerParams) error
 }

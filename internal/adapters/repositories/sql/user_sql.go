@@ -28,7 +28,7 @@ func (r *UserRepository) List(ctx context.Context) ([]dbmodel.User, error) {
 	for _, row := range rows {
 		users = append(users, dbmodel.User{
 			Username:  row.Username,
-			Email:     row.Email,
+			Gmail:     row.Gmail,
 			CreatedAt: row.CreatedAt,
 		})
 	}
@@ -56,9 +56,9 @@ func (r *UserRepository) CheckPhoneNumberExists(ctx context.Context, phoneNumber
 	return count > 0, nil
 }
 
-// CheckEmailExists checks if email exists in database (Q3S.2)
-func (r *UserRepository) CheckEmailExists(ctx context.Context, email string) (bool, error) {
-	count, err := r.q.CheckEmailExists(ctx, email)
+// CheckGmailExists checks if email exists in database (Q3S.2)
+func (r *UserRepository) CheckGmailExists(ctx context.Context, email string) (bool, error) {
+	count, err := r.q.CheckGmailExists(ctx, email)
 	if err != nil {
 		return false, err
 	}
@@ -88,14 +88,13 @@ func (r *UserRepository) CreateUserWithCustomer(ctx context.Context, user reposi
 	err = qtx.CreateUser(ctx, dbmodel.CreateUserParams{
 		Username:    user.Username,
 		Password:    user.Password,
-		Email:       stringOrEmpty(user.Email),
+		Gmail:       stringOrEmpty(user.Gmail),
 		Role:        dbmodel.UsersRole(user.Role),
 		FirstName:   user.FirstName,
 		LastName:    user.LastName,
 		Gender:      dbmodel.UsersGender(stringOrEmpty(user.Gender)),
 		DateOfBirth: dobTime,
 		PhoneNumber: stringOrEmpty(user.PhoneNumber),
-		Gmail:       stringOrEmpty(user.Email),
 		Specialty:   sql.NullString{Valid: false},
 		IsActive:    sql.NullBool{Bool: true, Valid: true},
 	})
