@@ -21,6 +21,7 @@ type Querier interface {
 	CheckGmailExists(ctx context.Context, lower string) (int64, error)
 	CheckGmailExistsExceptUsername(ctx context.Context, arg CheckGmailExistsExceptUsernameParams) (int64, error)
 	CheckGmailExistsUser(ctx context.Context, gmail string) (int64, error)
+	CheckPaymentAccountActive(ctx context.Context, id int32) (int64, error)
 	CheckPhoneExists(ctx context.Context, phoneNumber string) (int64, error)
 	CheckPhoneExistsExceptUsername(ctx context.Context, arg CheckPhoneExistsExceptUsernameParams) (int64, error)
 	CheckPhoneNumberExistsUser(ctx context.Context, phoneNumber string) (int64, error)
@@ -39,6 +40,8 @@ type Querier interface {
 	CountCustomerDurations(ctx context.Context) (int64, error)
 	CountCustomerSessions(ctx context.Context) (int64, error)
 	CountCustomers(ctx context.Context) (int64, error)
+	CountProductReferences(ctx context.Context, arg CountProductReferencesParams) (CountProductReferencesRow, error)
+	CountProducts(ctx context.Context) (int64, error)
 	CountStaffs(ctx context.Context) (int64, error)
 	CreateCustomer(ctx context.Context, arg CreateCustomerParams) error
 	CreateCustomerDuration(ctx context.Context, arg CreateCustomerDurationParams) error
@@ -67,6 +70,7 @@ type Querier interface {
 	DeleteCustomerSessionByID(ctx context.Context, id int32) (sql.Result, error)
 	DeleteCustomerSessionBySales(ctx context.Context, salesUsername sql.NullString) error
 	DeleteCustomerSessionByTrainer(ctx context.Context, trainerUsername sql.NullString) error
+	DeleteProductByID(ctx context.Context, id int32) (sql.Result, error)
 	DeleteTrainerAvailabilityByTrainer(ctx context.Context, trainerUsername string) error
 	DeleteTrainingScheduleByCustomer(ctx context.Context, customerUsername sql.NullString) error
 	DeleteTrainingScheduleByTrainer(ctx context.Context, trainerUsername sql.NullString) error
@@ -102,6 +106,8 @@ type Querier interface {
 	GetUserRole(ctx context.Context, username string) (UsersRole, error)
 	// Q3C.6 - อัปเดตจำนวนครั้งที่ใช้ไปแล้ว
 	IncrementUsedSessions(ctx context.Context, id int32) error
+	InsertProductDuration(ctx context.Context, arg InsertProductDurationParams) (sql.Result, error)
+	InsertProductSession(ctx context.Context, arg InsertProductSessionParams) (sql.Result, error)
 	ListAllProducts(ctx context.Context) ([]Product, error)
 	// ดึงรายชื่อเทรนเนอร์ทั้งหมดที่ active (สำหรับ dropdown)
 	ListAllTrainers(ctx context.Context) ([]ListAllTrainersRow, error)
@@ -109,6 +115,7 @@ type Querier interface {
 	ListCustomerSessions(ctx context.Context, arg ListCustomerSessionsParams) ([]ListCustomerSessionsRow, error)
 	ListCustomers(ctx context.Context, arg ListCustomersParams) ([]ListCustomersRow, error)
 	ListDurations(ctx context.Context) ([]ListDurationsRow, error)
+	ListProducts(ctx context.Context, arg ListProductsParams) ([]ListProductsRow, error)
 	ListSessions(ctx context.Context) ([]ListSessionsRow, error)
 	ListStaffs(ctx context.Context, arg ListStaffsParams) ([]ListStaffsRow, error)
 	ListUsers(ctx context.Context) ([]ListUsersRow, error)
@@ -125,6 +132,8 @@ type Querier interface {
 	UpdateCustomerUserWithPassword(ctx context.Context, arg UpdateCustomerUserWithPasswordParams) error
 	// อัปเดตตาราง customers
 	UpdateCustomersDetail(ctx context.Context, arg UpdateCustomersDetailParams) error
+	UpdateProductDuration(ctx context.Context, arg UpdateProductDurationParams) error
+	UpdateProductSession(ctx context.Context, arg UpdateProductSessionParams) error
 	UpdateStaffNoPassword(ctx context.Context, arg UpdateStaffNoPasswordParams) error
 	UpdateStaffWithPassword(ctx context.Context, arg UpdateStaffWithPasswordParams) error
 	// Q0S.2: Update updated_at when user logs in (track last active time)

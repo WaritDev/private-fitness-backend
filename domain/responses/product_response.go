@@ -1,6 +1,10 @@
 package responses
 
-import "time"
+import (
+	"time"
+
+	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db/dbmodel"
+)
 
 type ProductResponse struct {
 	ID               int32     `json:"id"`
@@ -14,4 +18,22 @@ type ProductResponse struct {
 	PaymentAccountID int32     `json:"paymentAccountId"`
 	CreatedAt        time.Time `json:"createdAt"`
 	UpdatedAt        time.Time `json:"updatedAt"`
+}
+
+type ListProductsResponse struct {
+	Data []dbmodel.ListProductsRow `json:"data"`
+	Meta PageMeta                  `json:"meta"`
+}
+
+type ProductCreatedResponse struct {
+	ID      int32  `json:"id"`
+	Message string `json:"message"`
+}
+
+type ProductUpdatedResponse struct {
+	Message string `json:"message"`
+}
+
+type ProductDeletedResponse struct {
+    Message string `json:"message"`
 }
