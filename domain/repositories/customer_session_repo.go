@@ -25,6 +25,9 @@ type CustomerSessionRepository interface {
 	// DecrementUsedSessions - ยกเลิกการจอง: ลดจำนวนครั้งที่ใช้ไป (used_sessions - 1)
 	DecrementUsedSessions(ctx context.Context, tx *sql.Tx, sessionID int32) error
 
+	// IncrementUsedSessionsByUsername - Q5C.2: อัปเดตจำนวนครั้งที่ใช้ไปสำหรับ Check-in (Use Case 5C)
+	IncrementUsedSessionsByUsername(ctx context.Context, customerUsername string) error
+
 	// GetCustomerActiveSessions - ดึงข้อมูล Session packages ที่ยัง ACTIVE ของลูกค้า
 	GetCustomerActiveSessions(ctx context.Context, customerUsername string) ([]ActiveSessionPackageInfo, error)
 
@@ -35,7 +38,6 @@ type CustomerSessionRepository interface {
 	CheckTrainerExists(ctx context.Context, username string) (int64, error)
 
 	Delete(ctx context.Context, id int32) error
-
 }
 
 // ActiveSessionInfo - ข้อมูล Session package ที่ active
@@ -112,7 +114,7 @@ type TrainingScheduleParams struct {
 }
 
 type UpdateCustomerSessionEditableFieldsParams struct {
-	ID             int32
+	ID              int32
 	TrainerUsername string
 	PricePaid       string
 	DiscountAmount  sql.NullString

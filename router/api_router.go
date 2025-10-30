@@ -105,6 +105,13 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	bookings.Post("/book", handler.Booking.BookAppointment)           // Q3C: Book appointment with trainer
 	bookings.Delete("/cancel/:id", handler.Booking.CancelAppointment) // Cancel appointment
 
+	// Member routes (Use Case 5C: สแกนเข้า Fitness)
+	member := apiGroup.Group("/member")
+	member.Post("/qrcode", handler.Member.GenerateQRCode) // Generate QR Code for check-in
+
+	// Check-in route (public - accessed by QR scanner)
+	apiGroup.Get("/checkin", handler.Member.CheckIn) // Check-in via QR Code scan
+
 	// Protected routes
 	// customers := apiGroup.Group("/customer/")
 	// customers.

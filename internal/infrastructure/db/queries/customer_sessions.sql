@@ -29,6 +29,18 @@ UPDATE customer_sessions
 SET used_sessions = used_sessions + 1
 WHERE id = ?;
 
+-- name: IncrementUsedSessionsByUsername :exec
+-- Q5C.2 - อัปเดตจำนวนครั้งที่ใช้ไปแล้วสำหรับ Check-in (Use Case 5C)
+-- ใช้ session package ACTIVE ที่ใหม่ที่สุด
+UPDATE customer_sessions
+SET used_sessions = used_sessions + 1,
+    updated_at = NOW()
+WHERE customer_username = ?
+  AND status = 'ACTIVE'
+  AND used_sessions < total_sessions
+ORDER BY created_at DESC
+LIMIT 1;
+
 -- name: GetActiveSessionByCustomer :one
 -- หา Session package ACTIVE ของ Customer (สำหรับการจอง)
 SELECT

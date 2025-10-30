@@ -303,6 +303,24 @@ func (q *Queries) IncrementUsedSessions(ctx context.Context, id int32) error {
 	return err
 }
 
+const incrementUsedSessionsByUsername = `-- name: IncrementUsedSessionsByUsername :exec
+UPDATE customer_sessions
+SET used_sessions = used_sessions + 1,
+    updated_at = NOW()
+WHERE customer_username = ?
+  AND status = 'ACTIVE'
+  AND used_sessions < total_sessions
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+// Q5C.2 - อัปเดตจำนวนครั้งที่ใช้ไปแล้วสำหรับ Check-in (Use Case 5C)
+// ใช้ session package ACTIVE ที่ใหม่ที่สุด
+func (q *Queries) IncrementUsedSessionsByUsername(ctx context.Context, customerUsername sql.NullString) error {
+	_, err := q.db.ExecContext(ctx, incrementUsedSessionsByUsername, customerUsername)
+	return err
+}
+
 const listCustomerSessions = `-- name: ListCustomerSessions :many
 SELECT
   cs.id,

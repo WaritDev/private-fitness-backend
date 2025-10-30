@@ -112,6 +112,9 @@ type Querier interface {
 	// Q3C.6 - อัปเดตจำนวนครั้งที่ใช้ไปแล้ว
 	IncrementUsedSessions(ctx context.Context, id int32) error
 	InsertPaymentAccount(ctx context.Context, arg InsertPaymentAccountParams) (sql.Result, error)
+	// Q5C.2 - อัปเดตจำนวนครั้งที่ใช้ไปแล้วสำหรับ Check-in (Use Case 5C)
+	// ใช้ session package ACTIVE ที่ใหม่ที่สุด
+	IncrementUsedSessionsByUsername(ctx context.Context, customerUsername sql.NullString) error
 	InsertProductDuration(ctx context.Context, arg InsertProductDurationParams) (sql.Result, error)
 	InsertProductSession(ctx context.Context, arg InsertProductSessionParams) (sql.Result, error)
 	ListAllProducts(ctx context.Context) ([]Product, error)
