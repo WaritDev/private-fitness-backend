@@ -9,8 +9,9 @@ import (
 )
 
 type Querier interface {
-	CreateCustomer(ctx context.Context) error
-	CreateUser(ctx context.Context) error
+	CheckUsernameExists(ctx context.Context, username string) (int64, error)
+	CreateCustomer(ctx context.Context, arg CreateCustomerParams) error
+	CreateUser(ctx context.Context, arg CreateUserParams) error
 	GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error)
 	ListDurations(ctx context.Context) ([]ListDurationsRow, error)
 	ListSessions(ctx context.Context) ([]ListSessionsRow, error)

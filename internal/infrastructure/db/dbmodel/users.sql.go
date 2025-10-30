@@ -8,20 +8,65 @@ package dbmodel
 import (
 	"context"
 	"database/sql"
+	"time"
 )
+
+const checkUsernameExists = `-- name: CheckUsernameExists :one
+SELECT COUNT(username) as count
+FROM users
+WHERE username = ?
+`
+
+func (q *Queries) CheckUsernameExists(ctx context.Context, username string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, checkUsernameExists, username)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
 
 const createUser = `-- name: CreateUser :exec
 INSERT INTO users (username, password, email, role, first_name, last_name, gender, date_of_birth, phone_number, gmail, specialty, is_active)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
-func (q *Queries) CreateUser(ctx context.Context) error {
-	_, err := q.db.ExecContext(ctx, createUser)
+type CreateUserParams struct {
+	Username    string         `json:"username"`
+	Password    string         `json:"password"`
+	Email       string         `json:"email"`
+	Role        UsersRole      `json:"role"`
+	FirstName   string         `json:"firstName"`
+	LastName    string         `json:"lastName"`
+	Gender      UsersGender    `json:"gender"`
+	DateOfBirth time.Time      `json:"dateOfBirth"`
+	PhoneNumber string         `json:"phoneNumber"`
+	Gmail       string         `json:"gmail"`
+	Specialty   sql.NullString `json:"specialty"`
+	IsActive    sql.NullBool   `json:"isActive"`
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
+	_, err := q.db.ExecContext(ctx, createUser,
+		arg.Username,
+		arg.Password,
+		arg.Email,
+		arg.Role,
+		arg.FirstName,
+		arg.LastName,
+		arg.Gender,
+		arg.DateOfBirth,
+		arg.PhoneNumber,
+		arg.Gmail,
+		arg.Specialty,
+		arg.IsActive,
+	)
 	return err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT username, password, role, first_name, last_name FROM users WHERE username = $1 LIMIT 1
+SELECT username, password, role, first_name, last_name
+FROM users
+WHERE username = ?
+LIMIT 1
 `
 
 type GetUserByUsernameRow struct {

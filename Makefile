@@ -3,13 +3,13 @@ start:
 
 gen:
 	sqlc generate
-	wire ./internal/...
+	go run github.com/google/wire/cmd/wire@latest ./internal/...
 
 gen-sqlc:
 	sqlc generate
 
 gen-wire:
-	wire ./internal/...
+	go run github.com/google/wire/cmd/wire@latest ./internal/...
 
 migrate-schema:
 	go run cmd/migration/main.go --migrate:schema

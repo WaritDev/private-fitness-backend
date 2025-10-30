@@ -28,7 +28,7 @@ ORDER BY list_price ASC
 `
 
 type ListDurationsRow struct {
-	ID            uint64           `json:"id"`
+	ID            int32            `json:"id"`
 	Name          string           `json:"name"`
 	Type          ProductsType     `json:"type"`
 	Category      ProductsCategory `json:"category"`
@@ -88,7 +88,7 @@ ORDER BY list_price ASC
 `
 
 type ListSessionsRow struct {
-	ID            uint64           `json:"id"`
+	ID            int32            `json:"id"`
 	Name          string           `json:"name"`
 	Type          ProductsType     `json:"type"`
 	Category      ProductsCategory `json:"category"`
