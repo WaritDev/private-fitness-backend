@@ -11,26 +11,43 @@ import (
 
 type Querier interface {
 	ActiveMembersToday(ctx context.Context) (int64, error)
+	CheckGmailExists(ctx context.Context, lower string) (int64, error)
+	CheckGmailExistsExceptUsername(ctx context.Context, arg CheckGmailExistsExceptUsernameParams) (int64, error)
+	CheckPhoneExists(ctx context.Context, phoneNumber string) (int64, error)
+	CheckPhoneExistsExceptUsername(ctx context.Context, arg CheckPhoneExistsExceptUsernameParams) (int64, error)
 	CheckUsernameExists(ctx context.Context, username string) (int64, error)
 	CheckinsToday(ctx context.Context) (int64, error)
 	CompletedPTInRange(ctx context.Context, arg CompletedPTInRangeParams) (int64, error)
+	CountStaffs(ctx context.Context) (int64, error)
 	CreateCustomer(ctx context.Context, arg CreateCustomerParams) error
 	CreateCustomerDuration(ctx context.Context, arg CreateCustomerDurationParams) error
 	CreatePaymentAccount(ctx context.Context, arg CreatePaymentAccountParams) error
+	CreateStaff(ctx context.Context, arg CreateStaffParams) error
 	CreateUser(ctx context.Context, arg CreateUserParams) error
+	DeleteCustomerDurationBySales(ctx context.Context, salesUsername sql.NullString) error
+	DeleteCustomerSessionBySales(ctx context.Context, salesUsername sql.NullString) error
+	DeleteCustomerSessionByTrainer(ctx context.Context, trainerUsername sql.NullString) error
+	DeleteTrainerAvailabilityByTrainer(ctx context.Context, trainerUsername string) error
+	DeleteTrainingScheduleByTrainer(ctx context.Context, trainerUsername sql.NullString) error
+	DeleteUserByUsername(ctx context.Context, username string) error
 	GetCustomerDurationById(ctx context.Context, id int32) (CustomerDuration, error)
 	GetCustomerDurationsByUsername(ctx context.Context, customerUsername sql.NullString) ([]CustomerDuration, error)
 	GetProductById(ctx context.Context, id int32) (Product, error)
+	GetStaffByUsername(ctx context.Context, username string) (GetStaffByUsernameRow, error)
 	GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error)
+	GetUserRole(ctx context.Context, username string) (UsersRole, error)
 	ListAllProducts(ctx context.Context) ([]Product, error)
 	ListDurations(ctx context.Context) ([]ListDurationsRow, error)
 	ListSessions(ctx context.Context) ([]ListSessionsRow, error)
+	ListStaffs(ctx context.Context, arg ListStaffsParams) ([]ListStaffsRow, error)
 	ListUsers(ctx context.Context) ([]ListUsersRow, error)
 	NewMembersInRange(ctx context.Context, arg NewMembersInRangeParams) (int64, error)
 	RevenueDurations(ctx context.Context, arg RevenueDurationsParams) (int64, error)
 	RevenueSessions(ctx context.Context, arg RevenueSessionsParams) (int64, error)
 	TopSellingProductsDurations(ctx context.Context, arg TopSellingProductsDurationsParams) ([]TopSellingProductsDurationsRow, error)
 	TopSellingProductsSessions(ctx context.Context, arg TopSellingProductsSessionsParams) ([]TopSellingProductsSessionsRow, error)
+	UpdateStaffNoPassword(ctx context.Context, arg UpdateStaffNoPasswordParams) error
+	UpdateStaffWithPassword(ctx context.Context, arg UpdateStaffWithPasswordParams) error
 }
 
 var _ Querier = (*Queries)(nil)
