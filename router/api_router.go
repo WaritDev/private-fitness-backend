@@ -26,6 +26,12 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	// Manager routes
 	managers := apiGroup.Group("/manager")
 	managers.Get("/dashboard", handler.Manager.GetDashboard)
+
+	// Customer routes
+	customers := apiGroup.Group("/customers")
+	customers.Get("/", handler.Customer.ListCustomers)
+	customers.Post("/:username/update", handler.Customer.UpdateCustomer)
+	customers.Delete("/:username", handler.Customer.DeleteCustomer)  
 	
 	// Auth routes
 	authGroup := apiGroup.Group("/auth")
