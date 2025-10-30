@@ -11,6 +11,23 @@ import (
 	"time"
 )
 
+const checkBookingPermission = `-- name: CheckBookingPermission :one
+SELECT COUNT(*) as has_permission
+FROM customer_sessions
+WHERE customer_username = ?
+  AND status = 'ACTIVE'
+  AND used_sessions < total_sessions
+`
+
+// ตรวจสอบสิทธิ์การจองของ Customer
+// ต้องมี Session package แบบ ACTIVE และยังมีสิทธิ์คงเหลือ (used_sessions < total_sessions)
+func (q *Queries) CheckBookingPermission(ctx context.Context, customerUsername sql.NullString) (int64, error) {
+	row := q.db.QueryRowContext(ctx, checkBookingPermission, customerUsername)
+	var has_permission int64
+	err := row.Scan(&has_permission)
+	return has_permission, err
+}
+
 const createCustomerSession = `-- name: CreateCustomerSession :exec
 INSERT INTO customer_sessions (
   customer_username,
@@ -54,5 +71,70 @@ func (q *Queries) CreateCustomerSession(ctx context.Context, arg CreateCustomerS
 		arg.DiscountAmount,
 		arg.Status,
 	)
+	return err
+}
+
+const decrementUsedSessions = `-- name: DecrementUsedSessions :exec
+UPDATE customer_sessions
+SET used_sessions = used_sessions - 1
+WHERE id = ?
+  AND used_sessions > 0
+`
+
+// ยกเลิกการจอง - ลดจำนวนครั้งที่ใช้ไป (used_sessions - 1)
+// Logic: UPDATE customer_sessions SET used_sessions = used_sessions - 1 WHERE id = ? AND used_sessions > 0
+// Note: id คือ customer_sessions.id (ได้จาก training_schedules.session_id)
+// ต้องมี used_sessions > 0 เพื่อป้องกันค่าติดลบ
+func (q *Queries) DecrementUsedSessions(ctx context.Context, id int32) error {
+	_, err := q.db.ExecContext(ctx, decrementUsedSessions, id)
+	return err
+}
+
+const getActiveSessionByCustomer = `-- name: GetActiveSessionByCustomer :one
+SELECT
+  id,
+  customer_username,
+  trainer_username,
+  total_sessions,
+  used_sessions
+FROM customer_sessions
+WHERE customer_username = ?
+  AND status = 'ACTIVE'
+  AND used_sessions < total_sessions
+ORDER BY created_at DESC
+LIMIT 1
+`
+
+type GetActiveSessionByCustomerRow struct {
+	ID               int32          `json:"id"`
+	CustomerUsername sql.NullString `json:"customerUsername"`
+	TrainerUsername  sql.NullString `json:"trainerUsername"`
+	TotalSessions    int32          `json:"totalSessions"`
+	UsedSessions     sql.NullInt32  `json:"usedSessions"`
+}
+
+// หา Session package ACTIVE ของ Customer (สำหรับการจอง)
+func (q *Queries) GetActiveSessionByCustomer(ctx context.Context, customerUsername sql.NullString) (GetActiveSessionByCustomerRow, error) {
+	row := q.db.QueryRowContext(ctx, getActiveSessionByCustomer, customerUsername)
+	var i GetActiveSessionByCustomerRow
+	err := row.Scan(
+		&i.ID,
+		&i.CustomerUsername,
+		&i.TrainerUsername,
+		&i.TotalSessions,
+		&i.UsedSessions,
+	)
+	return i, err
+}
+
+const incrementUsedSessions = `-- name: IncrementUsedSessions :exec
+UPDATE customer_sessions
+SET used_sessions = used_sessions + 1
+WHERE id = ?
+`
+
+// Q3C.6 - อัปเดตจำนวนครั้งที่ใช้ไปแล้ว
+func (q *Queries) IncrementUsedSessions(ctx context.Context, id int32) error {
+	_, err := q.db.ExecContext(ctx, incrementUsedSessions, id)
 	return err
 }

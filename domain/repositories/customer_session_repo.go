@@ -10,6 +10,27 @@ import (
 type CustomerSessionRepository interface {
 	// RegisterCustomerSession - สร้าง User, Customer, CustomerSession, TrainingSchedules, CustomerLog ในครั้งเดียว (Transaction)
 	RegisterCustomerSession(ctx context.Context, tx *sql.Tx, params RegisterSessionParams) (int32, error)
+
+	// CheckBookingPermission - ตรวจสอบว่า Customer มีสิทธิ์จองหรือไม่ (มี Session package ACTIVE และยังมีสิทธิ์คงเหลือ)
+	CheckBookingPermission(ctx context.Context, customerUsername string) (bool, error)
+
+	// IncrementUsedSessions - Q3C.6: อัปเดตจำนวนครั้งที่ใช้ไป (used_sessions + 1)
+	IncrementUsedSessions(ctx context.Context, tx *sql.Tx, sessionID int32) error
+
+	// GetActiveSessionByCustomer - หา Session package ACTIVE ของ Customer
+	GetActiveSessionByCustomer(ctx context.Context, customerUsername string) (*ActiveSessionInfo, error)
+
+	// DecrementUsedSessions - ยกเลิกการจอง: ลดจำนวนครั้งที่ใช้ไป (used_sessions - 1)
+	DecrementUsedSessions(ctx context.Context, tx *sql.Tx, sessionID int32) error
+}
+
+// ActiveSessionInfo - ข้อมูล Session package ที่ active
+type ActiveSessionInfo struct {
+	ID               int32
+	CustomerUsername string
+	TrainerUsername  string
+	TotalSessions    int32
+	UsedSessions     int32
 }
 
 // RegisterSessionParams - Parameters สำหรับ RegisterCustomerSession

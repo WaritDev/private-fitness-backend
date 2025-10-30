@@ -113,3 +113,63 @@ func (r *CustomerSessionRepository) RegisterCustomerSession(ctx context.Context,
 
 	return sessionID, nil
 }
+
+// CheckBookingPermission - ตรวจสอบว่า Customer มีสิทธิ์จองหรือไม่
+func (r *CustomerSessionRepository) CheckBookingPermission(ctx context.Context, customerUsername string) (bool, error) {
+	count, err := r.q.CheckBookingPermission(ctx, sql.NullString{String: customerUsername, Valid: true})
+	if err != nil {
+		return false, fmt.Errorf("failed to check booking permission: %w", err)
+	}
+
+	// ถ้า count > 0 แสดงว่ามีสิทธิ์
+	return count > 0, nil
+}
+
+// IncrementUsedSessions - Q3C.6: อัปเดตจำนวนครั้งที่ใช้ไป (used_sessions + 1)
+func (r *CustomerSessionRepository) IncrementUsedSessions(ctx context.Context, tx *sql.Tx, sessionID int32) error {
+	qtx := r.q.WithTx(tx)
+	err := qtx.IncrementUsedSessions(ctx, sessionID)
+	if err != nil {
+		return fmt.Errorf("failed to increment used sessions: %w", err)
+	}
+	return nil
+}
+
+// GetActiveSessionByCustomer - หา Session package ACTIVE ของ Customer
+func (r *CustomerSessionRepository) GetActiveSessionByCustomer(ctx context.Context, customerUsername string) (*repositories.ActiveSessionInfo, error) {
+	row, err := r.q.GetActiveSessionByCustomer(ctx, sql.NullString{String: customerUsername, Valid: true})
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil // No active session found
+		}
+		return nil, fmt.Errorf("failed to get active session: %w", err)
+	}
+
+	var trainerUsername string
+	if row.TrainerUsername.Valid {
+		trainerUsername = row.TrainerUsername.String
+	}
+
+	var customerUser string
+	if row.CustomerUsername.Valid {
+		customerUser = row.CustomerUsername.String
+	}
+
+	return &repositories.ActiveSessionInfo{
+		ID:               row.ID,
+		CustomerUsername: customerUser,
+		TrainerUsername:  trainerUsername,
+		TotalSessions:    row.TotalSessions,
+		UsedSessions:     row.UsedSessions.Int32,
+	}, nil
+}
+
+// DecrementUsedSessions - ยกเลิกการจอง: ลดจำนวนครั้งที่ใช้ไป (used_sessions - 1)
+func (r *CustomerSessionRepository) DecrementUsedSessions(ctx context.Context, tx *sql.Tx, sessionID int32) error {
+	qtx := r.q.WithTx(tx)
+	err := qtx.DecrementUsedSessions(ctx, sessionID)
+	if err != nil {
+		return fmt.Errorf("failed to decrement used sessions: %w", err)
+	}
+	return nil
+}

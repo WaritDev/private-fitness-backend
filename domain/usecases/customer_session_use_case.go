@@ -146,3 +146,14 @@ func (u *CustomerSessionUseCase) RegisterCustomerSession(ctx context.Context, re
 		Message:          "Customer session registered successfully",
 	}, nil
 }
+
+// CheckBookingPermission - ตรวจสอบสิทธิ์การเข้าถึงฟังก์ชันการจอง
+// ตรวจว่า Customer มีแพ็กเกจ Sessions แบบ ACTIVE และยังมีสิทธิ์คงเหลือ
+func (u *CustomerSessionUseCase) CheckBookingPermission(ctx context.Context, customerUsername string) (bool, error) {
+	hasPermission, err := u.sessionRepo.CheckBookingPermission(ctx, customerUsername)
+	if err != nil {
+		return false, fmt.Errorf("failed to check booking permission: %w", err)
+	}
+
+	return hasPermission, nil
+}

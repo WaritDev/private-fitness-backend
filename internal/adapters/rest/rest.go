@@ -9,6 +9,7 @@ type Handler struct {
 	Payment          *PaymentHandler
 	CustomerSession  *CustomerSessionHandler
 	CustomerDuration *CustomerDurationHandler
+	Booking          *BookingHandler
 }
 
 func ProvideHandler(
@@ -20,6 +21,7 @@ func ProvideHandler(
 	payment *PaymentHandler,
 	customerSession *CustomerSessionHandler,
 	customerDuration *CustomerDurationHandler,
+	booking *BookingHandler,
 ) *Handler {
 	return &Handler{
 		User:             user,
@@ -30,5 +32,6 @@ func ProvideHandler(
 		Payment:          payment,
 		CustomerSession:  customerSession,
 		CustomerDuration: customerDuration,
+		Booking:          booking,
 	}
 }

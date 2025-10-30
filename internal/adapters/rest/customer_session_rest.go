@@ -82,3 +82,41 @@ func (h *CustomerSessionHandler) Register(c *fiber.Ctx) error {
 		"result":      result,
 	})
 }
+
+// CheckPermission - GET /api/customers/sessions/check-permission
+// ตรวจสอบสิทธิ์การเข้าถึงฟังก์ชันการจอง
+func (h *CustomerSessionHandler) CheckPermission(c *fiber.Ctx) error {
+	// Get customer username from query parameter
+	customerUsername := c.Query("username")
+
+	if customerUsername == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":      "error",
+			"status_code": fiber.StatusBadRequest,
+			"message":     "Username is required",
+			"result":      nil,
+		})
+	}
+
+	// Check permission
+	hasPermission, err := h.useCase.CheckBookingPermission(c.Context(), customerUsername)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":      "error",
+			"status_code": fiber.StatusInternalServerError,
+			"message":     err.Error(),
+			"result":      nil,
+		})
+	}
+
+	// Return result
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      "success",
+		"status_code": fiber.StatusOK,
+		"message":     "Permission check completed",
+		"result": fiber.Map{
+			"hasPermission": hasPermission,
+			"canBook":       hasPermission,
+		},
+	})
+}
