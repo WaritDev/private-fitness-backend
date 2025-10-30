@@ -26,7 +26,7 @@ func (h *UserHandler) CheckPhoneNumber(c *fiber.Ctx) error {
 		})
 	}
 
-	exists, err := h.UC.CheckPhoneNumberExists(c.Context(), phoneNumber)
+	exists, err := h.UC.CheckPhoneNumberExistsUser(c.Context(), phoneNumber)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":      "Internal Server Error",
@@ -61,7 +61,7 @@ func (h *UserHandler) CheckGmail(c *fiber.Ctx) error {
 		})
 	}
 
-	exists, err := h.UC.CheckGmailExists(c.Context(), gmail)
+	exists, err := h.UC.CheckGmailExistsUser(c.Context(), gmail)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":      "Internal Server Error",

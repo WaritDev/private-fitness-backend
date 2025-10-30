@@ -7,7 +7,61 @@ package dbmodel
 
 import (
 	"context"
+	"database/sql"
+	"time"
 )
+
+const checkCustomerGmailExistsExcept = `-- name: CheckCustomerGmailExistsExcept :one
+SELECT COUNT(u.username) AS count
+FROM users u
+WHERE LOWER(u.gmail) = LOWER(?)
+  AND u.username <> ?
+`
+
+type CheckCustomerGmailExistsExceptParams struct {
+	LOWER    string `json:"LOWER"`
+	Username string `json:"username"`
+}
+
+func (q *Queries) CheckCustomerGmailExistsExcept(ctx context.Context, arg CheckCustomerGmailExistsExceptParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, checkCustomerGmailExistsExcept, arg.LOWER, arg.Username)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const checkCustomerPhoneExistsExcept = `-- name: CheckCustomerPhoneExistsExcept :one
+SELECT COUNT(u.username) AS count
+FROM users u
+WHERE u.phone_number = ?
+  AND u.username <> ?
+`
+
+type CheckCustomerPhoneExistsExceptParams struct {
+	PhoneNumber string `json:"phoneNumber"`
+	Username    string `json:"username"`
+}
+
+func (q *Queries) CheckCustomerPhoneExistsExcept(ctx context.Context, arg CheckCustomerPhoneExistsExceptParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, checkCustomerPhoneExistsExcept, arg.PhoneNumber, arg.Username)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countCustomers = `-- name: CountCustomers :one
+SELECT COUNT(u.username) AS total_items
+FROM users u
+JOIN customers c ON c.username = u.username
+WHERE u.role = 'CUSTOMER'
+`
+
+func (q *Queries) CountCustomers(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countCustomers)
+	var total_items int64
+	err := row.Scan(&total_items)
+	return total_items, err
+}
 
 const createCustomer = `-- name: CreateCustomer :exec
 INSERT INTO
@@ -52,6 +106,342 @@ func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) 
 		arg.EmergencyContactRelationship,
 		arg.EmergencyContactPhone,
 		arg.MarketingSource,
+	)
+	return err
+}
+
+const deleteCustomerByUsername = `-- name: DeleteCustomerByUsername :exec
+DELETE FROM customers
+WHERE username = ?
+`
+
+func (q *Queries) DeleteCustomerByUsername(ctx context.Context, username string) error {
+	_, err := q.db.ExecContext(ctx, deleteCustomerByUsername, username)
+	return err
+}
+
+const deleteCustomerDurationByCustomer = `-- name: DeleteCustomerDurationByCustomer :exec
+DELETE FROM customer_durations
+WHERE customer_username = ?
+`
+
+func (q *Queries) DeleteCustomerDurationByCustomer(ctx context.Context, customerUsername sql.NullString) error {
+	_, err := q.db.ExecContext(ctx, deleteCustomerDurationByCustomer, customerUsername)
+	return err
+}
+
+const deleteCustomerLogsByCustomer = `-- name: DeleteCustomerLogsByCustomer :exec
+DELETE FROM customer_logs
+WHERE customer_username = ?
+`
+
+func (q *Queries) DeleteCustomerLogsByCustomer(ctx context.Context, customerUsername sql.NullString) error {
+	_, err := q.db.ExecContext(ctx, deleteCustomerLogsByCustomer, customerUsername)
+	return err
+}
+
+const deleteCustomerSessionByCustomer = `-- name: DeleteCustomerSessionByCustomer :exec
+DELETE FROM customer_sessions
+WHERE customer_username = ?
+`
+
+func (q *Queries) DeleteCustomerSessionByCustomer(ctx context.Context, customerUsername sql.NullString) error {
+	_, err := q.db.ExecContext(ctx, deleteCustomerSessionByCustomer, customerUsername)
+	return err
+}
+
+const deleteTrainingScheduleByCustomer = `-- name: DeleteTrainingScheduleByCustomer :exec
+DELETE FROM training_schedules
+WHERE customer_username = ?
+`
+
+func (q *Queries) DeleteTrainingScheduleByCustomer(ctx context.Context, customerUsername sql.NullString) error {
+	_, err := q.db.ExecContext(ctx, deleteTrainingScheduleByCustomer, customerUsername)
+	return err
+}
+
+const getCustomerByUsername = `-- name: GetCustomerByUsername :one
+SELECT
+  u.username,
+  u.first_name,
+  u.last_name,
+  u.gender,
+  u.date_of_birth,
+  u.phone_number,
+  u.gmail,
+  u.is_active,
+  c.health_info,
+  c.address,
+  c.company_name,
+  c.company_position,
+  c.marital_status,
+  c.emergency_contact_name,
+  c.emergency_contact_relationship,
+  c.emergency_contact_phone,
+  c.marketing_source
+FROM users u
+JOIN customers c ON c.username = u.username
+WHERE u.username = ?
+`
+
+type GetCustomerByUsernameRow struct {
+	Username                     string                 `json:"username"`
+	FirstName                    string                 `json:"firstName"`
+	LastName                     string                 `json:"lastName"`
+	Gender                       UsersGender            `json:"gender"`
+	DateOfBirth                  time.Time              `json:"dateOfBirth"`
+	PhoneNumber                  string                 `json:"phoneNumber"`
+	Gmail                        string                 `json:"gmail"`
+	IsActive                     sql.NullBool           `json:"isActive"`
+	HealthInfo                   string                 `json:"healthInfo"`
+	Address                      string                 `json:"address"`
+	CompanyName                  string                 `json:"companyName"`
+	CompanyPosition              string                 `json:"companyPosition"`
+	MaritalStatus                CustomersMaritalStatus `json:"maritalStatus"`
+	EmergencyContactName         string                 `json:"emergencyContactName"`
+	EmergencyContactRelationship string                 `json:"emergencyContactRelationship"`
+	EmergencyContactPhone        string                 `json:"emergencyContactPhone"`
+	MarketingSource              string                 `json:"marketingSource"`
+}
+
+func (q *Queries) GetCustomerByUsername(ctx context.Context, username string) (GetCustomerByUsernameRow, error) {
+	row := q.db.QueryRowContext(ctx, getCustomerByUsername, username)
+	var i GetCustomerByUsernameRow
+	err := row.Scan(
+		&i.Username,
+		&i.FirstName,
+		&i.LastName,
+		&i.Gender,
+		&i.DateOfBirth,
+		&i.PhoneNumber,
+		&i.Gmail,
+		&i.IsActive,
+		&i.HealthInfo,
+		&i.Address,
+		&i.CompanyName,
+		&i.CompanyPosition,
+		&i.MaritalStatus,
+		&i.EmergencyContactName,
+		&i.EmergencyContactRelationship,
+		&i.EmergencyContactPhone,
+		&i.MarketingSource,
+	)
+	return i, err
+}
+
+const listCustomers = `-- name: ListCustomers :many
+SELECT
+  u.username,
+  u.first_name,
+  u.last_name,
+  u.gender,
+  u.date_of_birth,
+  u.phone_number,
+  u.gmail,
+  u.is_active,
+  c.health_info,
+  c.address,
+  c.company_name,
+  c.company_position,
+  c.marital_status,
+  c.emergency_contact_name,
+  c.emergency_contact_relationship,
+  c.emergency_contact_phone,
+  c.marketing_source
+FROM users u
+JOIN customers c ON c.username = u.username
+WHERE u.role = 'CUSTOMER'
+ORDER BY u.is_active DESC, u.first_name ASC, u.last_name ASC
+LIMIT ? OFFSET ?
+`
+
+type ListCustomersParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+type ListCustomersRow struct {
+	Username                     string                 `json:"username"`
+	FirstName                    string                 `json:"firstName"`
+	LastName                     string                 `json:"lastName"`
+	Gender                       UsersGender            `json:"gender"`
+	DateOfBirth                  time.Time              `json:"dateOfBirth"`
+	PhoneNumber                  string                 `json:"phoneNumber"`
+	Gmail                        string                 `json:"gmail"`
+	IsActive                     sql.NullBool           `json:"isActive"`
+	HealthInfo                   string                 `json:"healthInfo"`
+	Address                      string                 `json:"address"`
+	CompanyName                  string                 `json:"companyName"`
+	CompanyPosition              string                 `json:"companyPosition"`
+	MaritalStatus                CustomersMaritalStatus `json:"maritalStatus"`
+	EmergencyContactName         string                 `json:"emergencyContactName"`
+	EmergencyContactRelationship string                 `json:"emergencyContactRelationship"`
+	EmergencyContactPhone        string                 `json:"emergencyContactPhone"`
+	MarketingSource              string                 `json:"marketingSource"`
+}
+
+func (q *Queries) ListCustomers(ctx context.Context, arg ListCustomersParams) ([]ListCustomersRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCustomers, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCustomersRow
+	for rows.Next() {
+		var i ListCustomersRow
+		if err := rows.Scan(
+			&i.Username,
+			&i.FirstName,
+			&i.LastName,
+			&i.Gender,
+			&i.DateOfBirth,
+			&i.PhoneNumber,
+			&i.Gmail,
+			&i.IsActive,
+			&i.HealthInfo,
+			&i.Address,
+			&i.CompanyName,
+			&i.CompanyPosition,
+			&i.MaritalStatus,
+			&i.EmergencyContactName,
+			&i.EmergencyContactRelationship,
+			&i.EmergencyContactPhone,
+			&i.MarketingSource,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateCustomerUserNoPassword = `-- name: UpdateCustomerUserNoPassword :exec
+UPDATE users
+SET first_name    = ?,
+    last_name     = ?,
+    gender        = ?,
+    date_of_birth = ?,
+    phone_number  = ?,
+    gmail         = ?,
+    is_active     = ?,
+    updated_at    = CURRENT_TIMESTAMP
+WHERE username = ?
+`
+
+type UpdateCustomerUserNoPasswordParams struct {
+	FirstName   string       `json:"firstName"`
+	LastName    string       `json:"lastName"`
+	Gender      UsersGender  `json:"gender"`
+	DateOfBirth time.Time    `json:"dateOfBirth"`
+	PhoneNumber string       `json:"phoneNumber"`
+	Gmail       string       `json:"gmail"`
+	IsActive    sql.NullBool `json:"isActive"`
+	Username    string       `json:"username"`
+}
+
+// อัปเดต users: ไม่มีการเปลี่ยน password
+func (q *Queries) UpdateCustomerUserNoPassword(ctx context.Context, arg UpdateCustomerUserNoPasswordParams) error {
+	_, err := q.db.ExecContext(ctx, updateCustomerUserNoPassword,
+		arg.FirstName,
+		arg.LastName,
+		arg.Gender,
+		arg.DateOfBirth,
+		arg.PhoneNumber,
+		arg.Gmail,
+		arg.IsActive,
+		arg.Username,
+	)
+	return err
+}
+
+const updateCustomerUserWithPassword = `-- name: UpdateCustomerUserWithPassword :exec
+UPDATE users
+SET password      = ?,
+    first_name    = ?,
+    last_name     = ?,
+    gender        = ?,
+    date_of_birth = ?,
+    phone_number  = ?,
+    gmail         = ?,
+    is_active     = ?,
+    updated_at    = CURRENT_TIMESTAMP
+WHERE username = ?
+`
+
+type UpdateCustomerUserWithPasswordParams struct {
+	Password    string       `json:"password"`
+	FirstName   string       `json:"firstName"`
+	LastName    string       `json:"lastName"`
+	Gender      UsersGender  `json:"gender"`
+	DateOfBirth time.Time    `json:"dateOfBirth"`
+	PhoneNumber string       `json:"phoneNumber"`
+	Gmail       string       `json:"gmail"`
+	IsActive    sql.NullBool `json:"isActive"`
+	Username    string       `json:"username"`
+}
+
+// อัปเดต users: มีการรีเซ็ตรหัสผ่าน
+func (q *Queries) UpdateCustomerUserWithPassword(ctx context.Context, arg UpdateCustomerUserWithPasswordParams) error {
+	_, err := q.db.ExecContext(ctx, updateCustomerUserWithPassword,
+		arg.Password,
+		arg.FirstName,
+		arg.LastName,
+		arg.Gender,
+		arg.DateOfBirth,
+		arg.PhoneNumber,
+		arg.Gmail,
+		arg.IsActive,
+		arg.Username,
+	)
+	return err
+}
+
+const updateCustomersDetail = `-- name: UpdateCustomersDetail :exec
+UPDATE customers
+SET health_info                    = ?,
+    address                        = ?,
+    company_name                   = ?,
+    company_position               = ?,
+    marital_status                 = ?,
+    emergency_contact_name         = ?,
+    emergency_contact_relationship = ?,
+    emergency_contact_phone        = ?,
+    marketing_source               = ?
+WHERE username = ?
+`
+
+type UpdateCustomersDetailParams struct {
+	HealthInfo                   string                 `json:"healthInfo"`
+	Address                      string                 `json:"address"`
+	CompanyName                  string                 `json:"companyName"`
+	CompanyPosition              string                 `json:"companyPosition"`
+	MaritalStatus                CustomersMaritalStatus `json:"maritalStatus"`
+	EmergencyContactName         string                 `json:"emergencyContactName"`
+	EmergencyContactRelationship string                 `json:"emergencyContactRelationship"`
+	EmergencyContactPhone        string                 `json:"emergencyContactPhone"`
+	MarketingSource              string                 `json:"marketingSource"`
+	Username                     string                 `json:"username"`
+}
+
+// อัปเดตตาราง customers
+func (q *Queries) UpdateCustomersDetail(ctx context.Context, arg UpdateCustomersDetailParams) error {
+	_, err := q.db.ExecContext(ctx, updateCustomersDetail,
+		arg.HealthInfo,
+		arg.Address,
+		arg.CompanyName,
+		arg.CompanyPosition,
+		arg.MaritalStatus,
+		arg.EmergencyContactName,
+		arg.EmergencyContactRelationship,
+		arg.EmergencyContactPhone,
+		arg.MarketingSource,
+		arg.Username,
 	)
 	return err
 }

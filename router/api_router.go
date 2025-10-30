@@ -13,10 +13,26 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 		})
 	})
 
-	app.Get("/api/manager/dashboard", handler.Manager.GetDashboard)
-
 	// api
 	apiGroup := app.Group("/api")
+
+	// Staff routes
+	staffs := apiGroup.Group("/staffs")
+	staffs.Get("/", handler.Staff.ListStaffs)
+	staffs.Post("/create", handler.Staff.CreateStaff)
+	staffs.Post("/:username/update", handler.Staff.UpdateStaff)
+	staffs.Delete("/:username", handler.Staff.DeleteStaff)
+
+	// Manager routes
+	managers := apiGroup.Group("/manager")
+	managers.Get("/dashboard", handler.Manager.GetDashboard)
+
+	// Customer routes
+	customers := apiGroup.Group("/customers")
+	customers.Get("/", handler.Customer.ListCustomers)
+	customers.Post("/:username/update", handler.Customer.UpdateCustomer)
+	customers.Delete("/:username", handler.Customer.DeleteCustomer)  
+	
 	// Auth routes
 	authGroup := apiGroup.Group("/auth")
 	authGroup.Post("/login", handler.Auth.Login)
@@ -51,7 +67,6 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	payments.Get("/info/:productId", handler.Payment.GetPaymentInfo)
 
 	// Customer registration routes (after Sales pre-entry)
-	customers := apiGroup.Group("/customers")
 	customers.Post("/sessions/register", handler.CustomerSession.Register)
 	customers.Post("/durations/register", handler.CustomerDuration.Register)
 	customers.Get("/sessions/check-permission", handler.CustomerSession.CheckPermission) // Check booking permission

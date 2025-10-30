@@ -35,7 +35,7 @@ type UserRepo interface {
 	List(ctx context.Context) ([]dbmodel.User, error)
 	GetByUsername(ctx context.Context, username string) (dbmodel.GetUserByUsernameRow, error)
 	CheckUsernameExists(ctx context.Context, username string) (bool, error)
-	CheckPhoneNumberExists(ctx context.Context, phoneNumber string) (bool, error)
-	CheckGmailExists(ctx context.Context, email string) (bool, error)
+	CheckPhoneNumberExistsUser(ctx context.Context, phoneNumber string) (bool, error)
+	CheckGmailExistsUser(ctx context.Context, email string) (bool, error)
 	CreateUserWithCustomer(ctx context.Context, user CreateUserParams, customer CreateCustomerParams) error
 }

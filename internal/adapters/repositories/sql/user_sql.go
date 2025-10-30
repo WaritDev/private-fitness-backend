@@ -48,8 +48,8 @@ func (r *UserRepository) CheckUsernameExists(ctx context.Context, username strin
 }
 
 // CheckPhoneNumberExists checks if phone number exists in database (Q3S.1)
-func (r *UserRepository) CheckPhoneNumberExists(ctx context.Context, phoneNumber string) (bool, error) {
-	count, err := r.q.CheckPhoneNumberExists(ctx, phoneNumber)
+func (r *UserRepository) CheckPhoneNumberExistsUser(ctx context.Context, phoneNumber string) (bool, error) {
+	count, err := r.q.CheckPhoneNumberExistsUser(ctx, phoneNumber)
 	if err != nil {
 		return false, err
 	}
@@ -57,7 +57,7 @@ func (r *UserRepository) CheckPhoneNumberExists(ctx context.Context, phoneNumber
 }
 
 // CheckGmailExists checks if email exists in database (Q3S.2)
-func (r *UserRepository) CheckGmailExists(ctx context.Context, email string) (bool, error) {
+func (r *UserRepository) CheckGmailExistsUser(ctx context.Context, email string) (bool, error) {
 	count, err := r.q.CheckGmailExists(ctx, email)
 	if err != nil {
 		return false, err

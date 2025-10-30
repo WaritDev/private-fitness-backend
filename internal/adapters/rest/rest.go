@@ -7,6 +7,8 @@ type Handler struct {
 	Product          *ProductHandler
 	Trainer          *TrainerHandler
 	Payment          *PaymentHandler
+	Staff            *StaffHandler
+	Customer         *CustomerHandler
 	CustomerSession  *CustomerSessionHandler
 	CustomerDuration *CustomerDurationHandler
 	Booking          *BookingHandler
@@ -19,6 +21,8 @@ func ProvideHandler(
 	product *ProductHandler,
 	trainer *TrainerHandler,
 	payment *PaymentHandler,
+	staff *StaffHandler,
+	customer *CustomerHandler,
 	customerSession *CustomerSessionHandler,
 	customerDuration *CustomerDurationHandler,
 	booking *BookingHandler,
@@ -33,5 +37,7 @@ func ProvideHandler(
 		CustomerSession:  customerSession,
 		CustomerDuration: customerDuration,
 		Booking:          booking,
+		Staff:            staff,
+		Customer:         customer,
 	}
 }

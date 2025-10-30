@@ -11,27 +11,27 @@ import (
 	"time"
 )
 
-const checkGmailExists = `-- name: CheckGmailExists :one
+const checkGmailExistsUser = `-- name: CheckGmailExistsUser :one
 SELECT COUNT(gmail) as count
 FROM users
 WHERE gmail = ?
 `
 
-func (q *Queries) CheckGmailExists(ctx context.Context, gmail string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, checkGmailExists, gmail)
+func (q *Queries) CheckGmailExistsUser(ctx context.Context, gmail string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, checkGmailExistsUser, gmail)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
 }
 
-const checkPhoneNumberExists = `-- name: CheckPhoneNumberExists :one
+const checkPhoneNumberExistsUser = `-- name: CheckPhoneNumberExistsUser :one
 SELECT COUNT(phone_number) as count
 FROM users
 WHERE phone_number = ?
 `
 
-func (q *Queries) CheckPhoneNumberExists(ctx context.Context, phoneNumber string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, checkPhoneNumberExists, phoneNumber)
+func (q *Queries) CheckPhoneNumberExistsUser(ctx context.Context, phoneNumber string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, checkPhoneNumberExistsUser, phoneNumber)
 	var count int64
 	err := row.Scan(&count)
 	return count, err

@@ -18,12 +18,12 @@ SELECT COUNT(username) as count
 FROM users
 WHERE username = ?;
 
--- name: CheckGmailExists :one
+-- name: CheckGmailExistsUser :one
 SELECT COUNT(gmail) as count
 FROM users
 WHERE gmail = ?;
 
--- name: CheckPhoneNumberExists :one
+-- name: CheckPhoneNumberExistsUser :one
 SELECT COUNT(phone_number) as count
 FROM users
 WHERE phone_number = ?;

@@ -25,6 +25,9 @@ var RepositorySet = wire.NewSet(
 	sql.ProvideAuthRepository,
 	sql.ProvideManagerDashboardRepository,
 	sql.ProvideProductRepository,
+	sql.ProvideStaffRepository,
+	sql.ProvideCustomerRepository,
+
 	sql.ProvideTrainerRepository,          // Already returns interface, no need to bind
 	sql.ProvidePaymentAccountRepository,   // Already returns interface, no need to bind
 	sql.ProvideCustomerSessionRepository,  // Already returns interface, no need to bind
@@ -34,6 +37,8 @@ var RepositorySet = wire.NewSet(
 	// Bind adapters -> domain interfaces
 	wire.Bind(new(repositories.UserRepo), new(*sql.UserRepository)),
 	wire.Bind(new(repositories.AuthRepo), new(*sql.AuthRepository)),
+	wire.Bind(new(repositories.StaffRepository), new(*sql.StaffRepository)),
+	wire.Bind(new(repositories.CustomerRepository), new(*sql.CustomerRepository)),
 )
 
 var ServiceSet = wire.NewSet(
@@ -41,8 +46,10 @@ var ServiceSet = wire.NewSet(
 	usecases.ProvideAuthUseCase,
 	usecases.ProvideManagerDashboardUsecase,
 	usecases.ProvideProductUseCase,
+	usecases.ProvideStaffUsecase,
 	usecases.ProvideSessionUseCase,
 	usecases.ProvidePaymentUseCase,
+	usecases.ProvideCustomerUsecase,
 	usecases.ProvideCustomerSessionUseCase,
 	usecases.ProvideCustomerDurationUseCase,
 	usecases.ProvideBookingUseCase,
@@ -54,8 +61,10 @@ var HandlerSet = wire.NewSet(
 	rest.ProvideHandler,
 	rest.ProvideManagerDashboardHandler,
 	rest.ProvideProductHandler,
+	rest.ProvideStaffHandler,
 	rest.ProvideTrainerHandler,
 	rest.ProvidePaymentHandler,
+	rest.ProvideCustomerHandler, 
 	rest.ProvideCustomerSessionHandler,
 	rest.ProvideCustomerDurationHandler,
 	rest.ProvideBookingHandler,
