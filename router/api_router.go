@@ -45,6 +45,12 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	sessions.Post("/:id/update", handler.CustomerSession.Update)
 	sessions.Delete("/:id", handler.CustomerSession.Delete)
 
+	// Customer Log routes
+	customerLogs := apiGroup.Group("/customer-logs")
+	customerLogs.Get("/", handler.CustomerLog.List)
+	customerLogs.Post("/:id/update", handler.CustomerLog.Update)
+	customerLogs.Delete("/:id", handler.CustomerLog.Delete)
+
 	// Auth routes
 	authGroup := apiGroup.Group("/auth")
 	authGroup.Post("/login", handler.Auth.Login)
