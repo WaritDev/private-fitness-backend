@@ -86,6 +86,86 @@ func (q *Queries) DeleteCustomerDurationByID(ctx context.Context, id int32) (sql
 	return q.db.ExecContext(ctx, deleteCustomerDurationByID, id)
 }
 
+const getCustomerActiveDuration = `-- name: GetCustomerActiveDuration :many
+SELECT 
+  cd.id,
+  cd.customer_username,
+  cd.product_id,
+  p.name AS product_name,
+  p.duration_days,
+  cd.sales_username,
+  cd.purchase_date,
+  cd.start_date,
+  cd.end_date,
+  DATEDIFF(cd.end_date, CURDATE()) AS days_remaining,
+  cd.price_paid,
+  cd.discount_amount,
+  cd.status,
+  cd.created_at
+FROM customer_durations cd
+JOIN products p ON cd.product_id = p.id
+WHERE cd.customer_username = ?
+  AND cd.status = 'ACTIVE'
+ORDER BY cd.created_at DESC
+`
+
+type GetCustomerActiveDurationRow struct {
+	ID               int32                   `json:"id"`
+	CustomerUsername sql.NullString          `json:"customerUsername"`
+	ProductID        sql.NullInt32           `json:"productId"`
+	ProductName      string                  `json:"productName"`
+	DurationDays     sql.NullInt32           `json:"durationDays"`
+	SalesUsername    sql.NullString          `json:"salesUsername"`
+	PurchaseDate     time.Time               `json:"purchaseDate"`
+	StartDate        time.Time               `json:"startDate"`
+	EndDate          time.Time               `json:"endDate"`
+	DaysRemaining    int32                   `json:"daysRemaining"`
+	PricePaid        string                  `json:"pricePaid"`
+	DiscountAmount   sql.NullString          `json:"discountAmount"`
+	Status           CustomerDurationsStatus `json:"status"`
+	CreatedAt        sql.NullTime            `json:"createdAt"`
+}
+
+// ดึงข้อมูล Duration packages ที่ยัง ACTIVE ของลูกค้า
+// JOIN กับ PRODUCTS เพื่อดึงชื่อแพ็กเกจและคำนวณ วันคงเหลือที่ยังใช้งานได้
+func (q *Queries) GetCustomerActiveDuration(ctx context.Context, customerUsername sql.NullString) ([]GetCustomerActiveDurationRow, error) {
+	rows, err := q.db.QueryContext(ctx, getCustomerActiveDuration, customerUsername)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCustomerActiveDurationRow
+	for rows.Next() {
+		var i GetCustomerActiveDurationRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CustomerUsername,
+			&i.ProductID,
+			&i.ProductName,
+			&i.DurationDays,
+			&i.SalesUsername,
+			&i.PurchaseDate,
+			&i.StartDate,
+			&i.EndDate,
+			&i.DaysRemaining,
+			&i.PricePaid,
+			&i.DiscountAmount,
+			&i.Status,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getCustomerDurationByID = `-- name: GetCustomerDurationByID :one
 SELECT
   cd.id,

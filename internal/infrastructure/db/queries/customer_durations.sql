@@ -129,3 +129,29 @@ WHERE cd.id = ?;
 -- name: DeleteCustomerDurationByID :execresult
 DELETE FROM customer_durations
 WHERE id = ?;
+
+
+-- name: GetCustomerActiveDuration :many
+-- ดึงข้อมูล Duration packages ที่ยัง ACTIVE ของลูกค้า
+-- JOIN กับ PRODUCTS เพื่อดึงชื่อแพ็กเกจและคำนวณ วันคงเหลือที่ยังใช้งานได้
+SELECT 
+  cd.id,
+  cd.customer_username,
+  cd.product_id,
+  p.name AS product_name,
+  p.duration_days,
+  cd.sales_username,
+  cd.purchase_date,
+  cd.start_date,
+  cd.end_date,
+  DATEDIFF(cd.end_date, CURDATE()) AS days_remaining,
+  cd.price_paid,
+  cd.discount_amount,
+  cd.status,
+  cd.created_at
+FROM customer_durations cd
+JOIN products p ON cd.product_id = p.id
+WHERE cd.customer_username = ?
+  AND cd.status = 'ACTIVE'
+ORDER BY cd.created_at DESC;
+

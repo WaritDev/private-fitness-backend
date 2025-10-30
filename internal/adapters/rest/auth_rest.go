@@ -64,7 +64,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		Name:     "pf_auth",
 		Value:    result.Token,
 		HTTPOnly: true,
-		SameSite: "Lax",
+		SameSite: "None",
 		Secure:   os.Getenv("NODE_ENV") == "production",
 		Path:     "/",
 		MaxAge:   60 * 60 * 24 * 7, // 7 days
@@ -125,7 +125,7 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 		Name:     "pf_auth",
 		Value:    "",
 		HTTPOnly: true,
-		SameSite: "Lax",
+		SameSite: "None",
 		Secure:   os.Getenv("NODE_ENV") == "production",
 		Path:     "/",
 		MaxAge:   -1, // Delete cookie

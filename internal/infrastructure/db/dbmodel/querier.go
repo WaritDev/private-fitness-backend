@@ -83,6 +83,9 @@ type Querier interface {
 	GetAppointmentById(ctx context.Context, id int32) (GetAppointmentByIdRow, error)
 	// Q3C.3b - ดึงนัดที่ถูกจองแล้ว (APPOINTMENT)
 	GetAppointmentSchedules(ctx context.Context, arg GetAppointmentSchedulesParams) ([]GetAppointmentSchedulesRow, error)
+	// ดึงข้อมูล Duration packages ที่ยัง ACTIVE ของลูกค้า
+	// JOIN กับ PRODUCTS เพื่อดึงชื่อแพ็กเกจและคำนวณ วันคงเหลือที่ยังใช้งานได้
+	GetCustomerActiveDuration(ctx context.Context, customerUsername sql.NullString) ([]GetCustomerActiveDurationRow, error)
 	// ดึงข้อมูล Session packages ที่ยัง ACTIVE ของลูกค้า
 	// JOIN กับ PRODUCTS เพื่อดึงชื่อแพ็กเกจและคำนวณ sessions คงเหลือ
 	GetCustomerActiveSessions(ctx context.Context, customerUsername sql.NullString) ([]GetCustomerActiveSessionsRow, error)

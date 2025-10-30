@@ -842,6 +842,85 @@ if (data.status === 'success') {
 
 ---
 
+### 5.5 Get Active Duration Packages
+
+**Endpoint:** `GET /api/customers/durations/active/:username`
+
+**Description:** ดึงข้อมูล Duration packages ที่ยัง ACTIVE ของลูกค้า (แสดงจำนวนวันคงเหลือ)
+
+**Path Parameters:**
+- `username` (string): ชื่อผู้ใช้ลูกค้า
+
+**Example:** `GET /api/customers/durations/active/cust01`
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "OK",
+  "status_code": 200,
+  "message": "Active duration packages retrieved successfully",
+  "result": [
+    {
+      "id": 2001,
+      "customerUsername": "cust01",
+      "productId": 1,
+      "productName": "1 Month Gym Pass",
+      "durationDays": 30,
+      "salesUsername": "sales01",
+      "purchaseDate": "2025-10-01T00:00:00Z",
+      "startDate": "2025-10-01T00:00:00Z",
+      "endDate": "2025-10-31T00:00:00Z",
+      "daysRemaining": 15,
+      "pricePaid": 1500.00,
+      "discountAmount": 0.00,
+      "status": "ACTIVE",
+      "createdAt": "2025-10-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+**Response (200 OK - No Active Durations):**
+```json
+{
+  "status": "OK",
+  "status_code": 200,
+  "message": "Active duration packages retrieved successfully",
+  "result": []
+}
+```
+
+**Field Descriptions:**
+- `durationDays`: จำนวนวันทั้งหมดที่ซื้อ
+- `startDate`: วันเริ่มต้นแพ็กเกจ
+- `endDate`: วันสิ้นสุดแพ็กเกจ
+- `daysRemaining`: จำนวนวันคงเหลือ (คำนวณจาก DATEDIFF(endDate, CURDATE()))
+
+**Business Logic:**
+- JOIN กับตาราง `products` เพื่อดึง `product_name` และ `duration_days`
+- คำนวณ `daysRemaining` ด้วย SQL: `DATEDIFF(end_date, CURDATE())`
+- กรองเฉพาะ `status = 'ACTIVE'`
+- เรียงลำดับตาม `created_at DESC`
+
+**Use Case:** แสดงข้อมูลแพ็กเกจในหน้าโปรไฟล์ หรือเช็คว่ามีสิทธิ์เข้าใช้งานฟิตเนสหรือไม่
+
+**Usage Example:**
+```javascript
+const response = await fetch(`http://localhost:8000/api/customers/durations/active/cust01`, {
+  method: 'GET',
+  headers: { 'Content-Type': 'application/json' }
+});
+
+const data = await response.json();
+if (data.status === 'OK' && data.result.length > 0) {
+  const activeDuration = data.result[0];
+  console.log(`Days remaining: ${activeDuration.daysRemaining}`);
+  console.log(`Package: ${activeDuration.productName}`);
+}
+```
+
+---
+
 ## 6. Booking APIs
 
 ### 6.1 Get Booking Slots

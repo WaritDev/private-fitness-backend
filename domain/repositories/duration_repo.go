@@ -22,6 +22,9 @@ type CustomerDurationRepository interface {
 	Delete(ctx context.Context, id int32) error
 	// RegisterDuration - Use Case 2.1C: สร้าง User, Customer, CustomerDuration ในครั้งเดียว (Transaction)
 	RegisterDuration(ctx context.Context, tx *sql.Tx, params RegisterDurationParams) (int32, error)
+
+	// GetCustomerActiveDuration - ดึง Duration packages ที่ยัง ACTIVE ของลูกค้า (คล้าย GetCustomerActiveSessions)
+	GetCustomerActiveDuration(ctx context.Context, username string) ([]ActiveDurationPackageInfo, error)
 }
 
 type CreateCustomerDurationParams struct {
@@ -52,22 +55,22 @@ type CustomerDurationInfo struct {
 }
 
 type CustomerDurationTableRow struct {
-	DurationID          int32
-	CustomerUsername    string
-	CustomerFirstName   string
-	CustomerLastName    string
-	ProductID           int32
-	ProductName         string
-	ProductType         string
-	ProductCategory     string
-	DurationDays        int32
-	SalesUsername       string
-	PurchaseDate        time.Time
-	StartDate           time.Time
-	EndDate             time.Time
-	PricePaid           string
-	DiscountAmount      string
-	Status              string
+	DurationID        int32
+	CustomerUsername  string
+	CustomerFirstName string
+	CustomerLastName  string
+	ProductID         int32
+	ProductName       string
+	ProductType       string
+	ProductCategory   string
+	DurationDays      int32
+	SalesUsername     string
+	PurchaseDate      time.Time
+	StartDate         time.Time
+	EndDate           time.Time
+	PricePaid         string
+	DiscountAmount    string
+	Status            string
 }
 
 type UpdateCustomerDurationEditableFieldsParams struct {
@@ -77,6 +80,25 @@ type UpdateCustomerDurationEditableFieldsParams struct {
 	DiscountAmount *string // nil = ไม่อัปเดต/ให้เป็น NULL, ไม่ nil = "0.00", "100.00"
 	Status         string  // "ACTIVE" | "EXPIRED" | "FROZEN" | "CANCELLED"
 }
+
+// ActiveDurationPackageInfo - Duration package ที่ ACTIVE พร้อมข้อมูลจาก JOIN products
+type ActiveDurationPackageInfo struct {
+	ID               int32
+	CustomerUsername string
+	ProductID        int32
+	ProductName      string // JOIN from products
+	DurationDays     int32  // JOIN from products
+	SalesUsername    string
+	PurchaseDate     time.Time
+	StartDate        time.Time
+	EndDate          time.Time
+	DaysRemaining    int32  // คำนวณ: DATEDIFF(end_date, CURDATE())
+	PricePaid        string // DECIMAL as string
+	DiscountAmount   string // DECIMAL as string
+	Status           string
+	CreatedAt        time.Time
+}
+
 // RegisterDurationParams - Parameters สำหรับ RegisterDuration (Use Case 2.1C)
 type RegisterDurationParams struct {
 	// User table

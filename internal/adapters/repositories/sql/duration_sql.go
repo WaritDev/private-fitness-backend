@@ -172,6 +172,7 @@ func (r *CustomerDurationRepository) Delete(ctx context.Context, id int32) error
 	}
 	return nil
 }
+
 // RegisterDuration - Use Case 2.1C: Transaction: Create User → Customer → CustomerDuration
 func (r *CustomerDurationRepository) RegisterDuration(ctx context.Context, tx *sql.Tx, params repositories.RegisterDurationParams) (int32, error) {
 	// Use transaction queries
@@ -236,4 +237,65 @@ func (r *CustomerDurationRepository) RegisterDuration(ctx context.Context, tx *s
 	}
 
 	return durationID, nil
+}
+
+// GetCustomerActiveDuration - ดึง Duration packages ที่ยัง ACTIVE ของลูกค้า (คล้าย GetCustomerActiveSessions)
+func (r *CustomerDurationRepository) GetCustomerActiveDuration(ctx context.Context, username string) ([]repositories.ActiveDurationPackageInfo, error) {
+	rows, err := r.q.GetCustomerActiveDuration(ctx, sql.NullString{String: username, Valid: true})
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]repositories.ActiveDurationPackageInfo, 0, len(rows))
+	for _, row := range rows {
+		// Handle NULL values from JOIN
+		customerUsername := ""
+		if row.CustomerUsername.Valid {
+			customerUsername = row.CustomerUsername.String
+		}
+
+		productID := int32(0)
+		if row.ProductID.Valid {
+			productID = row.ProductID.Int32
+		}
+
+		durationDays := int32(0)
+		if row.DurationDays.Valid {
+			durationDays = row.DurationDays.Int32
+		}
+
+		salesUsername := ""
+		if row.SalesUsername.Valid {
+			salesUsername = row.SalesUsername.String
+		}
+
+		discountAmount := ""
+		if row.DiscountAmount.Valid {
+			discountAmount = row.DiscountAmount.String
+		}
+
+		createdAt := time.Time{}
+		if row.CreatedAt.Valid {
+			createdAt = row.CreatedAt.Time
+		}
+
+		result = append(result, repositories.ActiveDurationPackageInfo{
+			ID:               row.ID,
+			CustomerUsername: customerUsername,
+			ProductID:        productID,
+			ProductName:      row.ProductName, // string (not NULL from JOIN)
+			DurationDays:     durationDays,
+			SalesUsername:    salesUsername,
+			PurchaseDate:     row.PurchaseDate,
+			StartDate:        row.StartDate,
+			EndDate:          row.EndDate,
+			DaysRemaining:    row.DaysRemaining, // int32 (calculated, not NULL)
+			PricePaid:        row.PricePaid,     // string (DECIMAL as string)
+			DiscountAmount:   discountAmount,
+			Status:           string(row.Status),
+			CreatedAt:        createdAt,
+		})
+	}
+
+	return result, nil
 }
