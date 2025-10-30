@@ -211,3 +211,46 @@ func (r *CustomerSessionRepository) GetCustomerActiveSessions(ctx context.Contex
 
 	return result, nil
 }
+
+func (r *CustomerSessionRepository) List(ctx context.Context, limit, offset int32) ([]dbmodel.ListCustomerSessionsRow, error) {
+	return r.q.ListCustomerSessions(ctx, dbmodel.ListCustomerSessionsParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+}
+
+func (r *CustomerSessionRepository) Count(ctx context.Context) (int64, error) {
+	return r.q.CountCustomerSessions(ctx)
+}
+
+func (r *CustomerSessionRepository) CheckTrainerExists(ctx context.Context, username string) (int64, error) {
+	return r.q.CheckTrainerExists(ctx, username)
+}
+
+func (r *CustomerSessionRepository) UpdateEditableFields(
+	ctx context.Context,
+	p repositories.UpdateCustomerSessionEditableFieldsParams,
+) error {
+	return r.q.UpdateCustomerSessionEditableFields(ctx, dbmodel.UpdateCustomerSessionEditableFieldsParams{
+		TrainerUsername: sql.NullString{String: p.TrainerUsername, Valid: true},
+		PricePaid:       p.PricePaid,
+		DiscountAmount:  p.DiscountAmount,
+		Status:          dbmodel.CustomerSessionsStatus(p.Status),
+		ID:              p.ID,
+	})
+}
+
+func (r *CustomerSessionRepository) Delete(ctx context.Context, id int32) error {
+    res, err := r.q.DeleteCustomerSessionByID(ctx, id)
+    if err != nil {
+        return err
+    }
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+    return nil
+}

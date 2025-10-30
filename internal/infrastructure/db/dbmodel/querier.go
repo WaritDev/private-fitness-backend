@@ -30,12 +30,14 @@ type Querier interface {
 	// คืนค่า overlapped_count ถ้าเป็น 0 แสดงว่ายังว่างอยู่
 	// Logic: ช่วงเวลาซ้อนทับกันเมื่อ start_time < endTime AND end_time > startTime
 	CheckTimeSlotAvailability(ctx context.Context, arg CheckTimeSlotAvailabilityParams) (int64, error)
+	CheckTrainerExists(ctx context.Context, username string) (int64, error)
 	CheckUsernameExists(ctx context.Context, username string) (int64, error)
 	CheckinsToday(ctx context.Context) (int64, error)
 	CompletedPTInRange(ctx context.Context, arg CompletedPTInRangeParams) (int64, error)
 	// นับจำนวนนัดหมายของเทรนเนอร์ในวันที่กำหนด
 	CountAppointmentsOnDate(ctx context.Context, arg CountAppointmentsOnDateParams) (int64, error)
 	CountCustomerDurations(ctx context.Context) (int64, error)
+	CountCustomerSessions(ctx context.Context) (int64, error)
 	CountCustomers(ctx context.Context) (int64, error)
 	CountStaffs(ctx context.Context) (int64, error)
 	CreateCustomer(ctx context.Context, arg CreateCustomerParams) error
@@ -62,6 +64,7 @@ type Querier interface {
 	DeleteCustomerDurationBySales(ctx context.Context, salesUsername sql.NullString) error
 	DeleteCustomerLogsByCustomer(ctx context.Context, customerUsername sql.NullString) error
 	DeleteCustomerSessionByCustomer(ctx context.Context, customerUsername sql.NullString) error
+	DeleteCustomerSessionByID(ctx context.Context, id int32) (sql.Result, error)
 	DeleteCustomerSessionBySales(ctx context.Context, salesUsername sql.NullString) error
 	DeleteCustomerSessionByTrainer(ctx context.Context, trainerUsername sql.NullString) error
 	DeleteTrainerAvailabilityByTrainer(ctx context.Context, trainerUsername string) error
@@ -83,9 +86,10 @@ type Querier interface {
 	GetCustomerDurationByID(ctx context.Context, id int32) (GetCustomerDurationByIDRow, error)
 	GetCustomerDurationById(ctx context.Context, id int32) (CustomerDuration, error)
 	GetCustomerDurationsByUsername(ctx context.Context, customerUsername sql.NullString) ([]CustomerDuration, error)
-	GetDurationDaysForDurationID(ctx context.Context, id int32) (sql.NullInt32, error)
+	GetCustomerSessionByID(ctx context.Context, id int32) (GetCustomerSessionByIDRow, error)
 	// Q3C.3a - ดึงวันหยุดหรือช่วงเวลาที่ไม่รับนัด (DAY_OFF)
 	GetDayOffSchedules(ctx context.Context, arg GetDayOffSchedulesParams) ([]GetDayOffSchedulesRow, error)
+	GetDurationDaysForDurationID(ctx context.Context, id int32) (sql.NullInt32, error)
 	// Q5S.1: ดึงข้อมูลสินค้าและบัญชีรับชำระเงินเพื่อแสดงหน้าชำระเงิน
 	GetPaymentInfoByProductId(ctx context.Context, id int32) (GetPaymentInfoByProductIdRow, error)
 	GetProductById(ctx context.Context, id int32) (Product, error)
@@ -99,6 +103,7 @@ type Querier interface {
 	// ดึงรายชื่อเทรนเนอร์ทั้งหมดที่ active (สำหรับ dropdown)
 	ListAllTrainers(ctx context.Context) ([]ListAllTrainersRow, error)
 	ListCustomerDurations(ctx context.Context, arg ListCustomerDurationsParams) ([]ListCustomerDurationsRow, error)
+	ListCustomerSessions(ctx context.Context, arg ListCustomerSessionsParams) ([]ListCustomerSessionsRow, error)
 	ListCustomers(ctx context.Context, arg ListCustomersParams) ([]ListCustomersRow, error)
 	ListDurations(ctx context.Context) ([]ListDurationsRow, error)
 	ListSessions(ctx context.Context) ([]ListSessionsRow, error)
@@ -110,6 +115,7 @@ type Querier interface {
 	TopSellingProductsDurations(ctx context.Context, arg TopSellingProductsDurationsParams) ([]TopSellingProductsDurationsRow, error)
 	TopSellingProductsSessions(ctx context.Context, arg TopSellingProductsSessionsParams) ([]TopSellingProductsSessionsRow, error)
 	UpdateCustomerDurationEditableFields(ctx context.Context, arg UpdateCustomerDurationEditableFieldsParams) error
+	UpdateCustomerSessionEditableFields(ctx context.Context, arg UpdateCustomerSessionEditableFieldsParams) error
 	// อัปเดต users: ไม่มีการเปลี่ยน password
 	UpdateCustomerUserNoPassword(ctx context.Context, arg UpdateCustomerUserNoPasswordParams) error
 	// อัปเดต users: มีการรีเซ็ตรหัสผ่าน

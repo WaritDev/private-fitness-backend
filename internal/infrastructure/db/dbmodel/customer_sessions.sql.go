@@ -28,6 +28,34 @@ func (q *Queries) CheckBookingPermission(ctx context.Context, customerUsername s
 	return has_permission, err
 }
 
+const checkTrainerExists = `-- name: CheckTrainerExists :one
+SELECT COUNT(username) AS cnt
+FROM users
+WHERE username = ? AND role = 'TRAINER'
+`
+
+func (q *Queries) CheckTrainerExists(ctx context.Context, username string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, checkTrainerExists, username)
+	var cnt int64
+	err := row.Scan(&cnt)
+	return cnt, err
+}
+
+const countCustomerSessions = `-- name: CountCustomerSessions :one
+SELECT COUNT(cs.id) AS total_items
+FROM customer_sessions cs
+JOIN users cu ON cu.username = cs.customer_username
+JOIN users tu ON tu.username = cs.trainer_username
+JOIN products p ON p.id = cs.product_id
+`
+
+func (q *Queries) CountCustomerSessions(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countCustomerSessions)
+	var total_items int64
+	err := row.Scan(&total_items)
+	return total_items, err
+}
+
 const createCustomerSession = `-- name: CreateCustomerSession :exec
 INSERT INTO customer_sessions (
   customer_username,
@@ -88,6 +116,15 @@ WHERE id = ?
 func (q *Queries) DecrementUsedSessions(ctx context.Context, id int32) error {
 	_, err := q.db.ExecContext(ctx, decrementUsedSessions, id)
 	return err
+}
+
+const deleteCustomerSessionByID = `-- name: DeleteCustomerSessionByID :execresult
+DELETE FROM customer_sessions
+WHERE id = ?
+`
+
+func (q *Queries) DeleteCustomerSessionByID(ctx context.Context, id int32) (sql.Result, error) {
+	return q.db.ExecContext(ctx, deleteCustomerSessionByID, id)
 }
 
 const getActiveSessionByCustomer = `-- name: GetActiveSessionByCustomer :one
@@ -204,6 +241,56 @@ func (q *Queries) GetCustomerActiveSessions(ctx context.Context, customerUsernam
 	return items, nil
 }
 
+const getCustomerSessionByID = `-- name: GetCustomerSessionByID :one
+SELECT
+  cs.id,
+  cs.customer_username,
+  cs.trainer_username,
+  cs.product_id,
+  cs.sales_username,
+  cs.purchase_date,
+  cs.total_sessions,
+  cs.used_sessions,
+  cs.price_paid,
+  cs.discount_amount,
+  cs.status
+FROM customer_sessions cs
+WHERE cs.id = ?
+`
+
+type GetCustomerSessionByIDRow struct {
+	ID               int32                  `json:"id"`
+	CustomerUsername sql.NullString         `json:"customerUsername"`
+	TrainerUsername  sql.NullString         `json:"trainerUsername"`
+	ProductID        sql.NullInt32          `json:"productId"`
+	SalesUsername    sql.NullString         `json:"salesUsername"`
+	PurchaseDate     time.Time              `json:"purchaseDate"`
+	TotalSessions    int32                  `json:"totalSessions"`
+	UsedSessions     sql.NullInt32          `json:"usedSessions"`
+	PricePaid        string                 `json:"pricePaid"`
+	DiscountAmount   sql.NullString         `json:"discountAmount"`
+	Status           CustomerSessionsStatus `json:"status"`
+}
+
+func (q *Queries) GetCustomerSessionByID(ctx context.Context, id int32) (GetCustomerSessionByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getCustomerSessionByID, id)
+	var i GetCustomerSessionByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.CustomerUsername,
+		&i.TrainerUsername,
+		&i.ProductID,
+		&i.SalesUsername,
+		&i.PurchaseDate,
+		&i.TotalSessions,
+		&i.UsedSessions,
+		&i.PricePaid,
+		&i.DiscountAmount,
+		&i.Status,
+	)
+	return i, err
+}
+
 const incrementUsedSessions = `-- name: IncrementUsedSessions :exec
 UPDATE customer_sessions
 SET used_sessions = used_sessions + 1
@@ -213,5 +300,136 @@ WHERE id = ?
 // Q3C.6 - อัปเดตจำนวนครั้งที่ใช้ไปแล้ว
 func (q *Queries) IncrementUsedSessions(ctx context.Context, id int32) error {
 	_, err := q.db.ExecContext(ctx, incrementUsedSessions, id)
+	return err
+}
+
+const listCustomerSessions = `-- name: ListCustomerSessions :many
+SELECT
+  cs.id,
+  cs.customer_username,
+  cu.first_name  AS customer_first_name,
+  cu.last_name   AS customer_last_name,
+  cs.trainer_username,
+  tu.first_name  AS trainer_first_name,
+  tu.last_name   AS trainer_last_name,
+  cs.product_id,
+  p.name         AS product_name,
+  p.type,
+  p.category,
+  p.session_amount,
+  cs.sales_username,
+  cs.purchase_date,
+  cs.total_sessions,
+  cs.used_sessions,
+  (cs.total_sessions - cs.used_sessions) AS remaining_sessions,
+  cs.price_paid,
+  cs.discount_amount,
+  cs.status
+FROM customer_sessions cs
+JOIN users cu ON cu.username = cs.customer_username
+JOIN users tu ON tu.username = cs.trainer_username
+JOIN products p ON p.id = cs.product_id
+ORDER BY cs.created_at DESC, cs.id DESC
+LIMIT ? OFFSET ?
+`
+
+type ListCustomerSessionsParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+type ListCustomerSessionsRow struct {
+	ID                int32                  `json:"id"`
+	CustomerUsername  sql.NullString         `json:"customerUsername"`
+	CustomerFirstName string                 `json:"customerFirstName"`
+	CustomerLastName  string                 `json:"customerLastName"`
+	TrainerUsername   sql.NullString         `json:"trainerUsername"`
+	TrainerFirstName  string                 `json:"trainerFirstName"`
+	TrainerLastName   string                 `json:"trainerLastName"`
+	ProductID         sql.NullInt32          `json:"productId"`
+	ProductName       string                 `json:"productName"`
+	Type              ProductsType           `json:"type"`
+	Category          ProductsCategory       `json:"category"`
+	SessionAmount     sql.NullInt32          `json:"sessionAmount"`
+	SalesUsername     sql.NullString         `json:"salesUsername"`
+	PurchaseDate      time.Time              `json:"purchaseDate"`
+	TotalSessions     int32                  `json:"totalSessions"`
+	UsedSessions      sql.NullInt32          `json:"usedSessions"`
+	RemainingSessions int32                  `json:"remainingSessions"`
+	PricePaid         string                 `json:"pricePaid"`
+	DiscountAmount    sql.NullString         `json:"discountAmount"`
+	Status            CustomerSessionsStatus `json:"status"`
+}
+
+func (q *Queries) ListCustomerSessions(ctx context.Context, arg ListCustomerSessionsParams) ([]ListCustomerSessionsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCustomerSessions, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCustomerSessionsRow
+	for rows.Next() {
+		var i ListCustomerSessionsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CustomerUsername,
+			&i.CustomerFirstName,
+			&i.CustomerLastName,
+			&i.TrainerUsername,
+			&i.TrainerFirstName,
+			&i.TrainerLastName,
+			&i.ProductID,
+			&i.ProductName,
+			&i.Type,
+			&i.Category,
+			&i.SessionAmount,
+			&i.SalesUsername,
+			&i.PurchaseDate,
+			&i.TotalSessions,
+			&i.UsedSessions,
+			&i.RemainingSessions,
+			&i.PricePaid,
+			&i.DiscountAmount,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateCustomerSessionEditableFields = `-- name: UpdateCustomerSessionEditableFields :exec
+UPDATE customer_sessions
+SET trainer_username = ?,
+    price_paid       = ?,
+    discount_amount  = ?,
+    status           = ?,
+    updated_at       = NOW()
+WHERE id = ?
+`
+
+type UpdateCustomerSessionEditableFieldsParams struct {
+	TrainerUsername sql.NullString         `json:"trainerUsername"`
+	PricePaid       string                 `json:"pricePaid"`
+	DiscountAmount  sql.NullString         `json:"discountAmount"`
+	Status          CustomerSessionsStatus `json:"status"`
+	ID              int32                  `json:"id"`
+}
+
+func (q *Queries) UpdateCustomerSessionEditableFields(ctx context.Context, arg UpdateCustomerSessionEditableFieldsParams) error {
+	_, err := q.db.ExecContext(ctx, updateCustomerSessionEditableFields,
+		arg.TrainerUsername,
+		arg.PricePaid,
+		arg.DiscountAmount,
+		arg.Status,
+		arg.ID,
+	)
 	return err
 }
