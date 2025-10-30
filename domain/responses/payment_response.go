@@ -39,3 +39,30 @@ type PaymentInfoForCalculation struct {
 	QRCodeURL        string
 	AccountActive    bool
 }
+
+type PaymentAccountItem struct {
+	ID            int32  `json:"id"`
+	AccountName   string `json:"accountName"`
+	AccountNumber string `json:"accountNumber"`
+	BankName      string `json:"bankName"`
+	QRCodeURL     string `json:"qrCodeUrl"`
+	IsActive      bool   `json:"isActive"`
+}
+
+type ListPaymentAccountsResponse struct {
+	Data []PaymentAccountItem `json:"data"`
+	Meta PageMeta             `json:"meta"`
+}
+
+type PaymentAccountCreatedResponse struct {
+	Message string `json:"message"`
+	ID      int32  `json:"id"`
+}
+
+type PaymentAccountUpdatedResponse struct {
+	Message string `json:"message"`
+}
+
+type PaymentAccountDeletedResponse struct {
+    Message string `json:"message"`
+}
