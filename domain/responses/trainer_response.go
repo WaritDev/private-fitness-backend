@@ -40,3 +40,15 @@ type AddWorkingTimeResponse struct {
 	Status  string `json:"status"`  // สถานะ "success" หรือ "error"
 	Message string `json:"message"` // ข้อความ
 }
+
+// UpdateWorkingTimeResponse - Response สำหรับการแก้ไขเวลาทำงาน (Q1P.4)
+type UpdateWorkingTimeResponse struct {
+	Status  string `json:"status"`  // สถานะ "success" หรือ "error"
+	Message string `json:"message"` // ข้อความ
+}
+
+// DeleteWorkingTimeResponse - Response สำหรับการลบเวลาทำงาน (Q1P.5)
+type DeleteWorkingTimeResponse struct {
+	Status  string `json:"status"`  // สถานะ "success" หรือ "error"
+	Message string `json:"message"` // ข้อความ
+}

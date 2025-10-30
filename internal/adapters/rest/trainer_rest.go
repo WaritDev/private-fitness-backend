@@ -204,3 +204,98 @@ func (h *TrainerHandler) AddWorkingTime(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(result)
 }
+
+// PUT /api/trainers/working-hours/:id - แก้ไขเวลาทำงาน (Q1P.4)
+func (h *TrainerHandler) UpdateWorkingTime(c *fiber.Ctx) error {
+	// ดึง trainerUsername จาก JWT claims
+	trainerUsername := c.Locals("username").(string)
+
+	// ดึง ID จาก URL parameter
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid ID parameter",
+		})
+	}
+
+	// Parse request body
+	var req requests.UpdateWorkingTimeRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid request body",
+		})
+	}
+
+	// Validate required fields
+	if req.DayOfWeek == "" || req.StartTime == "" || req.EndTime == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "dayOfWeek, startTime, and endTime are required",
+		})
+	}
+
+	// Validate day of week
+	validDays := []string{"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"}
+	isValidDay := false
+	for _, day := range validDays {
+		if req.DayOfWeek == day {
+			isValidDay = true
+			break
+		}
+	}
+	if !isValidDay {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid dayOfWeek. Must be MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, or SUNDAY",
+		})
+	}
+
+	// เรียก use case
+	result, err := h.trainerUC.UpdateWorkingTime(c.Context(), trainerUsername, int32(id), req)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": err.Error(),
+		})
+	}
+
+	// ถ้า result status = error แสดงว่าเกิด validation error
+	if result.Status == "error" {
+		return c.Status(fiber.StatusBadRequest).JSON(result)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(result)
+}
+
+// DELETE /api/trainers/working-hours/:id - ลบเวลาทำงาน (Q1P.5)
+func (h *TrainerHandler) DeleteWorkingTime(c *fiber.Ctx) error {
+	// ดึง trainerUsername จาก JWT claims
+	trainerUsername := c.Locals("username").(string)
+
+	// ดึง ID จาก URL parameter
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid ID parameter",
+		})
+	}
+
+	// เรียก use case
+	result, err := h.trainerUC.DeleteWorkingTime(c.Context(), trainerUsername, int32(id))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": err.Error(),
+		})
+	}
+
+	// ถ้า result status = error แสดงว่าเกิด validation error
+	if result.Status == "error" {
+		return c.Status(fiber.StatusNotFound).JSON(result)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(result)
+}

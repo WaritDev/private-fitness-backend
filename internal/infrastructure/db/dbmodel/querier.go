@@ -79,6 +79,8 @@ type Querier interface {
 	DeleteCustomerSessionByTrainer(ctx context.Context, trainerUsername sql.NullString) error
 	DeletePaymentAccountByID(ctx context.Context, id int32) (sql.Result, error)
 	DeleteProductByID(ctx context.Context, id int32) (sql.Result, error)
+	// Q1P.5: Delete Trainer Availability (Remove Working Time)
+	DeleteTrainerAvailability(ctx context.Context, id int32) error
 	DeleteTrainerAvailabilityByTrainer(ctx context.Context, trainerUsername string) error
 	DeleteTrainingScheduleByCustomer(ctx context.Context, customerUsername sql.NullString) error
 	DeleteTrainingScheduleByTrainer(ctx context.Context, trainerUsername sql.NullString) error
@@ -118,10 +120,10 @@ type Querier interface {
 	GetUserRole(ctx context.Context, username string) (UsersRole, error)
 	// Q3C.6 - อัปเดตจำนวนครั้งที่ใช้ไปแล้ว
 	IncrementUsedSessions(ctx context.Context, id int32) error
-	InsertPaymentAccount(ctx context.Context, arg InsertPaymentAccountParams) (sql.Result, error)
 	// Q5C.2 - อัปเดตจำนวนครั้งที่ใช้ไปแล้วสำหรับ Check-in (Use Case 5C)
 	// ใช้ session package ACTIVE ที่ใหม่ที่สุด
 	IncrementUsedSessionsByUsername(ctx context.Context, customerUsername sql.NullString) error
+	InsertPaymentAccount(ctx context.Context, arg InsertPaymentAccountParams) (sql.Result, error)
 	InsertProductDuration(ctx context.Context, arg InsertProductDurationParams) (sql.Result, error)
 	InsertProductSession(ctx context.Context, arg InsertProductSessionParams) (sql.Result, error)
 	ListAllProducts(ctx context.Context) ([]Product, error)
@@ -156,6 +158,8 @@ type Querier interface {
 	UpdateProductSession(ctx context.Context, arg UpdateProductSessionParams) error
 	UpdateStaffNoPassword(ctx context.Context, arg UpdateStaffNoPasswordParams) error
 	UpdateStaffWithPassword(ctx context.Context, arg UpdateStaffWithPasswordParams) error
+	// Q1P.4: Update Trainer Availability (Edit Working Time)
+	UpdateTrainerAvailability(ctx context.Context, arg UpdateTrainerAvailabilityParams) error
 	// Q0S.2: Update updated_at when user logs in (track last active time)
 	UpdateUserLoginTimestamp(ctx context.Context, username string) error
 }

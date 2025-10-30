@@ -67,6 +67,17 @@ func (q *Queries) CreateTrainerAvailability(ctx context.Context, arg CreateTrain
 	return err
 }
 
+const deleteTrainerAvailability = `-- name: DeleteTrainerAvailability :exec
+DELETE FROM training_availabilities
+WHERE id = ?
+`
+
+// Q1P.5: Delete Trainer Availability (Remove Working Time)
+func (q *Queries) DeleteTrainerAvailability(ctx context.Context, id int32) error {
+	_, err := q.db.ExecContext(ctx, deleteTrainerAvailability, id)
+	return err
+}
+
 const getTrainerAvailability = `-- name: GetTrainerAvailability :many
 
 SELECT
@@ -156,4 +167,31 @@ func (q *Queries) GetTrainingAvaliabilitiesByTrainerUsername(ctx context.Context
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateTrainerAvailability = `-- name: UpdateTrainerAvailability :exec
+UPDATE training_availabilities
+SET
+  day_of_week = ?,
+  start_time = ?,
+  end_time = ?
+WHERE id = ?
+`
+
+type UpdateTrainerAvailabilityParams struct {
+	DayOfWeek TrainingAvailabilitiesDayOfWeek `json:"dayOfWeek"`
+	StartTime time.Time                       `json:"startTime"`
+	EndTime   time.Time                       `json:"endTime"`
+	ID        int32                           `json:"id"`
+}
+
+// Q1P.4: Update Trainer Availability (Edit Working Time)
+func (q *Queries) UpdateTrainerAvailability(ctx context.Context, arg UpdateTrainerAvailabilityParams) error {
+	_, err := q.db.ExecContext(ctx, updateTrainerAvailability,
+		arg.DayOfWeek,
+		arg.StartTime,
+		arg.EndTime,
+		arg.ID,
+	)
+	return err
 }

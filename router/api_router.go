@@ -85,8 +85,10 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	trainers.Get("/", handler.Trainer.ListAllTrainers) // List all active trainers
 
 	// Use Case 1P: Manage Working Hours (Trainer must be logged in)
-	trainers.Get("/working-hours", handler.Trainer.GetWorkingHours) // Q1P.1: Get trainer's working hours
-	trainers.Post("/working-hours", handler.Trainer.AddWorkingTime) // Q1P.2 + Q1P.3: Add new working time
+	trainers.Get("/working-hours", handler.Trainer.GetWorkingHours)          // Q1P.1: Get trainer's working hours
+	trainers.Post("/working-hours", handler.Trainer.AddWorkingTime)          // Q1P.2 + Q1P.3: Add new working time
+	trainers.Put("/working-hours/:id", handler.Trainer.UpdateWorkingTime)    // Q1P.4: Update working time
+	trainers.Delete("/working-hours/:id", handler.Trainer.DeleteWorkingTime) // Q1P.5: Delete working time
 
 	// Payment routes (for Use Case: ยืนยันการชำระเงิน)
 	payments := apiGroup.Group("/payments")

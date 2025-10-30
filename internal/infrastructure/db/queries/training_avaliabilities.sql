@@ -41,3 +41,18 @@ INSERT INTO training_availabilities (
   start_time,
   end_time
 ) VALUES (?, ?, ?, ?);
+
+
+-- Q1P.4: Update Trainer Availability (Edit Working Time)
+-- name: UpdateTrainerAvailability :exec
+UPDATE training_availabilities
+SET
+  day_of_week = ?,
+  start_time = ?,
+  end_time = ?
+WHERE id = ?;
+
+-- Q1P.5: Delete Trainer Availability (Remove Working Time)
+-- name: DeleteTrainerAvailability :exec
+DELETE FROM training_availabilities
+WHERE id = ?;

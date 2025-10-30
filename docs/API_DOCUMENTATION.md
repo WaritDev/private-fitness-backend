@@ -1759,6 +1759,288 @@ const handleSubmit = (e: React.FormEvent) => {
 
 ---
 
+### 7.3 Update Working Time (Trainer)
+
+**Endpoint:** `PUT /api/trainers/working-hours/:id`
+
+**Description:** แก้ไขเวลาทำงานที่มีอยู่แล้ว (Q1P.4)
+
+**Authorization:** Required (JWT Token - Trainer role)
+
+**URL Parameters:**
+- `id` (integer, required) - ID ของเวลาทำงานที่ต้องการแก้ไข
+
+**Business Logic:**
+1. ตรวจสอบว่า working hour นี้เป็นของ trainer ที่ login หรือไม่ (ownership validation)
+2. Validate time format และ endTime > startTime
+3. อัพเดทข้อมูลด้วย Q1P.4
+4. Return success response
+
+**SQL Query (Q1P.4):**
+```sql
+UPDATE training_availabilities
+SET
+  day_of_week = ?,
+  start_time = ?,
+  end_time = ?
+WHERE id = ?;
+```
+
+**Request Body:**
+```json
+{
+  "dayOfWeek": "TUESDAY",
+  "startTime": "10:00",
+  "endTime": "14:00"
+}
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "success",
+  "message": "Working time updated successfully"
+}
+```
+
+**Error Responses:**
+
+**400 Bad Request - Not Owner:**
+```json
+{
+  "status": "error",
+  "message": "Working hour not found or does not belong to you"
+}
+```
+
+**400 Bad Request - Invalid Time:**
+```json
+{
+  "status": "error",
+  "message": "End time must be after start time"
+}
+```
+
+**Usage Example:**
+```typescript
+const updateWorkingTime = async (id: number, data: UpdateWorkingTimeRequest) => {
+  const token = localStorage.getItem('token');
+  
+  const response = await fetch(`http://localhost:8000/api/trainers/working-hours/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
+  });
+
+  const result = await response.json();
+  
+  if (result.status === 'success') {
+    alert('Working time updated successfully');
+    // Refresh working hours list
+  } else {
+    alert(result.message);
+  }
+};
+```
+
+---
+
+### 7.4 Delete Working Time (Trainer)
+
+**Endpoint:** `DELETE /api/trainers/working-hours/:id`
+
+**Description:** ลบเวลาทำงาน (Q1P.5)
+
+**Authorization:** Required (JWT Token - Trainer role)
+
+**URL Parameters:**
+- `id` (integer, required) - ID ของเวลาทำงานที่ต้องการลบ
+
+**Business Logic:**
+1. ตรวจสอบว่า working hour นี้เป็นของ trainer ที่ login หรือไม่ (ownership validation)
+2. ลบข้อมูลด้วย Q1P.5
+3. Return success response
+
+**SQL Query (Q1P.5):**
+```sql
+DELETE FROM training_availabilities
+WHERE id = ?;
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "success",
+  "message": "Working time deleted successfully"
+}
+```
+
+**Error Response (404 Not Found):**
+```json
+{
+  "status": "error",
+  "message": "Working hour not found or does not belong to you"
+}
+```
+
+**Usage Example:**
+```typescript
+const deleteWorkingTime = async (id: number) => {
+  if (!confirm('Are you sure you want to delete this working time?')) {
+    return;
+  }
+
+  const token = localStorage.getItem('token');
+  
+  const response = await fetch(`http://localhost:8000/api/trainers/working-hours/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+
+  const result = await response.json();
+  
+  if (result.status === 'success') {
+    alert('Working time deleted successfully');
+    // Refresh working hours list
+  } else {
+    alert(result.message);
+  }
+};
+```
+
+**Frontend Integration Example:**
+```typescript
+// Complete Working Hours Management Component
+interface WorkingHour {
+  availabilityId: number;
+  dayOfWeek: string;
+  startTime: string;
+  endTime: string;
+}
+
+const WorkingHoursPage: React.FC = () => {
+  const [workingHours, setWorkingHours] = useState<WorkingHour[]>([]);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({ dayOfWeek: '', startTime: '', endTime: '' });
+
+  // Fetch working hours
+  const fetchWorkingHours = async () => {
+    const token = localStorage.getItem('token');
+    const response = await fetch('http://localhost:8000/api/trainers/working-hours', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await response.json();
+    if (data.status === 'success') {
+      setWorkingHours(data.workingHours);
+    }
+  };
+
+  // Update working time
+  const handleUpdate = async (id: number) => {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`http://localhost:8000/api/trainers/working-hours/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(editForm)
+    });
+
+    const result = await response.json();
+    if (result.status === 'success') {
+      alert('Updated successfully');
+      setEditingId(null);
+      fetchWorkingHours();
+    } else {
+      alert(result.message);
+    }
+  };
+
+  // Delete working time
+  const handleDelete = async (id: number) => {
+    if (!confirm('Delete this working time?')) return;
+    
+    const token = localStorage.getItem('token');
+    const response = await fetch(`http://localhost:8000/api/trainers/working-hours/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    const result = await response.json();
+    if (result.status === 'success') {
+      alert('Deleted successfully');
+      fetchWorkingHours();
+    } else {
+      alert(result.message);
+    }
+  };
+
+  return (
+    <div>
+      <h1>Working Hours Management</h1>
+      <table>
+        <thead>
+          <tr>
+            <th>Day</th>
+            <th>Start Time</th>
+            <th>End Time</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {workingHours.map((hour) => (
+            <tr key={hour.availabilityId}>
+              {editingId === hour.availabilityId ? (
+                <>
+                  <td>
+                    <select value={editForm.dayOfWeek} onChange={(e) => setEditForm({...editForm, dayOfWeek: e.target.value})}>
+                      <option value="MONDAY">Monday</option>
+                      <option value="TUESDAY">Tuesday</option>
+                      {/* ... other days */}
+                    </select>
+                  </td>
+                  <td><input type="time" value={editForm.startTime} onChange={(e) => setEditForm({...editForm, startTime: e.target.value})} /></td>
+                  <td><input type="time" value={editForm.endTime} onChange={(e) => setEditForm({...editForm, endTime: e.target.value})} /></td>
+                  <td>
+                    <button onClick={() => handleUpdate(hour.availabilityId)}>Save</button>
+                    <button onClick={() => setEditingId(null)}>Cancel</button>
+                  </td>
+                </>
+              ) : (
+                <>
+                  <td>{hour.dayOfWeek}</td>
+                  <td>{hour.startTime}</td>
+                  <td>{hour.endTime}</td>
+                  <td>
+                    <button onClick={() => {
+                      setEditingId(hour.availabilityId);
+                      setEditForm({
+                        dayOfWeek: hour.dayOfWeek,
+                        startTime: hour.startTime,
+                        endTime: hour.endTime
+                      });
+                    }}>Edit</button>
+                    <button onClick={() => handleDelete(hour.availabilityId)}>Delete</button>
+                  </td>
+                </>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+```
+
+---
+
 ## 8. Error Codes
 
 ### Common Error Messages

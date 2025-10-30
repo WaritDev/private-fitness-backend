@@ -46,4 +46,13 @@ type TrainerRepository interface {
 
 	// CreateTrainerAvailability creates new working time slot (Q1P.3)
 	CreateTrainerAvailability(ctx context.Context, trainerUsername string, dayOfWeek string, startTime, endTime time.Time) error
+
+	// UpdateTrainerAvailability updates existing working time slot (Q1P.4)
+	UpdateTrainerAvailability(ctx context.Context, id int32, dayOfWeek string, startTime, endTime time.Time) error
+
+	// DeleteTrainerAvailability deletes a working time slot (Q1P.5)
+	DeleteTrainerAvailability(ctx context.Context, id int32) error
+
+	// GetTrainerAvailabilityByID gets a single working hour by ID (for validation)
+	GetTrainerAvailabilityByID(ctx context.Context, id int32) (*TrainerAvailability, error)
 }
