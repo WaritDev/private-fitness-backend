@@ -11,39 +11,54 @@ import (
 
 type Querier interface {
 	ActiveMembersToday(ctx context.Context) (int64, error)
+	CheckCustomerGmailExistsExcept(ctx context.Context, arg CheckCustomerGmailExistsExceptParams) (int64, error)
+	CheckCustomerPhoneExistsExcept(ctx context.Context, arg CheckCustomerPhoneExistsExceptParams) (int64, error)
+	CheckEmailExists(ctx context.Context, email string) (int64, error)
 	CheckGmailExists(ctx context.Context, lower string) (int64, error)
 	CheckGmailExistsExceptUsername(ctx context.Context, arg CheckGmailExistsExceptUsernameParams) (int64, error)
 	CheckPhoneExists(ctx context.Context, phoneNumber string) (int64, error)
 	CheckPhoneExistsExceptUsername(ctx context.Context, arg CheckPhoneExistsExceptUsernameParams) (int64, error)
+	CheckPhoneNumberExists(ctx context.Context, phoneNumber string) (int64, error)
+	// ตรวจสอบว่ามีนัดซ้อนทับหรือไม่
+	CheckScheduleOverlap(ctx context.Context, arg CheckScheduleOverlapParams) (int64, error)
 	CheckUsernameExists(ctx context.Context, username string) (int64, error)
 	CheckinsToday(ctx context.Context) (int64, error)
 	CompletedPTInRange(ctx context.Context, arg CompletedPTInRangeParams) (int64, error)
-	CountStaffs(ctx context.Context) (int64, error)
-	CheckEmailExists(ctx context.Context, email string) (int64, error)
-	CheckPhoneNumberExists(ctx context.Context, phoneNumber string) (int64, error)
-	CheckScheduleOverlap(ctx context.Context, arg CheckScheduleOverlapParams) (int64, error)
+	// นับจำนวนนัดหมายของเทรนเนอร์ในวันที่กำหนด
 	CountAppointmentsOnDate(ctx context.Context, arg CountAppointmentsOnDateParams) (int64, error)
+	CountCustomers(ctx context.Context) (int64, error)
+	CountStaffs(ctx context.Context) (int64, error)
 	CreateCustomer(ctx context.Context, arg CreateCustomerParams) error
 	CreateCustomerDuration(ctx context.Context, arg CreateCustomerDurationParams) error
 	CreatePaymentAccount(ctx context.Context, arg CreatePaymentAccountParams) error
 	CreateStaff(ctx context.Context, arg CreateStaffParams) error
 	CreateUser(ctx context.Context, arg CreateUserParams) error
+	DeleteCustomerByUsername(ctx context.Context, username string) error
+	DeleteCustomerDurationByCustomer(ctx context.Context, customerUsername sql.NullString) error
 	DeleteCustomerDurationBySales(ctx context.Context, salesUsername sql.NullString) error
+	DeleteCustomerLogsByCustomer(ctx context.Context, customerUsername sql.NullString) error
+	DeleteCustomerSessionByCustomer(ctx context.Context, customerUsername sql.NullString) error
 	DeleteCustomerSessionBySales(ctx context.Context, salesUsername sql.NullString) error
 	DeleteCustomerSessionByTrainer(ctx context.Context, trainerUsername sql.NullString) error
 	DeleteTrainerAvailabilityByTrainer(ctx context.Context, trainerUsername string) error
+	DeleteTrainingScheduleByCustomer(ctx context.Context, customerUsername sql.NullString) error
 	DeleteTrainingScheduleByTrainer(ctx context.Context, trainerUsername sql.NullString) error
 	DeleteUserByUsername(ctx context.Context, username string) error
+	// Q4S.1 แก้ไข: หาเทรนเนอร์ที่ว่างในวันและเวลาที่กำหนด
 	FindAvailableTrainers(ctx context.Context, arg FindAvailableTrainersParams) ([]FindAvailableTrainersRow, error)
+	GetCustomerByUsername(ctx context.Context, username string) (GetCustomerByUsernameRow, error)
 	GetCustomerDurationById(ctx context.Context, id int32) (CustomerDuration, error)
 	GetCustomerDurationsByUsername(ctx context.Context, customerUsername sql.NullString) ([]CustomerDuration, error)
+	// Q5S.1: ดึงข้อมูลสินค้าและบัญชีรับชำระเงินเพื่อแสดงหน้าชำระเงิน
 	GetPaymentInfoByProductId(ctx context.Context, id int32) (GetPaymentInfoByProductIdRow, error)
 	GetProductById(ctx context.Context, id int32) (Product, error)
 	GetStaffByUsername(ctx context.Context, username string) (GetStaffByUsernameRow, error)
 	GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error)
 	GetUserRole(ctx context.Context, username string) (UsersRole, error)
 	ListAllProducts(ctx context.Context) ([]Product, error)
+	// ดึงรายชื่อเทรนเนอร์ทั้งหมดที่ active (สำหรับ dropdown)
 	ListAllTrainers(ctx context.Context) ([]ListAllTrainersRow, error)
+	ListCustomers(ctx context.Context, arg ListCustomersParams) ([]ListCustomersRow, error)
 	ListDurations(ctx context.Context) ([]ListDurationsRow, error)
 	ListSessions(ctx context.Context) ([]ListSessionsRow, error)
 	ListStaffs(ctx context.Context, arg ListStaffsParams) ([]ListStaffsRow, error)
@@ -53,6 +68,12 @@ type Querier interface {
 	RevenueSessions(ctx context.Context, arg RevenueSessionsParams) (int64, error)
 	TopSellingProductsDurations(ctx context.Context, arg TopSellingProductsDurationsParams) ([]TopSellingProductsDurationsRow, error)
 	TopSellingProductsSessions(ctx context.Context, arg TopSellingProductsSessionsParams) ([]TopSellingProductsSessionsRow, error)
+	// อัปเดต users: ไม่มีการเปลี่ยน password
+	UpdateCustomerUserNoPassword(ctx context.Context, arg UpdateCustomerUserNoPasswordParams) error
+	// อัปเดต users: มีการรีเซ็ตรหัสผ่าน
+	UpdateCustomerUserWithPassword(ctx context.Context, arg UpdateCustomerUserWithPasswordParams) error
+	// อัปเดตตาราง customers
+	UpdateCustomersDetail(ctx context.Context, arg UpdateCustomersDetailParams) error
 	UpdateStaffNoPassword(ctx context.Context, arg UpdateStaffNoPasswordParams) error
 	UpdateStaffWithPassword(ctx context.Context, arg UpdateStaffWithPasswordParams) error
 }
