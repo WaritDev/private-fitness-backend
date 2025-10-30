@@ -10,6 +10,72 @@ import (
 	"database/sql"
 )
 
+const checkPaymentAccountActive = `-- name: CheckPaymentAccountActive :one
+SELECT COUNT(pa.id) AS account_count
+FROM payment_accounts pa
+WHERE pa.id = ?
+  AND pa.is_active = 1
+`
+
+func (q *Queries) CheckPaymentAccountActive(ctx context.Context, id int32) (int64, error) {
+	row := q.db.QueryRowContext(ctx, checkPaymentAccountActive, id)
+	var account_count int64
+	err := row.Scan(&account_count)
+	return account_count, err
+}
+
+const countProductReferences = `-- name: CountProductReferences :one
+WITH ref AS (
+  SELECT
+    (SELECT COUNT(product_id) FROM customer_durations cd WHERE cd.product_id = ?) AS cd_refs,
+    (SELECT COUNT(product_id) FROM customer_sessions cs WHERE cs.product_id = ?) AS cs_refs
+)
+SELECT
+  cd_refs AS ref_in_customer_duration,
+  cs_refs AS ref_in_customer_session,
+  (cd_refs + cs_refs) AS total_refs
+FROM ref
+`
+
+type CountProductReferencesParams struct {
+	ProductID   sql.NullInt32 `json:"productId"`
+	ProductID_2 sql.NullInt32 `json:"productId2"`
+}
+
+type CountProductReferencesRow struct {
+	RefInCustomerDuration int64 `json:"refInCustomerDuration"`
+	RefInCustomerSession  int64 `json:"refInCustomerSession"`
+	TotalRefs             int32 `json:"totalRefs"`
+}
+
+func (q *Queries) CountProductReferences(ctx context.Context, arg CountProductReferencesParams) (CountProductReferencesRow, error) {
+	row := q.db.QueryRowContext(ctx, countProductReferences, arg.ProductID, arg.ProductID_2)
+	var i CountProductReferencesRow
+	err := row.Scan(&i.RefInCustomerDuration, &i.RefInCustomerSession, &i.TotalRefs)
+	return i, err
+}
+
+const countProducts = `-- name: CountProducts :one
+SELECT COUNT(p.id) AS total_items
+FROM products p
+`
+
+func (q *Queries) CountProducts(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countProducts)
+	var total_items int64
+	err := row.Scan(&total_items)
+	return total_items, err
+}
+
+const deleteProductByID = `-- name: DeleteProductByID :execresult
+DELETE FROM products
+WHERE id = ?
+`
+
+func (q *Queries) DeleteProductByID(ctx context.Context, id int32) (sql.Result, error) {
+	return q.db.ExecContext(ctx, deleteProductByID, id)
+}
+
 const getProductById = `-- name: GetProductById :one
 SELECT
   id,
@@ -45,6 +111,96 @@ func (q *Queries) GetProductById(ctx context.Context, id int32) (Product, error)
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const insertProductDuration = `-- name: InsertProductDuration :execresult
+INSERT INTO products (
+  name,
+  type,
+  category,
+  list_price,
+  duration_days,
+  session_amount,
+  is_active,
+  payment_account_id,
+  created_at,
+  updated_at
+) VALUES (
+  ?,               -- name
+  'DURATION',      -- type
+  ?,               -- category
+  ?,               -- list_price (DECIMAL -> ส่ง string)
+  ?,               -- duration_days
+  NULL,            -- session_amount
+  COALESCE(?, 1),  -- is_active (NULL -> TRUE)
+  ?,               -- payment_account_id
+  NOW(), NOW()
+)
+`
+
+type InsertProductDurationParams struct {
+	Name             string           `json:"name"`
+	Category         ProductsCategory `json:"category"`
+	ListPrice        string           `json:"listPrice"`
+	DurationDays     sql.NullInt32    `json:"durationDays"`
+	Column5          interface{}      `json:"column5"`
+	PaymentAccountID int32            `json:"paymentAccountId"`
+}
+
+func (q *Queries) InsertProductDuration(ctx context.Context, arg InsertProductDurationParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, insertProductDuration,
+		arg.Name,
+		arg.Category,
+		arg.ListPrice,
+		arg.DurationDays,
+		arg.Column5,
+		arg.PaymentAccountID,
+	)
+}
+
+const insertProductSession = `-- name: InsertProductSession :execresult
+INSERT INTO products (
+  name,
+  type,
+  category,
+  list_price,
+  duration_days,
+  session_amount,
+  is_active,
+  payment_account_id,
+  created_at,
+  updated_at
+) VALUES (
+  ?,               -- name
+  'SESSION',       -- type
+  ?,               -- category
+  ?,               -- list_price (DECIMAL -> ส่ง string)
+  NULL,            -- duration_days
+  ?,               -- session_amount
+  COALESCE(?, 1),  -- is_active (NULL -> TRUE)
+  ?,               -- payment_account_id
+  NOW(), NOW()
+)
+`
+
+type InsertProductSessionParams struct {
+	Name             string           `json:"name"`
+	Category         ProductsCategory `json:"category"`
+	ListPrice        string           `json:"listPrice"`
+	SessionAmount    sql.NullInt32    `json:"sessionAmount"`
+	Column5          interface{}      `json:"column5"`
+	PaymentAccountID int32            `json:"paymentAccountId"`
+}
+
+func (q *Queries) InsertProductSession(ctx context.Context, arg InsertProductSessionParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, insertProductSession,
+		arg.Name,
+		arg.Category,
+		arg.ListPrice,
+		arg.SessionAmount,
+		arg.Column5,
+		arg.PaymentAccountID,
+	)
 }
 
 const listAllProducts = `-- name: ListAllProducts :many
@@ -163,6 +319,81 @@ func (q *Queries) ListDurations(ctx context.Context) ([]ListDurationsRow, error)
 	return items, nil
 }
 
+const listProducts = `-- name: ListProducts :many
+SELECT
+  p.id,
+  p.name,
+  p.type,
+  p.category,
+  p.list_price,
+  p.duration_days,
+  p.session_amount,
+  p.is_active,
+  p.payment_account_id,
+  p.created_at,
+  p.updated_at,
+  (p.is_active = 1) AS is_active_bool
+FROM products p
+ORDER BY p.is_active DESC, p.type ASC, p.category ASC, p.list_price ASC
+LIMIT ? OFFSET ?
+`
+
+type ListProductsParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+type ListProductsRow struct {
+	ID               int32            `json:"id"`
+	Name             string           `json:"name"`
+	Type             ProductsType     `json:"type"`
+	Category         ProductsCategory `json:"category"`
+	ListPrice        string           `json:"listPrice"`
+	DurationDays     sql.NullInt32    `json:"durationDays"`
+	SessionAmount    sql.NullInt32    `json:"sessionAmount"`
+	IsActive         sql.NullBool     `json:"isActive"`
+	PaymentAccountID int32            `json:"paymentAccountId"`
+	CreatedAt        sql.NullTime     `json:"createdAt"`
+	UpdatedAt        sql.NullTime     `json:"updatedAt"`
+	IsActiveBool     bool             `json:"isActiveBool"`
+}
+
+func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]ListProductsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listProducts, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListProductsRow
+	for rows.Next() {
+		var i ListProductsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Type,
+			&i.Category,
+			&i.ListPrice,
+			&i.DurationDays,
+			&i.SessionAmount,
+			&i.IsActive,
+			&i.PaymentAccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.IsActiveBool,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSessions = `-- name: ListSessions :many
 SELECT
   id,
@@ -224,4 +455,78 @@ func (q *Queries) ListSessions(ctx context.Context) ([]ListSessionsRow, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateProductDuration = `-- name: UpdateProductDuration :exec
+UPDATE products
+SET name = ?,
+    category = ?,
+    list_price = ?,
+    duration_days = ?,
+    session_amount = NULL,
+    is_active = ?,
+    payment_account_id = ?,
+    updated_at = NOW()
+WHERE id = ?
+  AND type = 'DURATION'
+`
+
+type UpdateProductDurationParams struct {
+	Name             string           `json:"name"`
+	Category         ProductsCategory `json:"category"`
+	ListPrice        string           `json:"listPrice"`
+	DurationDays     sql.NullInt32    `json:"durationDays"`
+	IsActive         sql.NullBool     `json:"isActive"`
+	PaymentAccountID int32            `json:"paymentAccountId"`
+	ID               int32            `json:"id"`
+}
+
+func (q *Queries) UpdateProductDuration(ctx context.Context, arg UpdateProductDurationParams) error {
+	_, err := q.db.ExecContext(ctx, updateProductDuration,
+		arg.Name,
+		arg.Category,
+		arg.ListPrice,
+		arg.DurationDays,
+		arg.IsActive,
+		arg.PaymentAccountID,
+		arg.ID,
+	)
+	return err
+}
+
+const updateProductSession = `-- name: UpdateProductSession :exec
+UPDATE products
+SET name = ?,
+    category = ?,
+    list_price = ?,
+    duration_days = NULL,
+    session_amount = ?,
+    is_active = ?,
+    payment_account_id = ?,
+    updated_at = NOW()
+WHERE id = ?
+  AND type = 'SESSION'
+`
+
+type UpdateProductSessionParams struct {
+	Name             string           `json:"name"`
+	Category         ProductsCategory `json:"category"`
+	ListPrice        string           `json:"listPrice"`
+	SessionAmount    sql.NullInt32    `json:"sessionAmount"`
+	IsActive         sql.NullBool     `json:"isActive"`
+	PaymentAccountID int32            `json:"paymentAccountId"`
+	ID               int32            `json:"id"`
+}
+
+func (q *Queries) UpdateProductSession(ctx context.Context, arg UpdateProductSessionParams) error {
+	_, err := q.db.ExecContext(ctx, updateProductSession,
+		arg.Name,
+		arg.Category,
+		arg.ListPrice,
+		arg.SessionAmount,
+		arg.IsActive,
+		arg.PaymentAccountID,
+		arg.ID,
+	)
+	return err
 }

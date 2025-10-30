@@ -7,6 +7,7 @@ import (
 
 	"github.com/WaritDev/private-fitness-backend/domain/repositories"
 	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db/dbmodel"
+	"github.com/WaritDev/private-fitness-backend/utils"
 )
 
 // ProductRepository implements domain/repositories.ProductRepository using sqlc
@@ -148,4 +149,91 @@ func (r *ProductRepository) mapToProductInfo(row dbmodel.Product, includeTimesta
 		CreatedAt:        createdAt,
 		UpdatedAt:        updatedAt,
 	}
+}
+
+func (r *ProductRepository) List(ctx context.Context, limit, offset int32) ([]dbmodel.ListProductsRow, error) {
+	return r.q.ListProducts(ctx, dbmodel.ListProductsParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+}
+
+func (r *ProductRepository) Count(ctx context.Context) (int64, error) {
+	return r.q.CountProducts(ctx)
+}
+
+func (r *ProductRepository) CheckPaymentAccountActive(ctx context.Context, id int32) (int64, error) {
+	return r.q.CheckPaymentAccountActive(ctx, id)
+}
+
+func (r *ProductRepository) InsertDuration(ctx context.Context, p repositories.CreateProductDurationParams) (int32, error) {
+	res, err := r.q.InsertProductDuration(ctx, dbmodel.InsertProductDurationParams{
+		Name:            p.Name,
+		Category:        dbmodel.ProductsCategory(p.Category),
+		ListPrice:       p.ListPrice,
+		DurationDays:    sql.NullInt32{Int32: p.DurationDays, Valid: true},
+		Column5:         utils.CoalesceTrueBool(p.IsActive),
+		PaymentAccountID: p.PaymentAccountID,
+	})
+	if err != nil {
+		return 0, err
+	}
+	id64, _ := res.LastInsertId()
+	return int32(id64), nil
+}
+
+func (r *ProductRepository) InsertSession(ctx context.Context, p repositories.CreateProductSessionParams) (int32, error) {
+	res, err := r.q.InsertProductSession(ctx, dbmodel.InsertProductSessionParams{
+		Name:             p.Name,
+		Category:         dbmodel.ProductsCategory(p.Category),
+		ListPrice:        p.ListPrice,
+		SessionAmount:    sql.NullInt32{Int32: p.SessionAmount, Valid: true},
+		Column5:          utils.CoalesceTrueBool(p.IsActive),
+		PaymentAccountID: p.PaymentAccountID,
+	})
+	if err != nil {
+		return 0, err
+	}
+	id64, _ := res.LastInsertId()
+	return int32(id64), nil
+}
+
+func (r *ProductRepository) UpdateDuration(ctx context.Context, p repositories.UpdateProductDurationParams) error {
+    return r.q.UpdateProductDuration(ctx, dbmodel.UpdateProductDurationParams{
+        Name:             p.Name,
+        Category:         dbmodel.ProductsCategory(p.Category),
+        ListPrice:        p.ListPrice,
+        DurationDays:     sql.NullInt32{Int32: p.DurationDays, Valid: true},
+        IsActive:         utils.CoalesceTrueBool(p.IsActive),
+        PaymentAccountID: p.PaymentAccountID,
+        ID:               p.ID,
+    })
+}
+
+func (r *ProductRepository) UpdateSession(ctx context.Context, p repositories.UpdateProductSessionParams) error {
+    return r.q.UpdateProductSession(ctx, dbmodel.UpdateProductSessionParams{
+        Name:             p.Name,
+        Category:         dbmodel.ProductsCategory(p.Category),
+        ListPrice:        p.ListPrice,
+        SessionAmount:    sql.NullInt32{Int32: p.SessionAmount, Valid: true},
+        IsActive:         utils.CoalesceTrueBool(p.IsActive),
+        PaymentAccountID: p.PaymentAccountID,
+        ID:               p.ID,
+    })
+}
+
+func (r *ProductRepository) CountReferences(ctx context.Context, id int32) (int64, error) {
+    refs, err := r.q.CountProductReferences(ctx, dbmodel.CountProductReferencesParams{
+        ProductID: sql.NullInt32{Int32: id, Valid: true},
+        ProductID_2: sql.NullInt32{Int32: id, Valid: true},
+    })
+    if err != nil {
+        return 0, err
+    }
+    return int64(refs.TotalRefs), nil
+}
+
+func (r *ProductRepository) Delete(ctx context.Context, id int32) error {
+    _, err := r.q.DeleteProductByID(ctx, id)
+    return err
 }

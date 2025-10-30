@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/WaritDev/private-fitness-backend/domain/repositories"
 	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db/dbmodel"
@@ -30,4 +31,35 @@ func (r *CustomerLogRepository) CreateCustomerLog(ctx context.Context, tx *sql.T
 		return fmt.Errorf("failed to create customer log: %w", err)
 	}
 	return nil
+}
+
+func (r *CustomerLogRepository) List(ctx context.Context, limit, offset int32) ([]dbmodel.ListCustomerLogsRow, error) {
+	return r.q.ListCustomerLogs(ctx, dbmodel.ListCustomerLogsParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+}
+
+func (r *CustomerLogRepository) Count(ctx context.Context) (int64, error) {
+	return r.q.CountCustomerLogs(ctx)
+}
+
+func (r *CustomerLogRepository) UpdateByID(ctx context.Context, id int32, ts time.Time, logType string) (int64, error) {
+	res, err := r.q.UpdateCustomerLogByID(ctx, dbmodel.UpdateCustomerLogByIDParams{
+		CreatedAt: sql.NullTime{Time: ts, Valid: true},
+		LogType:   dbmodel.CustomerLogsLogType(logType),
+		ID:        id,
+	})
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
+func (r *CustomerLogRepository) DeleteByID(ctx context.Context, id int32) (int64, error) {
+	res, err := r.q.DeleteCustomerLogByID(ctx, id)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
 }

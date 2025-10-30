@@ -10,6 +10,18 @@ import (
 	"database/sql"
 )
 
+const countCustomerLogs = `-- name: CountCustomerLogs :one
+SELECT COUNT(cl.id) AS total_items
+FROM customer_logs cl
+`
+
+func (q *Queries) CountCustomerLogs(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countCustomerLogs)
+	var total_items int64
+	err := row.Scan(&total_items)
+	return total_items, err
+}
+
 const createCustomerLog = `-- name: CreateCustomerLog :exec
 INSERT INTO customer_logs (
   customer_username,
@@ -27,4 +39,126 @@ type CreateCustomerLogParams struct {
 func (q *Queries) CreateCustomerLog(ctx context.Context, arg CreateCustomerLogParams) error {
 	_, err := q.db.ExecContext(ctx, createCustomerLog, arg.CustomerUsername, arg.LogType)
 	return err
+}
+
+const deleteCustomerLogByID = `-- name: DeleteCustomerLogByID :execresult
+DELETE FROM customer_logs
+WHERE id = ?
+`
+
+func (q *Queries) DeleteCustomerLogByID(ctx context.Context, id int32) (sql.Result, error) {
+	return q.db.ExecContext(ctx, deleteCustomerLogByID, id)
+}
+
+const getCustomerLogByID = `-- name: GetCustomerLogByID :one
+SELECT
+  cl.id,
+  cl.customer_username,
+  u.first_name  AS customer_first_name,
+  u.last_name   AS customer_last_name,
+  cl.created_at,
+  cl.log_type
+FROM customer_logs cl
+JOIN users u ON u.username = cl.customer_username
+WHERE cl.id = ?
+LIMIT 1
+`
+
+type GetCustomerLogByIDRow struct {
+	ID                int32               `json:"id"`
+	CustomerUsername  sql.NullString      `json:"customerUsername"`
+	CustomerFirstName string              `json:"customerFirstName"`
+	CustomerLastName  string              `json:"customerLastName"`
+	CreatedAt         sql.NullTime        `json:"createdAt"`
+	LogType           CustomerLogsLogType `json:"logType"`
+}
+
+func (q *Queries) GetCustomerLogByID(ctx context.Context, id int32) (GetCustomerLogByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getCustomerLogByID, id)
+	var i GetCustomerLogByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.CustomerUsername,
+		&i.CustomerFirstName,
+		&i.CustomerLastName,
+		&i.CreatedAt,
+		&i.LogType,
+	)
+	return i, err
+}
+
+const listCustomerLogs = `-- name: ListCustomerLogs :many
+SELECT
+  cl.id                    AS log_id,
+  cl.customer_username     AS customer_username,
+  u.first_name             AS customer_first_name,
+  u.last_name              AS customer_last_name,
+  cl.created_at            AS created_at,
+  cl.log_type              AS log_type
+FROM customer_logs cl
+JOIN customers c ON c.username = cl.customer_username
+JOIN users     u ON u.username = c.username
+ORDER BY cl.created_at DESC, cl.id DESC
+LIMIT ? OFFSET ?
+`
+
+type ListCustomerLogsParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+type ListCustomerLogsRow struct {
+	LogID             int32               `json:"logId"`
+	CustomerUsername  sql.NullString      `json:"customerUsername"`
+	CustomerFirstName string              `json:"customerFirstName"`
+	CustomerLastName  string              `json:"customerLastName"`
+	CreatedAt         sql.NullTime        `json:"createdAt"`
+	LogType           CustomerLogsLogType `json:"logType"`
+}
+
+func (q *Queries) ListCustomerLogs(ctx context.Context, arg ListCustomerLogsParams) ([]ListCustomerLogsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCustomerLogs, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCustomerLogsRow
+	for rows.Next() {
+		var i ListCustomerLogsRow
+		if err := rows.Scan(
+			&i.LogID,
+			&i.CustomerUsername,
+			&i.CustomerFirstName,
+			&i.CustomerLastName,
+			&i.CreatedAt,
+			&i.LogType,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateCustomerLogByID = `-- name: UpdateCustomerLogByID :execresult
+UPDATE customer_logs
+SET created_at = ?,          -- DATETIME/TIMESTAMP
+    log_type   = ?           -- ENUM('CHECK_IN','CHECK_OUT','BOOK_SESSION','CANCEL_SESSION')
+WHERE id = ?
+`
+
+type UpdateCustomerLogByIDParams struct {
+	CreatedAt sql.NullTime        `json:"createdAt"`
+	LogType   CustomerLogsLogType `json:"logType"`
+	ID        int32               `json:"id"`
+}
+
+func (q *Queries) UpdateCustomerLogByID(ctx context.Context, arg UpdateCustomerLogByIDParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, updateCustomerLogByID, arg.CreatedAt, arg.LogType, arg.ID)
 }

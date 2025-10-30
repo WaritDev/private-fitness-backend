@@ -53,6 +53,7 @@ var ServiceSet = wire.NewSet(
 	usecases.ProvideCustomerDurationUseCase,
 	usecases.ProvideCustomerSessionUseCase,
 	usecases.ProvideBookingUseCase,
+	usecases.ProvideCustomerLogUsecase,
 	usecases.ProvideMemberUseCase,
 )
 
@@ -69,5 +70,6 @@ var HandlerSet = wire.NewSet(
 	rest.ProvideCustomerHandler,
 	rest.ProvideCustomerSessionHandler,
 	rest.ProvideBookingHandler,
+	rest.ProvideCustomerLogHandler,
 	rest.ProvideMemberHandler,
 )
