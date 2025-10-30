@@ -11,10 +11,10 @@ import (
 )
 
 const activeMembersToday = `-- name: ActiveMembersToday :one
-SELECT CAST(COUNT(DISTINCT Customer_Username) AS SIGNED) AS c
-FROM CUSTOMER_DURATIONS
-WHERE Status = 'ACTIVE'
-  AND CURDATE() BETWEEN DATE(Start_Date) AND DATE(End_Date)
+SELECT CAST(COUNT(DISTINCT customer_username) AS SIGNED) AS c
+FROM customer_durations
+WHERE status = 'ACTIVE'
+  AND CURDATE() BETWEEN DATE(start_date) AND DATE(end_date)
 `
 
 func (q *Queries) ActiveMembersToday(ctx context.Context) (int64, error) {
@@ -26,9 +26,9 @@ func (q *Queries) ActiveMembersToday(ctx context.Context) (int64, error) {
 
 const checkinsToday = `-- name: CheckinsToday :one
 SELECT CAST(COUNT(*) AS SIGNED) AS c
-FROM CUSTOMER_LOGS
-WHERE Log_Type = 'CHECK_IN'
-  AND DATE(` + "`" + `Timestamp` + "`" + `) = CURDATE()
+FROM customer_logs
+WHERE log_type = 'CHECK_IN'
+  AND DATE(` + "`" + `created_at` + "`" + `) = CURDATE()
 `
 
 func (q *Queries) CheckinsToday(ctx context.Context) (int64, error) {
@@ -40,10 +40,10 @@ func (q *Queries) CheckinsToday(ctx context.Context) (int64, error) {
 
 const completedPTInRange = `-- name: CompletedPTInRange :one
 SELECT CAST(COUNT(*) AS SIGNED) AS c
-FROM TRAINING_SCHEDULES
-WHERE Schedule_Type = 'APPOINTMENT'
-  AND Start_Time BETWEEN ? AND ?
-  AND Start_Time < NOW()
+FROM training_schedules
+WHERE schedule_type = 'APPOINTMENT'
+  AND start_time BETWEEN ? AND ?
+  AND start_time < NOW()
 `
 
 type CompletedPTInRangeParams struct {
@@ -60,9 +60,9 @@ func (q *Queries) CompletedPTInRange(ctx context.Context, arg CompletedPTInRange
 
 const newMembersInRange = `-- name: NewMembersInRange :one
 SELECT CAST(COUNT(*) AS SIGNED) AS c
-FROM USERS
-WHERE Role = 'CUSTOMER'
-  AND Created_At BETWEEN ? AND ?
+FROM users
+WHERE role = 'CUSTOMER'
+  AND created_at BETWEEN ? AND ?
 `
 
 type NewMembersInRangeParams struct {
@@ -77,49 +77,70 @@ func (q *Queries) NewMembersInRange(ctx context.Context, arg NewMembersInRangePa
 	return c, err
 }
 
-const topSellingProducts = `-- name: TopSellingProducts :many
-SELECT p.Name AS name, COUNT(*) AS units
-FROM (
-  SELECT Product_Id FROM CUSTOMER_DURATIONS
-  WHERE Purchase_Date BETWEEN ? AND ?
-  UNION ALL
-  SELECT Product_Id FROM CUSTOMER_SESSIONS
-  WHERE Purchase_Date BETWEEN ? AND ?
-) s
-JOIN PRODUCTS p ON p.Product_Id = s.Product_Id
-GROUP BY p.Name
-ORDER BY units DESC
-LIMIT 5
+const revenueDurations = `-- name: RevenueDurations :one
+SELECT CAST(COALESCE(SUM(price_paid), 0) AS SIGNED) AS total
+FROM customer_durations
+WHERE purchase_date BETWEEN ? AND ?
 `
 
-type TopSellingProductsParams struct {
+type RevenueDurationsParams struct {
 	Start time.Time `json:"start"`
 	End   time.Time `json:"end"`
 }
 
-type TopSellingProductsRow struct {
+func (q *Queries) RevenueDurations(ctx context.Context, arg RevenueDurationsParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, revenueDurations, arg.Start, arg.End)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
+const revenueSessions = `-- name: RevenueSessions :one
+SELECT CAST(COALESCE(SUM(price_paid), 0) AS SIGNED) AS total
+FROM customer_sessions
+WHERE purchase_date BETWEEN ? AND ?
+`
+
+type RevenueSessionsParams struct {
+	Start time.Time `json:"start"`
+	End   time.Time `json:"end"`
+}
+
+func (q *Queries) RevenueSessions(ctx context.Context, arg RevenueSessionsParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, revenueSessions, arg.Start, arg.End)
+	var total int64
+	err := row.Scan(&total)
+	return total, err
+}
+
+const topSellingProductsDurations = `-- name: TopSellingProductsDurations :many
+SELECT p.name AS name, COUNT(*) AS units
+FROM customer_durations d
+JOIN products p ON p.id = d.product_id
+WHERE d.purchase_date BETWEEN ? AND ?
+GROUP BY p.name
+ORDER BY units DESC
+`
+
+type TopSellingProductsDurationsParams struct {
+	Start time.Time `json:"start"`
+	End   time.Time `json:"end"`
+}
+
+type TopSellingProductsDurationsRow struct {
 	Name  string `json:"name"`
 	Units int64  `json:"units"`
 }
 
-func (q *Queries) TopSellingProducts(ctx context.Context, arg TopSellingProductsParams) ([]TopSellingProductsRow, error) {
-	rows, err := q.db.QueryContext(ctx, topSellingProducts,
-		arg.Start,
-		arg.Start,
-		arg.End,
-		arg.End,
-		arg.Start,
-		arg.Start,
-		arg.End,
-		arg.End,
-	)
+func (q *Queries) TopSellingProductsDurations(ctx context.Context, arg TopSellingProductsDurationsParams) ([]TopSellingProductsDurationsRow, error) {
+	rows, err := q.db.QueryContext(ctx, topSellingProductsDurations, arg.Start, arg.End)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []TopSellingProductsRow
+	var items []TopSellingProductsDurationsRow
 	for rows.Next() {
-		var i TopSellingProductsRow
+		var i TopSellingProductsDurationsRow
 		if err := rows.Scan(&i.Name, &i.Units); err != nil {
 			return nil, err
 		}
@@ -134,36 +155,44 @@ func (q *Queries) TopSellingProducts(ctx context.Context, arg TopSellingProducts
 	return items, nil
 }
 
-const totalRevenue = `-- name: TotalRevenue :one
-SELECT CAST(COALESCE(SUM(amt), 0) AS SIGNED) AS total
-FROM (
-  SELECT Price_Paid AS amt
-  FROM CUSTOMER_DURATIONS
-  WHERE Purchase_Date BETWEEN ? AND ?
-  UNION ALL
-  SELECT Price_Paid AS amt
-  FROM CUSTOMER_SESSIONS
-  WHERE Purchase_Date BETWEEN ? AND ?
-) t
+const topSellingProductsSessions = `-- name: TopSellingProductsSessions :many
+SELECT p.name AS name, COUNT(*) AS units
+FROM customer_sessions s
+JOIN products p ON p.id = s.product_id
+WHERE s.purchase_date BETWEEN ? AND ?
+GROUP BY p.name
+ORDER BY units DESC
 `
 
-type TotalRevenueParams struct {
+type TopSellingProductsSessionsParams struct {
 	Start time.Time `json:"start"`
 	End   time.Time `json:"end"`
 }
 
-func (q *Queries) TotalRevenue(ctx context.Context, arg TotalRevenueParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, totalRevenue,
-		arg.Start,
-		arg.Start,
-		arg.End,
-		arg.End,
-		arg.Start,
-		arg.Start,
-		arg.End,
-		arg.End,
-	)
-	var total int64
-	err := row.Scan(&total)
-	return total, err
+type TopSellingProductsSessionsRow struct {
+	Name  string `json:"name"`
+	Units int64  `json:"units"`
+}
+
+func (q *Queries) TopSellingProductsSessions(ctx context.Context, arg TopSellingProductsSessionsParams) ([]TopSellingProductsSessionsRow, error) {
+	rows, err := q.db.QueryContext(ctx, topSellingProductsSessions, arg.Start, arg.End)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TopSellingProductsSessionsRow
+	for rows.Next() {
+		var i TopSellingProductsSessionsRow
+		if err := rows.Scan(&i.Name, &i.Units); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
