@@ -4,7 +4,7 @@ import (
 	"github.com/WaritDev/private-fitness-backend/config"
 	"github.com/WaritDev/private-fitness-backend/domain/repositories"
 	"github.com/WaritDev/private-fitness-backend/domain/usecases"
-	"github.com/WaritDev/private-fitness-backend/internal/adapters/repositories/psql"
+	"github.com/WaritDev/private-fitness-backend/internal/adapters/repositories/sql"
 	"github.com/WaritDev/private-fitness-backend/internal/adapters/rest"
 	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db"
 
@@ -21,20 +21,23 @@ var InfraSet = wire.NewSet(
 )
 
 var RepositorySet = wire.NewSet(
-	psql.ProvideUserRepository,
-	psql.ProvideAuthRepository,
+	sql.ProvideUserRepository,
+	sql.ProvideAuthRepository,
+	sql.ProvideManagerDashboardRepository,
 	// Bind adapters -> domain interfaces
-	wire.Bind(new(repositories.UserRepo), new(*psql.UserRepository)),
-	wire.Bind(new(repositories.AuthRepo), new(*psql.AuthRepository)),
+	wire.Bind(new(repositories.UserRepo), new(*sql.UserRepository)),
+	wire.Bind(new(repositories.AuthRepo), new(*sql.AuthRepository)),
 )
 
 var ServiceSet = wire.NewSet(
 	usecases.ProvideUserUseCase,
 	usecases.ProvideAuthUseCase,
+	usecases.ProvideManagerDashboardUsecase,
 )
 
 var HandlerSet = wire.NewSet(
 	rest.ProvideUserHandler,
 	rest.ProvideAuthHandler,
 	rest.ProvideHandler,
+	rest.ProvideManagerDashboardHandler,
 )

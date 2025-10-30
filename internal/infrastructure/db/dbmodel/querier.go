@@ -9,13 +9,19 @@ import (
 )
 
 type Querier interface {
+	ActiveMembersToday(ctx context.Context) (int64, error)
 	CheckUsernameExists(ctx context.Context, username string) (int64, error)
+	CheckinsToday(ctx context.Context) (int64, error)
+	CompletedPTInRange(ctx context.Context, arg CompletedPTInRangeParams) (int64, error)
 	CreateCustomer(ctx context.Context, arg CreateCustomerParams) error
 	CreateUser(ctx context.Context, arg CreateUserParams) error
 	GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error)
 	ListDurations(ctx context.Context) ([]ListDurationsRow, error)
 	ListSessions(ctx context.Context) ([]ListSessionsRow, error)
 	ListUsers(ctx context.Context) ([]ListUsersRow, error)
+	NewMembersInRange(ctx context.Context, arg NewMembersInRangeParams) (int64, error)
+	TopSellingProducts(ctx context.Context, arg TopSellingProductsParams) ([]TopSellingProductsRow, error)
+	TotalRevenue(ctx context.Context, arg TotalRevenueParams) (int64, error)
 }
 
 var _ Querier = (*Queries)(nil)

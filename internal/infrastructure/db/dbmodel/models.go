@@ -632,6 +632,6 @@ type User struct {
 	Gmail       string         `json:"gmail"`
 	Specialty   sql.NullString `json:"specialty"`
 	IsActive    sql.NullBool   `json:"isActive"`
-	CreatedAt   sql.NullTime   `json:"createdAt"`
+	CreatedAt   time.Time      `json:"createdAt"`
 	UpdatedAt   sql.NullTime   `json:"updatedAt"`
 }

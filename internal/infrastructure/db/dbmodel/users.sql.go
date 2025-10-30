@@ -97,9 +97,9 @@ ORDER BY username
 `
 
 type ListUsersRow struct {
-	Username  string       `json:"username"`
-	Email     string       `json:"email"`
-	CreatedAt sql.NullTime `json:"createdAt"`
+	Username  string    `json:"username"`
+	Email     string    `json:"email"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
