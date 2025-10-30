@@ -14,3 +14,12 @@ type CustomerLogUpdatedResponse struct {
 type CustomerLogDeletedResponse struct {
 	Message string `json:"message"`
 }
+
+type CustomerLog struct {
+	ID                  string `json:"id"`
+	CustomerUsername    string `json:"customerUsername"`
+	CustomerFirstName   string `json:"customerFirstName"`
+	CustomerLastName    string `json:"customerLastName"`
+	CreatedAt           string `json:"createdAt"` // RFC3339
+	LogType             string `json:"logType"`   // enum → string
+}

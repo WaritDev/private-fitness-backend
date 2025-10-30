@@ -9,3 +9,7 @@ type UpdateCustomerLogRequest struct {
 	Timestamp string `json:"timestamp"` // "YYYY-MM-DD HH:MM:SS"
 	LogType   string `json:"logType"`   // CHECK_IN|CHECK_OUT|BOOK_SESSION|CANCEL_SESSION
 }
+
+type GetCustomerLogByIDRequest struct {
+	ID string `json:"id" validate:"required"`
+}

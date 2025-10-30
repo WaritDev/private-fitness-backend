@@ -1,6 +1,9 @@
 package utils
 
-import "database/sql"
+import (
+	"database/sql"
+	"time"
+)
 
 func ToNullString(p *string) sql.NullString {
 	if p == nil {
@@ -28,4 +31,11 @@ func NB(v sql.NullBool) bool {
 		return v.Bool
 	}
 	return false
+}
+
+func NT(nt sql.NullTime) string {
+	if nt.Valid {
+		return nt.Time.Format(time.RFC3339)
+	}
+	return ""
 }
