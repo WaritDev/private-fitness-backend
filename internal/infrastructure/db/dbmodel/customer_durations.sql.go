@@ -11,6 +11,21 @@ import (
 	"time"
 )
 
+const countCustomerDurations = `-- name: CountCustomerDurations :one
+SELECT COUNT(cd.id) AS total_items
+FROM customer_durations cd
+JOIN customers c ON c.username = cd.customer_username
+JOIN users     u ON u.username = c.username
+JOIN products  p ON p.id = cd.product_id
+`
+
+func (q *Queries) CountCustomerDurations(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countCustomerDurations)
+	var total_items int64
+	err := row.Scan(&total_items)
+	return total_items, err
+}
+
 const createCustomerDuration = `-- name: CreateCustomerDuration :exec
 INSERT INTO customer_durations (
   customer_username,
@@ -60,6 +75,62 @@ func (q *Queries) CreateCustomerDuration(ctx context.Context, arg CreateCustomer
 		arg.Status,
 	)
 	return err
+}
+
+const deleteCustomerDurationByID = `-- name: DeleteCustomerDurationByID :execresult
+DELETE FROM customer_durations
+WHERE id = ?
+`
+
+func (q *Queries) DeleteCustomerDurationByID(ctx context.Context, id int32) (sql.Result, error) {
+	return q.db.ExecContext(ctx, deleteCustomerDurationByID, id)
+}
+
+const getCustomerDurationByID = `-- name: GetCustomerDurationByID :one
+SELECT
+  cd.id,
+  cd.customer_username,
+  cd.product_id,
+  cd.sales_username,
+  cd.purchase_date,
+  cd.start_date,
+  cd.end_date,
+  cd.price_paid,
+  cd.discount_amount,
+  cd.status
+FROM customer_durations cd
+WHERE cd.id = ?
+`
+
+type GetCustomerDurationByIDRow struct {
+	ID               int32                   `json:"id"`
+	CustomerUsername sql.NullString          `json:"customerUsername"`
+	ProductID        sql.NullInt32           `json:"productId"`
+	SalesUsername    sql.NullString          `json:"salesUsername"`
+	PurchaseDate     time.Time               `json:"purchaseDate"`
+	StartDate        time.Time               `json:"startDate"`
+	EndDate          time.Time               `json:"endDate"`
+	PricePaid        string                  `json:"pricePaid"`
+	DiscountAmount   sql.NullString          `json:"discountAmount"`
+	Status           CustomerDurationsStatus `json:"status"`
+}
+
+func (q *Queries) GetCustomerDurationByID(ctx context.Context, id int32) (GetCustomerDurationByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getCustomerDurationByID, id)
+	var i GetCustomerDurationByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.CustomerUsername,
+		&i.ProductID,
+		&i.SalesUsername,
+		&i.PurchaseDate,
+		&i.StartDate,
+		&i.EndDate,
+		&i.PricePaid,
+		&i.DiscountAmount,
+		&i.Status,
+	)
+	return i, err
 }
 
 const getCustomerDurationById = `-- name: GetCustomerDurationById :one
@@ -154,4 +225,146 @@ func (q *Queries) GetCustomerDurationsByUsername(ctx context.Context, customerUs
 		return nil, err
 	}
 	return items, nil
+}
+
+const getDurationDaysForDurationID = `-- name: GetDurationDaysForDurationID :one
+SELECT p.duration_days
+FROM customer_durations cd
+JOIN products p ON p.id = cd.product_id
+WHERE cd.id = ?
+  AND p.type = 'DURATION'
+  AND p.is_active = 1
+  AND p.duration_days IS NOT NULL
+LIMIT 1
+`
+
+func (q *Queries) GetDurationDaysForDurationID(ctx context.Context, id int32) (sql.NullInt32, error) {
+	row := q.db.QueryRowContext(ctx, getDurationDaysForDurationID, id)
+	var duration_days sql.NullInt32
+	err := row.Scan(&duration_days)
+	return duration_days, err
+}
+
+const listCustomerDurations = `-- name: ListCustomerDurations :many
+SELECT
+  cd.id,
+  cd.customer_username,
+  u.first_name  AS customer_first_name,
+  u.last_name   AS customer_last_name,
+  cd.product_id,
+  p.name        AS product_name,
+  p.type,
+  p.category,
+  p.duration_days,
+  cd.sales_username,
+  cd.purchase_date,
+  cd.start_date,
+  cd.end_date,
+  cd.price_paid,
+  cd.discount_amount,
+  cd.status
+FROM customer_durations cd
+JOIN customers c ON c.username = cd.customer_username
+JOIN users     u ON u.username = c.username
+JOIN products  p ON p.id = cd.product_id
+ORDER BY cd.created_at DESC, cd.id DESC
+LIMIT ? OFFSET ?
+`
+
+type ListCustomerDurationsParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+type ListCustomerDurationsRow struct {
+	ID                int32                   `json:"id"`
+	CustomerUsername  sql.NullString          `json:"customerUsername"`
+	CustomerFirstName string                  `json:"customerFirstName"`
+	CustomerLastName  string                  `json:"customerLastName"`
+	ProductID         sql.NullInt32           `json:"productId"`
+	ProductName       string                  `json:"productName"`
+	Type              ProductsType            `json:"type"`
+	Category          ProductsCategory        `json:"category"`
+	DurationDays      sql.NullInt32           `json:"durationDays"`
+	SalesUsername     sql.NullString          `json:"salesUsername"`
+	PurchaseDate      time.Time               `json:"purchaseDate"`
+	StartDate         time.Time               `json:"startDate"`
+	EndDate           time.Time               `json:"endDate"`
+	PricePaid         string                  `json:"pricePaid"`
+	DiscountAmount    sql.NullString          `json:"discountAmount"`
+	Status            CustomerDurationsStatus `json:"status"`
+}
+
+func (q *Queries) ListCustomerDurations(ctx context.Context, arg ListCustomerDurationsParams) ([]ListCustomerDurationsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCustomerDurations, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCustomerDurationsRow
+	for rows.Next() {
+		var i ListCustomerDurationsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CustomerUsername,
+			&i.CustomerFirstName,
+			&i.CustomerLastName,
+			&i.ProductID,
+			&i.ProductName,
+			&i.Type,
+			&i.Category,
+			&i.DurationDays,
+			&i.SalesUsername,
+			&i.PurchaseDate,
+			&i.StartDate,
+			&i.EndDate,
+			&i.PricePaid,
+			&i.DiscountAmount,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateCustomerDurationEditableFields = `-- name: UpdateCustomerDurationEditableFields :exec
+UPDATE customer_durations cd
+JOIN products p ON p.id = cd.product_id
+SET
+  cd.start_date      = STR_TO_DATE(?, '%Y-%m-%d'),
+  cd.end_date        = DATE_ADD(STR_TO_DATE(?, '%Y-%m-%d'), INTERVAL (p.duration_days - 1) DAY),
+  cd.price_paid      = ?,
+  cd.discount_amount = ?,
+  cd.status          = ?,
+  cd.updated_at      = NOW()
+WHERE cd.id = ?
+`
+
+type UpdateCustomerDurationEditableFieldsParams struct {
+	STRTODATE      string                  `json:"STRTODATE"`
+	STRTODATE_2    string                  `json:"STRTODATE2"`
+	PricePaid      string                  `json:"pricePaid"`
+	DiscountAmount sql.NullString          `json:"discountAmount"`
+	Status         CustomerDurationsStatus `json:"status"`
+	ID             int32                   `json:"id"`
+}
+
+func (q *Queries) UpdateCustomerDurationEditableFields(ctx context.Context, arg UpdateCustomerDurationEditableFieldsParams) error {
+	_, err := q.db.ExecContext(ctx, updateCustomerDurationEditableFields,
+		arg.STRTODATE,
+		arg.STRTODATE_2,
+		arg.PricePaid,
+		arg.DiscountAmount,
+		arg.Status,
+		arg.ID,
+	)
+	return err
 }
