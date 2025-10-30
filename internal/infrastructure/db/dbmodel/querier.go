@@ -35,6 +35,7 @@ type Querier interface {
 	CompletedPTInRange(ctx context.Context, arg CompletedPTInRangeParams) (int64, error)
 	// นับจำนวนนัดหมายของเทรนเนอร์ในวันที่กำหนด
 	CountAppointmentsOnDate(ctx context.Context, arg CountAppointmentsOnDateParams) (int64, error)
+	CountCustomerDurations(ctx context.Context) (int64, error)
 	CountCustomers(ctx context.Context) (int64, error)
 	CountStaffs(ctx context.Context) (int64, error)
 	CreateCustomer(ctx context.Context, arg CreateCustomerParams) error
@@ -57,6 +58,7 @@ type Querier interface {
 	DeleteAppointment(ctx context.Context, id int32) error
 	DeleteCustomerByUsername(ctx context.Context, username string) error
 	DeleteCustomerDurationByCustomer(ctx context.Context, customerUsername sql.NullString) error
+	DeleteCustomerDurationByID(ctx context.Context, id int32) (sql.Result, error)
 	DeleteCustomerDurationBySales(ctx context.Context, salesUsername sql.NullString) error
 	DeleteCustomerLogsByCustomer(ctx context.Context, customerUsername sql.NullString) error
 	DeleteCustomerSessionByCustomer(ctx context.Context, customerUsername sql.NullString) error
@@ -78,8 +80,10 @@ type Querier interface {
 	// JOIN กับ PRODUCTS เพื่อดึงชื่อแพ็กเกจและคำนวณ sessions คงเหลือ
 	GetCustomerActiveSessions(ctx context.Context, customerUsername sql.NullString) ([]GetCustomerActiveSessionsRow, error)
 	GetCustomerByUsername(ctx context.Context, username string) (GetCustomerByUsernameRow, error)
+	GetCustomerDurationByID(ctx context.Context, id int32) (GetCustomerDurationByIDRow, error)
 	GetCustomerDurationById(ctx context.Context, id int32) (CustomerDuration, error)
 	GetCustomerDurationsByUsername(ctx context.Context, customerUsername sql.NullString) ([]CustomerDuration, error)
+	GetDurationDaysForDurationID(ctx context.Context, id int32) (sql.NullInt32, error)
 	// Q3C.3a - ดึงวันหยุดหรือช่วงเวลาที่ไม่รับนัด (DAY_OFF)
 	GetDayOffSchedules(ctx context.Context, arg GetDayOffSchedulesParams) ([]GetDayOffSchedulesRow, error)
 	// Q5S.1: ดึงข้อมูลสินค้าและบัญชีรับชำระเงินเพื่อแสดงหน้าชำระเงิน
@@ -94,6 +98,7 @@ type Querier interface {
 	ListAllProducts(ctx context.Context) ([]Product, error)
 	// ดึงรายชื่อเทรนเนอร์ทั้งหมดที่ active (สำหรับ dropdown)
 	ListAllTrainers(ctx context.Context) ([]ListAllTrainersRow, error)
+	ListCustomerDurations(ctx context.Context, arg ListCustomerDurationsParams) ([]ListCustomerDurationsRow, error)
 	ListCustomers(ctx context.Context, arg ListCustomersParams) ([]ListCustomersRow, error)
 	ListDurations(ctx context.Context) ([]ListDurationsRow, error)
 	ListSessions(ctx context.Context) ([]ListSessionsRow, error)
@@ -104,6 +109,7 @@ type Querier interface {
 	RevenueSessions(ctx context.Context, arg RevenueSessionsParams) (int64, error)
 	TopSellingProductsDurations(ctx context.Context, arg TopSellingProductsDurationsParams) ([]TopSellingProductsDurationsRow, error)
 	TopSellingProductsSessions(ctx context.Context, arg TopSellingProductsSessionsParams) ([]TopSellingProductsSessionsRow, error)
+	UpdateCustomerDurationEditableFields(ctx context.Context, arg UpdateCustomerDurationEditableFieldsParams) error
 	// อัปเดต users: ไม่มีการเปลี่ยน password
 	UpdateCustomerUserNoPassword(ctx context.Context, arg UpdateCustomerUserNoPasswordParams) error
 	// อัปเดต users: มีการรีเซ็ตรหัสผ่าน

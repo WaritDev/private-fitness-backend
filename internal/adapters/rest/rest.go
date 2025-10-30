@@ -1,14 +1,14 @@
 package rest
 
 type Handler struct {
-	User             *UserHandler
-	Manager          *ManagerDashboardHandler
-	Auth             *AuthHandler
-	Product          *ProductHandler
-	Trainer          *TrainerHandler
-	Payment          *PaymentHandler
-	Staff            *StaffHandler
-	Customer         *CustomerHandler
+	User    *UserHandler
+	Manager *ManagerDashboardHandler
+	Auth       *AuthHandler
+	Product *ProductHandler
+	Staff   *StaffHandler
+	Trainer *TrainerHandler
+	Payment *PaymentHandler
+	Customer *CustomerHandler
 	CustomerSession  *CustomerSessionHandler
 	CustomerDuration *CustomerDurationHandler
 	Booking          *BookingHandler
