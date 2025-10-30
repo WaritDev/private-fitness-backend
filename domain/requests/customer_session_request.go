@@ -42,3 +42,15 @@ type SessionScheduleInput struct {
 	DayOfWeek string    `json:"dayOfWeek" validate:"required,oneof=MONDAY TUESDAY WEDNESDAY THURSDAY FRIDAY SATURDAY SUNDAY"`
 	StartTime time.Time `json:"startTime" validate:"required"` // ISO 8601
 }
+
+type ListCustomerSessionsRequest struct {
+	Page  int32 `query:"page"`
+	Limit int32 `query:"limit"`
+}
+
+type UpdateCustomerSessionRequest struct {
+	TrainerUsername string  `json:"trainerUsername"`
+	PricePaid       float64 `json:"pricePaid"`
+	DiscountAmount  float64 `json:"discountAmount"`
+	Status          string  `json:"status"` // ACTIVE|EXPIRED|COMPLETED|CANCELLED
+}

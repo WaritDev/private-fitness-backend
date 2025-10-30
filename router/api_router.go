@@ -33,13 +33,17 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	customers.Post("/:username/update", handler.Customer.UpdateCustomer)
 	customers.Delete("/:username", handler.Customer.DeleteCustomer)
 
-	customers.Delete("/:username", handler.Customer.DeleteCustomer)
-
 	// Customer Duration routes
 	durations := apiGroup.Group("/customer-durations")
 	durations.Get("/", handler.CustomerDuration.ListDurations)
 	durations.Post("/:id/update", handler.CustomerDuration.Update)
 	durations.Delete("/:id", handler.CustomerDuration.Delete)
+
+	// Customer Session routes
+	sessions := apiGroup.Group("/customer-sessions")
+	sessions.Get("/", handler.CustomerSession.ListSessions)
+	sessions.Post("/:id/update", handler.CustomerSession.Update)
+	sessions.Delete("/:id", handler.CustomerSession.Delete)
 	
 	// Auth routes
 	authGroup := apiGroup.Group("/auth")

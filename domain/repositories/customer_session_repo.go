@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"time"
+
+	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db/dbmodel"
 )
 
 // CustomerSessionRepository - Repository สำหรับจัดการ customer sessions
@@ -25,6 +27,15 @@ type CustomerSessionRepository interface {
 
 	// GetCustomerActiveSessions - ดึงข้อมูล Session packages ที่ยัง ACTIVE ของลูกค้า
 	GetCustomerActiveSessions(ctx context.Context, customerUsername string) ([]ActiveSessionPackageInfo, error)
+
+	List(ctx context.Context, limit, offset int32) ([]dbmodel.ListCustomerSessionsRow, error)
+	Count(ctx context.Context) (int64, error)
+
+	UpdateEditableFields(ctx context.Context, p UpdateCustomerSessionEditableFieldsParams) error
+	CheckTrainerExists(ctx context.Context, username string) (int64, error)
+
+	Delete(ctx context.Context, id int32) error
+
 }
 
 // ActiveSessionInfo - ข้อมูล Session package ที่ active
@@ -98,4 +109,12 @@ type TrainingScheduleParams struct {
 	StartTime        time.Time
 	EndTime          time.Time // StartTime + 2 hours
 	ScheduleType     string    // 'APPOINTMENT'
+}
+
+type UpdateCustomerSessionEditableFieldsParams struct {
+	ID             int32
+	TrainerUsername string
+	PricePaid       string
+	DiscountAmount  sql.NullString
+	Status          string
 }

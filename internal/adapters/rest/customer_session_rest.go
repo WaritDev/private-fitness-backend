@@ -1,6 +1,8 @@
 package rest
 
 import (
+	"strconv"
+
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
 	"github.com/WaritDev/private-fitness-backend/domain/usecases"
 	"github.com/gofiber/fiber/v2"
@@ -154,4 +156,54 @@ func (h *CustomerSessionHandler) GetActiveSessions(c *fiber.Ctx) error {
 		"message":     "Active sessions retrieved successfully",
 		"result":      sessions,
 	})
+}
+
+func (h *CustomerSessionHandler) ListSessions(c *fiber.Ctx) error {
+	var q requests.ListCustomerSessionsRequest
+	if err := c.QueryParser(&q); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	resp, err := h.useCase.List(c.Context(), q)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	return c.Status(fiber.StatusOK).JSON(resp)
+}
+
+func (h *CustomerSessionHandler) Update(c *fiber.Ctx) error {
+	idStr := c.Params("id")
+	id64, err := strconv.ParseInt(idStr, 10, 32)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, "invalid id")
+	}
+
+	var req requests.UpdateCustomerSessionRequest
+	if err := c.BodyParser(&req); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	resp, err := h.useCase.Update(c.Context(), int32(id64), req)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	return c.Status(fiber.StatusOK).JSON(resp)
+}
+
+func (h *CustomerSessionHandler) Delete(c *fiber.Ctx) error {
+    idStr := c.Params("id")
+    id, err := strconv.Atoi(idStr)
+    if err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "error": "invalid id",
+        })
+    }
+
+    res, err := h.useCase.Delete(c.Context(), int32(id))
+    if err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "error": err.Error(),
+        })
+    }
+
+    return c.Status(fiber.StatusOK).JSON(res)
 }

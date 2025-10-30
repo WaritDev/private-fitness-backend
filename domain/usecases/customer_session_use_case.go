@@ -3,13 +3,17 @@ package usecases
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"math"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/WaritDev/private-fitness-backend/domain/repositories"
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
 	"github.com/WaritDev/private-fitness-backend/domain/responses"
+	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db/dbmodel"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -190,4 +194,101 @@ func (u *CustomerSessionUseCase) GetCustomerActiveSessions(ctx context.Context, 
 	}
 
 	return result, nil
+}
+
+func (uc *CustomerSessionUseCase) List(ctx context.Context, req requests.ListCustomerSessionsRequest) (responses.ListCustomerSessionsResponse, error) {
+	limit := req.Limit
+	if limit <= 0 || limit > 100 { limit = 10 }
+	page := req.Page
+	if page <= 0 { page = 1 }
+	offset := (page - 1) * limit
+
+	rows, err := uc.sessionRepo.List(ctx, limit, offset)
+	if err != nil { return responses.ListCustomerSessionsResponse{}, err }
+
+	total, err := uc.sessionRepo.Count(ctx)
+	if err != nil { return responses.ListCustomerSessionsResponse{}, err }
+
+	if rows == nil {
+		rows = []dbmodel.ListCustomerSessionsRow{}
+	}
+
+	return responses.ListCustomerSessionsResponse{
+		Data: rows,
+		Meta: responses.PageMeta{
+			Page:       page,
+			Limit:      limit,
+			TotalItems: total,
+			TotalPages: int32(math.Ceil(float64(total)/float64(limit))),
+		},
+	}, nil
+}
+
+
+var reUsername = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]{2,29}$`)
+func (uc *CustomerSessionUseCase) Update(
+	ctx context.Context,
+	id int32,
+	req requests.UpdateCustomerSessionRequest,
+) (responses.CustomerSessionUpdatedResponse, error) {
+
+	if !reUsername.MatchString(req.TrainerUsername) {
+		return responses.CustomerSessionUpdatedResponse{}, errors.New("invalid trainerUsername")
+	}
+	if req.PricePaid < 0 {
+		return responses.CustomerSessionUpdatedResponse{}, errors.New("pricePaid must be >= 0")
+	}
+	if req.DiscountAmount < 0 {
+		return responses.CustomerSessionUpdatedResponse{}, errors.New("discountAmount must be >= 0")
+	}
+	switch req.Status {
+	case "ACTIVE", "EXPIRED", "COMPLETED", "CANCELLED":
+	default:
+		return responses.CustomerSessionUpdatedResponse{}, errors.New("invalid status")
+	}
+
+	// 2) trainer must exist & role=TRAINER
+	n, err := uc.sessionRepo.CheckTrainerExists(ctx, req.TrainerUsername)
+	if err != nil {
+		return responses.CustomerSessionUpdatedResponse{}, err
+	}
+	if n == 0 {
+		return responses.CustomerSessionUpdatedResponse{}, errors.New("trainer not found or not a TRAINER")
+	}
+
+	// 3) build params (decimal -> string)
+	priceStr := fmt.Sprintf("%.2f", req.PricePaid)
+	discStr := fmt.Sprintf("%.2f", req.DiscountAmount)
+
+	params := repositories.UpdateCustomerSessionEditableFieldsParams{
+		ID:              id,
+		TrainerUsername: req.TrainerUsername,
+		PricePaid:       priceStr,
+		DiscountAmount:  sql.NullString{String: discStr, Valid: true},
+		Status:          req.Status,
+	}
+	if err := uc.sessionRepo.UpdateEditableFields(ctx, params); err != nil {
+		return responses.CustomerSessionUpdatedResponse{}, err
+	}
+
+	return responses.CustomerSessionUpdatedResponse{
+		Message: fmt.Sprintf("Sessions Course ID: %d updated successfully", id),
+	}, nil
+}
+
+func (uc *CustomerSessionUseCase) Delete(
+    ctx context.Context,
+    id int32,
+) (responses.CustomerSessionDeletedResponse, error) {
+
+    if err := uc.sessionRepo.Delete(ctx, id); err != nil {
+        if errors.Is(err, sql.ErrNoRows) {
+            return responses.CustomerSessionDeletedResponse{}, fmt.Errorf("session course not found")
+        }
+        return responses.CustomerSessionDeletedResponse{}, err
+    }
+
+    return responses.CustomerSessionDeletedResponse{
+        Message: fmt.Sprintf("Sessions Course ID: %d deleted successfully", id),
+    }, nil
 }
