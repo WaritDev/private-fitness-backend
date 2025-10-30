@@ -921,7 +921,245 @@ if (data.status === 'OK' && data.result.length > 0) {
 
 ---
 
-## 6. Booking APIs
+## 6. Member / Check-in APIs
+
+### 6.1 Generate QR Code
+
+**Endpoint:** `POST /api/member/qrcode`
+
+**Description:** สร้าง QR Code สำหรับ Check-in เข้าฟิตเนส (Use Case 5C)
+
+**Authentication:** Required (JWT token)
+
+**Request Body:**
+```json
+{
+  "packageType": "DURATION"
+}
+```
+
+**Request Fields:**
+- `packageType` (string, required): ประเภทแพ็กเกจ - `"DURATION"` หรือ `"SESSION"`
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "success",
+  "status_code": 200,
+  "message": "QR Code generated successfully",
+  "result": {
+    "qrCodeUrl": "http://localhost:8000/api/checkin?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "packageType": "DURATION",
+    "expiresIn": 60
+  }
+}
+```
+
+**Response Fields:**
+- `qrCodeUrl` (string): URL สำหรับฝังใน QR Code (เปิดได้ที่เครื่องสแกน)
+- `token` (string): JWT token (หมดอายุใน 60 วินาที)
+- `packageType` (string): ประเภทแพ็กเกจที่เลือก
+- `expiresIn` (number): เวลาหมดอายุ (วินาที)
+
+**Error Response (400 Bad Request):**
+```json
+{
+  "status": "error",
+  "status_code": 400,
+  "message": "Invalid package type (must be DURATION or SESSION)",
+  "result": null
+}
+```
+
+**Error Response (401 Unauthorized):**
+```json
+{
+  "status": "error",
+  "status_code": 401,
+  "message": "Authentication required",
+  "result": null
+}
+```
+
+**Business Logic:**
+1. ตรวจสอบ JWT token ของผู้ใช้
+2. Validate `packageType` (ต้องเป็น "DURATION" หรือ "SESSION")
+3. สร้าง QR token พิเศษที่หมดอายุใน **60 วินาที**
+4. Token มี payload: `{ sub: username, packageType: "DURATION/SESSION", exp: timestamp }`
+5. Frontend นำ `qrCodeUrl` ไปสร้าง QR Code ด้วย library เช่น `react-qr-code`
+
+**Use Case:** ลูกค้ากด Toggle เลือก Duration/Session → เรียก API นี้ → แสดง QR Code
+
+**Usage Example:**
+```javascript
+const response = await fetch('http://localhost:8000/api/member/qrcode', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${userToken}`
+  },
+  body: JSON.stringify({
+    packageType: 'DURATION'
+  })
+});
+
+const data = await response.json();
+if (data.status === 'success') {
+  // ใช้ react-qr-code สร้าง QR
+  const qrUrl = data.result.qrCodeUrl;
+  console.log('QR Code URL:', qrUrl);
+  console.log('Expires in:', data.result.expiresIn, 'seconds');
+}
+```
+
+---
+
+### 6.2 Check-in via QR Code
+
+**Endpoint:** `GET /api/checkin?token={qr_token}`
+
+**Description:** สแกน QR Code เพื่อบันทึกการเข้าใช้งานฟิตเนส (Use Case 5C: Q5C.1 และ Q5C.2)
+
+**Authentication:** None (Public endpoint - accessed by QR scanner)
+
+**Query Parameters:**
+- `token` (string, required): JWT token จาก QR Code
+
+**Example:** 
+```
+GET /api/checkin?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Success Response (200 OK - HTML):**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Check-in Success</title>
+</head>
+<body>
+  <div class="container">
+    <div class="success">✅</div>
+    <h1>Welcome, John!</h1>
+    <p>User: <strong>cust01</strong></p>
+    <div class="badge">DURATION Package</div>
+  </div>
+</body>
+</html>
+```
+
+**Error Response (400 Bad Request):**
+```
+Missing token parameter
+```
+
+**Error Response (401 Unauthorized):**
+```
+Invalid or expired QR code
+```
+
+**Error Response (500 Internal Server Error):**
+```
+Check-in failed: user not found
+```
+
+**Business Logic:**
+1. รับ `token` จาก query string
+2. Verify JWT token (ตรวจสอบ signature และ expiry)
+3. Extract `username` และ `packageType` จาก token payload
+4. **Q5C.1**: สร้าง log ใน `customer_logs` (log_type = 'CHECK_IN')
+5. **Q5C.2**: ถ้าเป็น SESSION package → อัปเดต `used_sessions + 1`
+6. ดึงชื่อผู้ใช้ (first_name) จาก database
+7. แสดง HTML response "Welcome, [FirstName]!"
+
+**Database Operations:**
+
+**Q5C.1 - สร้าง Log (ทั้ง DURATION และ SESSION):**
+```sql
+INSERT INTO customer_logs (
+  customer_username,
+  log_type,
+  created_at
+) VALUES (
+  'cust01',
+  'CHECK_IN',
+  NOW()
+);
+```
+
+**Q5C.2 - Update Used Sessions (เฉพาะ SESSION):**
+```sql
+UPDATE customer_sessions
+SET used_sessions = used_sessions + 1,
+    updated_at = NOW()
+WHERE customer_username = 'cust01'
+  AND status = 'ACTIVE'
+  AND used_sessions < total_sessions
+ORDER BY created_at DESC
+LIMIT 1;
+```
+
+**Use Case Flow:**
+1. ลูกค้าเปิดแอพ → คลิก "Member" → เลือก Duration/Session
+2. Frontend เรียก `POST /api/member/qrcode` → ได้ URL
+3. แสดง QR Code บนมือถือ
+4. ลูกค้ายื่นมือถือให้เครื่องสแกนหน้าร้าน
+5. เครื่องสแกนเปิด browser → เข้า URL: `GET /api/checkin?token=xxx`
+6. Backend บันทึก log + อัปเดต sessions (ถ้าเป็น SESSION)
+7. แสดงหน้าจอ "Welcome, John!" + เปิดประตู
+
+**Security:**
+- Token หมดอายุใน **60 วินาที** เท่านั้น
+- ใช้ได้ครั้งเดียว (แต่ระบบไม่ enforce - อาจมี race condition)
+- ไม่ต้อง authenticate เพราะ token เป็น proof แล้ว
+
+**Frontend Integration:**
+```javascript
+// 1. Generate QR Code
+import QRCode from 'react-qr-code';
+
+function MemberCard({ user, packageType }) {
+  const [qrUrl, setQrUrl] = useState('');
+  const [expiresAt, setExpiresAt] = useState(null);
+
+  const handleGenerateQR = async () => {
+    const res = await fetch('/api/member/qrcode', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${userToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ packageType })
+    });
+
+    const data = await res.json();
+    if (data.status === 'success') {
+      setQrUrl(data.result.qrCodeUrl);
+      setExpiresAt(Date.now() + data.result.expiresIn * 1000);
+    }
+  };
+
+  return (
+    <div>
+      <button onClick={handleGenerateQR}>
+        Generate QR Code
+      </button>
+      {qrUrl && (
+        <div>
+          <QRCode value={qrUrl} size={256} />
+          <p>Expires in: {Math.ceil((expiresAt - Date.now()) / 1000)}s</p>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+## 7. Booking APIs
 
 ### 6.1 Get Booking Slots
 

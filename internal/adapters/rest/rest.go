@@ -1,17 +1,18 @@
 package rest
 
 type Handler struct {
-	User    *UserHandler
-	Manager *ManagerDashboardHandler
-	Auth       *AuthHandler
-	Product *ProductHandler
-	Staff   *StaffHandler
-	Trainer *TrainerHandler
-	Payment *PaymentHandler
-	Customer *CustomerHandler
+	User             *UserHandler
+	Manager          *ManagerDashboardHandler
+	Auth             *AuthHandler
+	Product          *ProductHandler
+	Staff            *StaffHandler
+	Trainer          *TrainerHandler
+	Payment          *PaymentHandler
+	Customer         *CustomerHandler
 	CustomerSession  *CustomerSessionHandler
 	CustomerDuration *CustomerDurationHandler
 	Booking          *BookingHandler
+	Member           *MemberHandler
 }
 
 func ProvideHandler(
@@ -26,6 +27,7 @@ func ProvideHandler(
 	customerSession *CustomerSessionHandler,
 	customerDuration *CustomerDurationHandler,
 	booking *BookingHandler,
+	member *MemberHandler,
 ) *Handler {
 	return &Handler{
 		User:             user,
@@ -39,5 +41,6 @@ func ProvideHandler(
 		Booking:          booking,
 		Staff:            staff,
 		Customer:         customer,
+		Member:           member,
 	}
 }

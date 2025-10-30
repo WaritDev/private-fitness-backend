@@ -174,6 +174,15 @@ func (r *CustomerSessionRepository) DecrementUsedSessions(ctx context.Context, t
 	return nil
 }
 
+// IncrementUsedSessionsByUsername - Q5C.2: อัปเดตจำนวนครั้งที่ใช้ไปสำหรับ Check-in (Use Case 5C)
+func (r *CustomerSessionRepository) IncrementUsedSessionsByUsername(ctx context.Context, customerUsername string) error {
+	err := r.q.IncrementUsedSessionsByUsername(ctx, sql.NullString{String: customerUsername, Valid: true})
+	if err != nil {
+		return fmt.Errorf("failed to increment used sessions for %s: %w", customerUsername, err)
+	}
+	return nil
+}
+
 // GetCustomerActiveSessions - ดึงข้อมูล Session packages ที่ยัง ACTIVE ของลูกค้า
 func (r *CustomerSessionRepository) GetCustomerActiveSessions(ctx context.Context, customerUsername string) ([]repositories.ActiveSessionPackageInfo, error) {
 	rows, err := r.q.GetCustomerActiveSessions(ctx, sql.NullString{String: customerUsername, Valid: true})
@@ -241,10 +250,10 @@ func (r *CustomerSessionRepository) UpdateEditableFields(
 }
 
 func (r *CustomerSessionRepository) Delete(ctx context.Context, id int32) error {
-    res, err := r.q.DeleteCustomerSessionByID(ctx, id)
-    if err != nil {
-        return err
-    }
+	res, err := r.q.DeleteCustomerSessionByID(ctx, id)
+	if err != nil {
+		return err
+	}
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
 		return err
@@ -252,5 +261,5 @@ func (r *CustomerSessionRepository) Delete(ctx context.Context, id int32) error 
 	if rowsAffected == 0 {
 		return sql.ErrNoRows
 	}
-    return nil
+	return nil
 }

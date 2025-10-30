@@ -102,6 +102,9 @@ type Querier interface {
 	GetUserRole(ctx context.Context, username string) (UsersRole, error)
 	// Q3C.6 - อัปเดตจำนวนครั้งที่ใช้ไปแล้ว
 	IncrementUsedSessions(ctx context.Context, id int32) error
+	// Q5C.2 - อัปเดตจำนวนครั้งที่ใช้ไปแล้วสำหรับ Check-in (Use Case 5C)
+	// ใช้ session package ACTIVE ที่ใหม่ที่สุด
+	IncrementUsedSessionsByUsername(ctx context.Context, customerUsername sql.NullString) error
 	ListAllProducts(ctx context.Context) ([]Product, error)
 	// ดึงรายชื่อเทรนเนอร์ทั้งหมดที่ active (สำหรับ dropdown)
 	ListAllTrainers(ctx context.Context) ([]ListAllTrainersRow, error)

@@ -55,6 +55,8 @@ func InitializeHandler() *rest.Handler {
 	customerLogRepository := sql.ProvideCustomerLogRepository(queries)
 	bookingUseCase := usecases.ProvideBookingUseCase(trainingScheduleRepository, customerSessionRepository, customerLogRepository, sqlDB)
 	bookingHandler := rest.ProvideBookingHandler(bookingUseCase)
-	handler := rest.ProvideHandler(userHandler, managerDashboardHandler, authHandler, productHandler, trainerHandler, paymentHandler, staffHandler, customerHandler, customerSessionHandler, customerDurationHandler, bookingHandler)
+	memberUseCase := usecases.ProvideMemberUseCase(customerLogRepository, customerSessionRepository, userRepository, authRepository, sqlDB)
+	memberHandler := rest.ProvideMemberHandler(memberUseCase, authUseCase)
+	handler := rest.ProvideHandler(userHandler, managerDashboardHandler, authHandler, productHandler, trainerHandler, paymentHandler, staffHandler, customerHandler, customerSessionHandler, customerDurationHandler, bookingHandler, memberHandler)
 	return handler
 }
