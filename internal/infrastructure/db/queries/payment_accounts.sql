@@ -73,3 +73,15 @@ WHERE id = ?;
 -- name: DeletePaymentAccountByID :execresult
 DELETE FROM payment_accounts
 WHERE id = ?;
+
+-- name: GetPaymentAccountByID :one
+SELECT
+  pa.id,
+  pa.account_name,
+  pa.account_number,
+  pa.bank_name,
+  pa.qr_code_image_url,
+  (pa.is_active = 1)
+FROM payment_accounts pa
+WHERE id = ?
+LIMIT 1;

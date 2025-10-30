@@ -20,6 +20,8 @@ type PaymentAccountRepository interface {
 	Update(ctx context.Context, p UpdatePaymentAccountParams) error
 
 	Delete(ctx context.Context, id int32) error
+
+	GetByID(ctx context.Context, id int32) (dbmodel.GetPaymentAccountByIDRow, error)
 }
 
 type CreatePaymentAccountParams struct {

@@ -108,6 +108,7 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	payments.Post("/create", handler.Payment.Create)
 	payments.Post("/:id/update", handler.Payment.Update)
 	payments.Delete("/:id", handler.Payment.Delete)
+	payments.Get("/:id", handler.Payment.GetByID)
 
 	// Customer registration routes (after Sales pre-entry)
 	customers.Post("/sessions/register", handler.CustomerSession.Register)
