@@ -38,4 +38,5 @@ type UserRepo interface {
 	CheckPhoneNumberExistsUser(ctx context.Context, phoneNumber string) (bool, error)
 	CheckGmailExistsUser(ctx context.Context, email string) (bool, error)
 	CreateUserWithCustomer(ctx context.Context, user CreateUserParams, customer CreateCustomerParams) error
+	UpdateLoginTimestamp(ctx context.Context, username string) error // Q0S.2: Update updated_at on login
 }

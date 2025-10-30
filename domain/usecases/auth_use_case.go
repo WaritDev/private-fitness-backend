@@ -33,6 +33,12 @@ func (u *AuthUseCase) Login(ctx context.Context, req requests.LoginRequest) (res
 		return responses.LoginResponse{}, fmt.Errorf("invalid credentials")
 	}
 
+	// Q0S.2: Update updated_at timestamp to track last login time
+	if err := u.userRepo.UpdateLoginTimestamp(ctx, user.Username); err != nil {
+		// Log error but don't fail login
+		fmt.Printf("Warning: failed to update login timestamp for user %s: %v\n", user.Username, err)
+	}
+
 	// Generate JWT token
 	payload := repositories.JWTPayload{
 		Sub:       user.Username,

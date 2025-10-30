@@ -83,9 +83,9 @@ type Querier interface {
 	GetCustomerDurationByID(ctx context.Context, id int32) (GetCustomerDurationByIDRow, error)
 	GetCustomerDurationById(ctx context.Context, id int32) (CustomerDuration, error)
 	GetCustomerDurationsByUsername(ctx context.Context, customerUsername sql.NullString) ([]CustomerDuration, error)
-	GetDurationDaysForDurationID(ctx context.Context, id int32) (sql.NullInt32, error)
 	// Q3C.3a - ดึงวันหยุดหรือช่วงเวลาที่ไม่รับนัด (DAY_OFF)
 	GetDayOffSchedules(ctx context.Context, arg GetDayOffSchedulesParams) ([]GetDayOffSchedulesRow, error)
+	GetDurationDaysForDurationID(ctx context.Context, id int32) (sql.NullInt32, error)
 	// Q5S.1: ดึงข้อมูลสินค้าและบัญชีรับชำระเงินเพื่อแสดงหน้าชำระเงิน
 	GetPaymentInfoByProductId(ctx context.Context, id int32) (GetPaymentInfoByProductIdRow, error)
 	GetProductById(ctx context.Context, id int32) (Product, error)
@@ -118,6 +118,8 @@ type Querier interface {
 	UpdateCustomersDetail(ctx context.Context, arg UpdateCustomersDetailParams) error
 	UpdateStaffNoPassword(ctx context.Context, arg UpdateStaffNoPasswordParams) error
 	UpdateStaffWithPassword(ctx context.Context, arg UpdateStaffWithPasswordParams) error
+	// Q0S.2: Update updated_at when user logs in (track last active time)
+	UpdateUserLoginTimestamp(ctx context.Context, username string) error
 }
 
 var _ Querier = (*Queries)(nil)
