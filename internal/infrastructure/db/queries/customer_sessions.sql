@@ -76,3 +76,73 @@ JOIN products p ON cs.product_id = p.id
 WHERE cs.customer_username = ?
   AND cs.status = 'ACTIVE'
 ORDER BY cs.created_at DESC;
+
+-- name: ListCustomerSessions :many
+SELECT
+  cs.id,
+  cs.customer_username,
+  cu.first_name  AS customer_first_name,
+  cu.last_name   AS customer_last_name,
+  cs.trainer_username,
+  tu.first_name  AS trainer_first_name,
+  tu.last_name   AS trainer_last_name,
+  cs.product_id,
+  p.name         AS product_name,
+  p.type,
+  p.category,
+  p.session_amount,
+  cs.sales_username,
+  cs.purchase_date,
+  cs.total_sessions,
+  cs.used_sessions,
+  (cs.total_sessions - cs.used_sessions) AS remaining_sessions,
+  cs.price_paid,
+  cs.discount_amount,
+  cs.status
+FROM customer_sessions cs
+JOIN users cu ON cu.username = cs.customer_username
+JOIN users tu ON tu.username = cs.trainer_username
+JOIN products p ON p.id = cs.product_id
+ORDER BY cs.created_at DESC, cs.id DESC
+LIMIT ? OFFSET ?;
+
+-- name: CountCustomerSessions :one
+SELECT COUNT(cs.id) AS total_items
+FROM customer_sessions cs
+JOIN users cu ON cu.username = cs.customer_username
+JOIN users tu ON tu.username = cs.trainer_username
+JOIN products p ON p.id = cs.product_id;
+
+-- name: GetCustomerSessionByID :one
+SELECT
+  cs.id,
+  cs.customer_username,
+  cs.trainer_username,
+  cs.product_id,
+  cs.sales_username,
+  cs.purchase_date,
+  cs.total_sessions,
+  cs.used_sessions,
+  cs.price_paid,
+  cs.discount_amount,
+  cs.status
+FROM customer_sessions cs
+WHERE cs.id = ?;
+
+-- name: CheckTrainerExists :one
+SELECT COUNT(username) AS cnt
+FROM users
+WHERE username = ? AND role = 'TRAINER';
+
+-- name: UpdateCustomerSessionEditableFields :exec
+UPDATE customer_sessions
+SET trainer_username = ?,
+    price_paid       = ?,
+    discount_amount  = ?,
+    status           = ?,
+    updated_at       = NOW()
+WHERE id = ?;
+
+-- name: DeleteCustomerSessionByID :execresult
+DELETE FROM customer_sessions
+WHERE id = ?;
