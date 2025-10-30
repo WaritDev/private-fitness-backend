@@ -21,16 +21,18 @@ var InfraSet = wire.NewSet(
 )
 
 var RepositorySet = wire.NewSet(
-	psql.ProvideUserRepository,
-	psql.ProvideAuthRepository,
+	sql.ProvideUserRepository,
+	sql.ProvideAuthRepository,
+	sql.ProvideManagerDashboardRepository,
 	// Bind adapters -> domain interfaces
-	wire.Bind(new(repositories.UserRepo), new(*psql.UserRepository)),
-	wire.Bind(new(repositories.AuthRepo), new(*psql.AuthRepository)),
+	wire.Bind(new(repositories.UserRepo), new(*sql.UserRepository)),
+	wire.Bind(new(repositories.AuthRepo), new(*sql.AuthRepository)),
 )
 
 var ServiceSet = wire.NewSet(
 	usecases.ProvideUserUseCase,
 	usecases.ProvideAuthUseCase,
+	usecases.ProvideManagerDashboardUsecase,
 )
 
 var HandlerSet = wire.NewSet(

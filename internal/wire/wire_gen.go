@@ -21,12 +21,15 @@ func InitializeHandler() *rest.Handler {
 	configConfig := config.ProvideConfig()
 	sqlDB := db.ProvideMariaDB(context, configConfig)
 	queries := db.ProvideQueries(sqlDB)
-	userRepository := psql.ProvideUserRepository(queries, sqlDB)
+	userRepository := sql.ProvideUserRepository(queries, sqlDB)
 	userUseCase := usecases.ProvideUserUseCase(userRepository)
 	userHandler := rest.ProvideUserHandler(userUseCase)
-	authRepository := psql.ProvideAuthRepository()
+	managerDashboardRepository := sql.ProvideManagerDashboardRepository(sqlDB)
+	managerDashboardUsecase := usecases.ProvideManagerDashboardUsecase(managerDashboardRepository)
+	managerDashboardHandler := rest.ProvideManagerDashboardHandler(managerDashboardUsecase)
+	authRepository := sql.ProvideAuthRepository()
 	authUseCase := usecases.ProvideAuthUseCase(authRepository, userRepository)
 	authHandler := rest.ProvideAuthHandler(authUseCase)
-	handler := rest.ProvideHandler(userHandler, authHandler)
+	handler := rest.ProvideHandler(userHandler, managerDashboardHandler, authHandler)
 	return handler
 }
