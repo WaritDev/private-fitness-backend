@@ -22,8 +22,9 @@ func main() {
 
 	// Cors config
 	app.Use(cors.New(cors.Config{
-		AllowMethods: "GET,POST,PUT,DELETE,PATCH",
-		AllowOrigins: "http://localhost:4500",
+        AllowOrigins: "*",
+        AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
+        AllowHeaders: "Origin, Content-Type, Accept, Authorization",
 	}))
 
 	router.RegisterApiRouter(app, handler)
