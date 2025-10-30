@@ -284,10 +284,10 @@ type ProductRepository interface {
 
 ### 4.2 Implement Repository
 
-**File**: `internal/adapters/repositories/psql/product_psql.go`
+**File**: `internal/adapters/repositories/sql/product_sql.go`
 
 ```go
-package psql
+package sql
 
 import (
 	"context"
@@ -757,7 +757,7 @@ package wire
 import (
 	"github.com/google/wire"
 	"github.com/WaritDev/private-fitness-backend/domain/usecases"
-	"github.com/WaritDev/private-fitness-backend/internal/adapters/repositories/psql"
+	"github.com/WaritDev/private-fitness-backend/internal/adapters/repositories/sql"
 	"github.com/WaritDev/private-fitness-backend/internal/adapters/rest"
 	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db"
 )
@@ -770,9 +770,9 @@ var InfraSet = wire.NewSet(
 
 // Repository layer
 var RepositorySet = wire.NewSet(
-	psql.ProvideUserRepository,
-	psql.ProvideAuthRepository,
-	psql.ProvideProductRepository,  // ✅ Add this
+	sql.ProvideUserRepository,
+	sql.ProvideAuthRepository,
+	sql.ProvideProductRepository,  // ✅ Add this
 )
 
 // Use case layer
@@ -904,8 +904,8 @@ type UserResponse struct {
 #### 8.6 Repository
 
 ```go
-// internal/adapters/repositories/psql/user_psql.go
-package psql
+// internal/adapters/repositories/sql/user_sql.go
+package sql
 
 import (
 	"context"
@@ -949,15 +949,15 @@ import (
 
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
 	"github.com/WaritDev/private-fitness-backend/domain/responses"
-	"github.com/WaritDev/private-fitness-backend/internal/adapters/repositories/psql"
+	"github.com/WaritDev/private-fitness-backend/internal/adapters/repositories/sql"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type UserUseCase struct {
-	repo *psql.UserRepository
+	repo *sql.UserRepository
 }
 
-func ProvideUserUseCase(repo *psql.UserRepository) *UserUseCase {
+func ProvideUserUseCase(repo *sql.UserRepository) *UserUseCase {
 	return &UserUseCase{repo: repo}
 }
 
@@ -1085,7 +1085,7 @@ users.Get("/", handler.User.ListUsers)
 ```go
 // internal/wire/provider.go
 var RepositorySet = wire.NewSet(
-	psql.ProvideUserRepository,  // ✅
+	sql.ProvideUserRepository,  // ✅
 )
 
 var ServiceSet = wire.NewSet(
@@ -1238,7 +1238,7 @@ make gen-sqlc
 
 **Step 3: Use generated method in repository**
 ```go
-// internal/adapters/repositories/psql/user_psql.go
+// internal/adapters/repositories/sql/user_sql.go
 func (r *UserRepository) CheckUsernameExists(ctx context.Context, username string) (bool, error) {
 	count, err := r.q.CheckUsernameExists(ctx, username)  // ✅ ใช้ method ที่ sqlc generate มาให้
 	if err != nil {
@@ -1254,10 +1254,10 @@ func (r *UserRepository) CheckUsernameExists(ctx context.Context, username strin
 
 **Important**: Repository ต้องมี `*sql.DB` เพื่อสร้าง transaction และใช้ `q.WithTx(tx)` เพื่อรัน queries ภายใน transaction
 
-**File**: `internal/adapters/repositories/psql/user_psql.go`
+**File**: `internal/adapters/repositories/sql/user_sql.go`
 
 ```go
-package psql
+package sql
 
 import (
 	"context"
@@ -1488,4 +1488,255 @@ docker-compose logs -f api
 
 ---
 
+---
+
+## 13. API Testing Examples (Auth APIs)
+
+### 13.1 Signup API (POST /api/auth/signup)
+
+**Complete Request with ALL Required Fields**:
+
+```bash
+curl -X POST http://localhost:8000/api/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "testuser01",
+    "password": "TestPass123!",
+    "firstName": "นายทดสอบ",
+    "lastName": "ระบบ",
+    "gender": "MALE",
+    "dateOfBirth": "1995-05-15",
+    "phone": "0812345678",
+    "email": "testuser01@example.com",
+    "healthInfo": "ไม่มีโรคประจำตัว แพ้อาหารทะเล",
+    "address": "123 ถนนสุขุมวิท แขวงคลองเตย เขตคลองเตย กรุงเทพฯ 10110",
+    "companyName": "บริษัท เทคโนโลยี จำกัด",
+    "companyPosition": "Software Engineer",
+    "maritalStatus": "SINGLE",
+    "emergencyContactName": "นางสาวทดสอบ ระบบ",
+    "emergencyContactRelationship": "พี่สาว",
+    "emergencyContactPhone": "0898765432",
+    "marketingSource": "Facebook Ads"
+  }'
+```
+
+**Expected Response (201 Created)**:
+```json
+{
+  "status": "Created",
+  "status_code": 201,
+  "message": "User registered successfully",
+  "result": {
+    "ok": true
+  }
+}
+```
+
+**Notes**:
+- All fields from `SignupRequest` are required except those marked optional
+- `username` must be 4-30 characters, alphanumeric only
+- `password` minimum 8 characters (complex validation on frontend)
+- `gender` must be: MALE, FEMALE, or OTHER
+- `maritalStatus` must be: SINGLE, MARRIED, DIVORCED, or WIDOWED
+- `dateOfBirth` format: YYYY-MM-DD
+- `email` must be valid email format
+- User will automatically be assigned role "CUSTOMER"
+
+---
+
+### 13.2 Login API (POST /api/auth/login)
+
+**Request**:
+```bash
+curl -X POST http://localhost:8000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -c cookies.txt \
+  -d '{
+    "username": "testuser01",
+    "password": "TestPass123!"
+  }'
+```
+
+**Expected Response (200 OK)**:
+```json
+{
+  "status": "OK",
+  "status_code": 200,
+  "message": "Login successful",
+  "result": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "sub": "testuser01",
+      "role": "CUSTOMER",
+      "firstName": "นายทดสอบ",
+      "lastName": "ระบบ"
+    }
+  }
+}
+```
+
+**Cookie Set**:
+- Cookie name: `pf_auth`
+- HTTPOnly: true
+- SameSite: Lax
+- Max-Age: 604800 (7 days)
+- Secure: true (if NODE_ENV=production)
+
+**Notes**:
+- JWT token returned in both response body AND HTTP-only cookie
+- Token is valid for 7 days
+- Use `-c cookies.txt` to save cookies for subsequent requests
+
+---
+
+### 13.3 Me API (GET /api/auth/me)
+
+**Request (with cookie)**:
+```bash
+curl http://localhost:8000/api/auth/me \
+  -b cookies.txt
+```
+
+**OR Request (with Authorization header)**:
+```bash
+curl http://localhost:8000/api/auth/me \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+**Expected Response (Authenticated - 200 OK)**:
+```json
+{
+  "status": "OK",
+  "status_code": 200,
+  "message": "User retrieved successfully",
+  "result": {
+    "authenticated": true,
+    "user": {
+      "sub": "testuser01",
+      "role": "CUSTOMER",
+      "firstName": "นายทดสอบ",
+      "lastName": "ระบบ"
+    }
+  }
+}
+```
+
+**Expected Response (Not Authenticated - 200 OK)**:
+```json
+{
+  "status": "OK",
+  "status_code": 200,
+  "message": "User not authenticated",
+  "result": {
+    "authenticated": false
+  }
+}
+```
+
+**Notes**:
+- Token can be provided via cookie OR Authorization header
+- Priority: Cookie first, then Authorization header
+- No error if not authenticated - returns `authenticated: false`
+
+---
+
+### 13.4 Logout API (POST /api/auth/logout)
+
+**Request**:
+```bash
+curl -X POST http://localhost:8000/api/auth/logout \
+  -b cookies.txt
+```
+
+**OR via GET**:
+```bash
+curl http://localhost:8000/api/auth/logout \
+  -b cookies.txt
+```
+
+**Expected Response (200 OK)**:
+```json
+{
+  "status": "OK",
+  "status_code": 200,
+  "message": "Logged out successfully",
+  "result": {
+    "ok": true
+  }
+}
+```
+
+**Cookie Cleared**:
+- Cookie `pf_auth` is cleared by setting MaxAge=-1
+- Expires date set to past time
+
+**Notes**:
+- Supports both POST and GET methods
+- No authentication required (can logout anytime)
+- Cookie is cleared on client side
+
+---
+
+### 13.5 Complete Testing Flow
+
+**Sequential Test Script**:
+
+```bash
+#!/bin/bash
+
+echo "=== 1. Signup New User ==="
+curl -X POST http://localhost:8000/api/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "testuser99",
+    "password": "SecurePass123!",
+    "firstName": "Test",
+    "lastName": "User",
+    "gender": "MALE",
+    "dateOfBirth": "1990-01-01",
+    "phone": "0801234567",
+    "email": "testuser99@example.com",
+    "healthInfo": "No health issues",
+    "address": "123 Test Street, Bangkok 10110",
+    "companyName": "Test Company Ltd.",
+    "companyPosition": "Tester",
+    "maritalStatus": "SINGLE",
+    "emergencyContactName": "Emergency Contact",
+    "emergencyContactRelationship": "Sibling",
+    "emergencyContactPhone": "0809876543",
+    "marketingSource": "Google Search"
+  }'
+
+echo -e "\n\n=== 2. Login ==="
+curl -X POST http://localhost:8000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -c cookies.txt \
+  -d '{
+    "username": "testuser99",
+    "password": "SecurePass123!"
+  }'
+
+echo -e "\n\n=== 3. Get Current User (Me) ==="
+curl http://localhost:8000/api/auth/me -b cookies.txt
+
+echo -e "\n\n=== 4. Logout ==="
+curl -X POST http://localhost:8000/api/auth/logout -b cookies.txt
+
+echo -e "\n\n=== 5. Verify Logged Out (Me again) ==="
+curl http://localhost:8000/api/auth/me -b cookies.txt
+
+echo -e "\n\nDone!"
+```
+
+**Expected Output**:
+1. Signup: `status_code: 201`
+2. Login: `status_code: 200` + token + cookie set
+3. Me: `authenticated: true` + user info
+4. Logout: `status_code: 200` + cookie cleared
+5. Me (after logout): `authenticated: false`
+
+---
+
 **Happy Coding! 🚀**
+
+````

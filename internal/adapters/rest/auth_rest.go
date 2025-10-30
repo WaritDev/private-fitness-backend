@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
-	"github.com/WaritDev/private-fitness-backend/domain/responses"
 	"github.com/WaritDev/private-fitness-backend/domain/usecases"
 	"github.com/gofiber/fiber/v2"
 )
@@ -75,7 +74,10 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		"status":      "OK",
 		"status_code": fiber.StatusOK,
 		"message":     "Login successful",
-		"result":      result.User,
+		"result": fiber.Map{
+			"token": result.Token,
+			"user":  result.User,
+		},
 	})
 }
 
@@ -150,26 +152,41 @@ func (h *AuthHandler) Me(c *fiber.Ctx) error {
 	}
 
 	if token == "" {
-		return c.Status(fiber.StatusOK).JSON(responses.MeResponse{
-			Authenticated: false,
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"status":      "OK",
+			"status_code": fiber.StatusOK,
+			"message":     "User not authenticated",
+			"result": fiber.Map{
+				"authenticated": false,
+			},
 		})
 	}
 
 	// Verify token
 	payload, err := h.UC.VerifyToken(c.Context(), token)
 	if err != nil {
-		return c.Status(fiber.StatusOK).JSON(responses.MeResponse{
-			Authenticated: false,
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"status":      "OK",
+			"status_code": fiber.StatusOK,
+			"message":     "User not authenticated",
+			"result": fiber.Map{
+				"authenticated": false,
+			},
 		})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(responses.MeResponse{
-		Authenticated: true,
-		User: responses.UserInfo{
-			Sub:       payload.Sub,
-			Role:      payload.Role,
-			FirstName: payload.FirstName,
-			LastName:  payload.LastName,
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      "OK",
+		"status_code": fiber.StatusOK,
+		"message":     "User retrieved successfully",
+		"result": fiber.Map{
+			"authenticated": true,
+			"user": fiber.Map{
+				"sub":       payload.Sub,
+				"role":      payload.Role,
+				"firstName": payload.FirstName,
+				"lastName":  payload.LastName,
+			},
 		},
 	})
 }
