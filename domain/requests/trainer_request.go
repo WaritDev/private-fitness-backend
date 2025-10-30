@@ -24,3 +24,10 @@ type UpdateWorkingTimeRequest struct {
 	StartTime string `json:"startTime" validate:"required"`                                                                // เวลาเริ่มต้น (HH:MM format)
 	EndTime   string `json:"endTime" validate:"required"`                                                                  // เวลาสิ้นสุด (HH:MM format)
 }
+
+// Use Case 3P: Manage Day-Offs
+
+// AddDayOffRequest - Request สำหรับเพิ่มวันหยุดของ Trainer
+type AddDayOffRequest struct {
+	DayOffDate string `json:"dayOffDate" validate:"required"` // วันหยุด (YYYY-MM-DD format)
+}

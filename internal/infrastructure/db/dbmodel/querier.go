@@ -18,6 +18,10 @@ type Querier interface {
 	CheckBookingPermission(ctx context.Context, customerUsername sql.NullString) (int64, error)
 	CheckCustomerGmailExistsExcept(ctx context.Context, arg CheckCustomerGmailExistsExceptParams) (int64, error)
 	CheckCustomerPhoneExistsExcept(ctx context.Context, arg CheckCustomerPhoneExistsExceptParams) (int64, error)
+	// Q3P.3: Check if day-off overlaps with existing appointments
+	CheckDayOffAppointmentOverlap(ctx context.Context, arg CheckDayOffAppointmentOverlapParams) (int64, error)
+	// Q3P.2: Check if day-off already exists for the same date
+	CheckDayOffDuplicate(ctx context.Context, arg CheckDayOffDuplicateParams) (int64, error)
 	CheckGmailExists(ctx context.Context, lower string) (int64, error)
 	CheckGmailExistsExceptUsername(ctx context.Context, arg CheckGmailExistsExceptUsernameParams) (int64, error)
 	CheckGmailExistsUser(ctx context.Context, gmail string) (int64, error)
@@ -51,6 +55,8 @@ type Querier interface {
 	CreateCustomerDuration(ctx context.Context, arg CreateCustomerDurationParams) error
 	CreateCustomerLog(ctx context.Context, arg CreateCustomerLogParams) error
 	CreateCustomerSession(ctx context.Context, arg CreateCustomerSessionParams) error
+	// Q3P.4: Create day-off
+	CreateDayOff(ctx context.Context, arg CreateDayOffParams) error
 	CreatePaymentAccount(ctx context.Context, arg CreatePaymentAccountParams) error
 	CreateStaff(ctx context.Context, arg CreateStaffParams) error
 	// Q1P.3: Create Trainer Availability (Add Working Time)
@@ -77,6 +83,8 @@ type Querier interface {
 	DeleteCustomerSessionByID(ctx context.Context, id int32) (sql.Result, error)
 	DeleteCustomerSessionBySales(ctx context.Context, salesUsername sql.NullString) error
 	DeleteCustomerSessionByTrainer(ctx context.Context, trainerUsername sql.NullString) error
+	// Q3P.5: Delete day-off
+	DeleteDayOff(ctx context.Context, id int32) error
 	DeletePaymentAccountByID(ctx context.Context, id int32) (sql.Result, error)
 	DeleteProductByID(ctx context.Context, id int32) (sql.Result, error)
 	// Q1P.5: Delete Trainer Availability (Remove Working Time)
@@ -115,6 +123,9 @@ type Querier interface {
 	// Use Case 1P: Manage Working Hours
 	// Q1P.1: Get Trainer Availability with ID (Get Working Hours)
 	GetTrainerAvailability(ctx context.Context, trainerUsername string) ([]TrainingAvailability, error)
+	// Use Case 3P: Manage Day-Offs
+	// Q3P.1: Get all day-offs for a trainer
+	GetTrainerDayOffs(ctx context.Context, trainerUsername sql.NullString) ([]GetTrainerDayOffsRow, error)
 	GetTrainingAvaliabilitiesByTrainerUsername(ctx context.Context, trainerUsername string) ([]GetTrainingAvaliabilitiesByTrainerUsernameRow, error)
 	GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error)
 	GetUserRole(ctx context.Context, username string) (UsersRole, error)

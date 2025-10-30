@@ -12,15 +12,18 @@ import (
 
 // TrainerUseCase handles trainer-related business logic
 type TrainerUseCase struct {
-	trainerRepo repositories.TrainerRepository
+	trainerRepo          repositories.TrainerRepository
+	trainingScheduleRepo repositories.TrainingScheduleRepository
 }
 
 // ProvideTrainerUseCase creates a new TrainerUseCase
 func ProvideTrainerUseCase(
 	trainerRepo repositories.TrainerRepository,
+	trainingScheduleRepo repositories.TrainingScheduleRepository,
 ) *TrainerUseCase {
 	return &TrainerUseCase{
-		trainerRepo: trainerRepo,
+		trainerRepo:          trainerRepo,
+		trainingScheduleRepo: trainingScheduleRepo,
 	}
 }
 
@@ -209,5 +212,125 @@ func (u *TrainerUseCase) DeleteWorkingTime(ctx context.Context, trainerUsername 
 	return &responses.DeleteWorkingTimeResponse{
 		Status:  "success",
 		Message: "Working time deleted successfully",
+	}, nil
+}
+
+// ========== Use Case 3P: Manage Day-Offs ==========
+
+// GetDayOffs retrieves all day-offs for a trainer (Q3P.1)
+func (u *TrainerUseCase) GetDayOffs(ctx context.Context, trainerUsername string) (*responses.DayOffsListResponse, error) {
+	// Q3P.1: ดึงรายการวันหยุดทั้งหมดของ Trainer
+	dayOffs, err := u.trainingScheduleRepo.GetTrainerDayOffs(ctx, trainerUsername)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get trainer day-offs: %w", err)
+	}
+
+	// แปลงข้อมูลเป็น response format
+	dayOffsList := make([]responses.DayOffResponse, len(dayOffs))
+	for i, dayOff := range dayOffs {
+		dayOffsList[i] = responses.DayOffResponse{
+			ScheduleID: dayOff.ScheduleID,
+			StartTime:  dayOff.StartTime,
+			EndTime:    dayOff.EndTime,
+		}
+	}
+
+	return &responses.DayOffsListResponse{
+		Status:  "success",
+		Message: "Day-offs retrieved successfully",
+		DayOffs: dayOffsList,
+	}, nil
+}
+
+// AddDayOff adds a new day-off with validation (Q3P.2, Q3P.3, Q3P.4)
+func (u *TrainerUseCase) AddDayOff(ctx context.Context, trainerUsername string, req requests.AddDayOffRequest) (*responses.AddDayOffResponse, error) {
+	// Step 1: Parse Day_Off_Date (YYYY-MM-DD format)
+	dayOffDate, err := time.Parse("2006-01-02", req.DayOffDate)
+	if err != nil {
+		return &responses.AddDayOffResponse{
+			Status:  "error",
+			Message: "Invalid date format. Expected YYYY-MM-DD",
+		}, nil
+	}
+
+	// Step 2: Convert to full day range
+	// NewStartTime = Day_Off_Date 00:00:00
+	// NewEndTime = Day_Off_Date 23:59:59
+	location := time.UTC // or use appropriate timezone
+	newStartTime := time.Date(dayOffDate.Year(), dayOffDate.Month(), dayOffDate.Day(), 0, 0, 0, 0, location)
+	newEndTime := time.Date(dayOffDate.Year(), dayOffDate.Month(), dayOffDate.Day(), 23, 59, 59, 0, location)
+
+	// Step 3: Validate duplicate - Q3P.2: CheckDayOffDuplicate
+	duplicateCount, err := u.trainingScheduleRepo.CheckDayOffDuplicate(ctx, trainerUsername, dayOffDate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check day-off duplicate: %w", err)
+	}
+
+	if duplicateCount > 0 {
+		return &responses.AddDayOffResponse{
+			Status:  "error",
+			Message: "Day-off already exists for this date",
+		}, nil
+	}
+
+	// Step 4: Validate appointment overlap - Q3P.3: CheckDayOffAppointmentOverlap
+	overlapCount, err := u.trainingScheduleRepo.CheckDayOffAppointmentOverlap(ctx, trainerUsername, newStartTime, newEndTime)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check appointment overlap: %w", err)
+	}
+
+	if overlapCount > 0 {
+		return &responses.AddDayOffResponse{
+			Status:  "error",
+			Message: "Cannot create day-off: There are existing appointments on this date",
+		}, nil
+	}
+
+	// Step 5: Create day-off - Q3P.4: CreateDayOff
+	err = u.trainingScheduleRepo.CreateDayOff(ctx, trainerUsername, newStartTime, newEndTime)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create day-off: %w", err)
+	}
+
+	// Step 6: Return success response
+	return &responses.AddDayOffResponse{
+		Status:  "success",
+		Message: "Day off created successfully",
+	}, nil
+}
+
+// DeleteDayOff deletes a day-off (Q3P.5)
+func (u *TrainerUseCase) DeleteDayOff(ctx context.Context, trainerUsername string, scheduleID int32) (*responses.DeleteDayOffResponse, error) {
+	// Step 1: Validate ownership - ensure this day-off belongs to the trainer
+	dayOffs, err := u.trainingScheduleRepo.GetTrainerDayOffs(ctx, trainerUsername)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get trainer day-offs: %w", err)
+	}
+
+	// Check if this schedule ID belongs to the trainer
+	found := false
+	for _, dayOff := range dayOffs {
+		if dayOff.ScheduleID == scheduleID {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return &responses.DeleteDayOffResponse{
+			Status:  "error",
+			Message: "Day-off not found or does not belong to you",
+		}, nil
+	}
+
+	// Step 2: Delete the day-off (Q3P.5)
+	err = u.trainingScheduleRepo.DeleteDayOff(ctx, scheduleID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to delete day-off: %w", err)
+	}
+
+	return &responses.DeleteDayOffResponse{
+		Status:  "success",
+		Message: "Day-off deleted successfully",
 	}, nil
 }

@@ -90,6 +90,11 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	trainers.Put("/working-hours/:id", handler.Trainer.UpdateWorkingTime)    // Q1P.4: Update working time
 	trainers.Delete("/working-hours/:id", handler.Trainer.DeleteWorkingTime) // Q1P.5: Delete working time
 
+	// Use Case 3P: Manage Day-Offs (Trainer must be logged in)
+	trainers.Get("/day-offs", handler.Trainer.GetDayOffs)          // Q3P.1: Get trainer's day-offs
+	trainers.Post("/day-offs", handler.Trainer.AddDayOff)          // Q3P.2 + Q3P.3 + Q3P.4: Add new day-off
+	trainers.Delete("/day-offs/:id", handler.Trainer.DeleteDayOff) // Q3P.5: Delete day-off
+
 	// Payment routes (for Use Case: ยืนยันการชำระเงิน)
 	payments := apiGroup.Group("/payments")
 	payments.Get("/info/:productId", handler.Payment.GetPaymentInfo)

@@ -15,7 +15,7 @@
 5. [Customer Registration APIs](#5-customer-registration-apis)
 6. [Booking APIs](#6-booking-apis)
 7. [Trainer / Working Hours APIs](#7-trainer--working-hours-apis)
-8. [Response Format](#8-response-format)
+8. [Trainer / Day-Offs Management APIs](#8-trainer--day-offs-management-apis)
 9. [Error Codes](#9-error-codes)
 
 ---
@@ -2041,7 +2041,496 @@ const WorkingHoursPage: React.FC = () => {
 
 ---
 
-## 8. Error Codes
+## 8. Trainer / Day-Offs Management APIs
+
+### 8.1 Get Day-Offs (Trainer)
+
+**Endpoint:** `GET /api/trainers/day-offs`
+
+**Description:** ดึงรายการวันหยุดทั้งหมดของเทรนเนอร์ (Use Case 3P: Q3P.1)
+
+**Authorization:** Required (JWT Token - Trainer role)
+
+**Business Logic:**
+1. ดึง `trainerUsername` จาก JWT token
+2. Query วันหยุดทั้งหมดจากตาราง `training_schedules` ที่ `schedule_type = 'DAY_OFF'` (Q3P.1)
+3. เรียงลำดับจากวันที่ล่าสุด (ORDER BY start_time DESC)
+4. แสดงผลในรูปแบบตาราง (ช่วงเวลาเป็น full day: 00:00:00 - 23:59:59)
+
+**SQL Query (Q3P.1):**
+```sql
+SELECT id, trainer_username, start_time, end_time
+FROM training_schedules
+WHERE trainer_username = ? AND schedule_type = 'DAY_OFF'
+ORDER BY start_time DESC;
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "success",
+  "message": "Day-offs retrieved successfully",
+  "dayOffs": [
+    {
+      "scheduleId": 10,
+      "startTime": "2025-12-25T00:00:00Z",
+      "endTime": "2025-12-25T23:59:59Z"
+    },
+    {
+      "scheduleId": 8,
+      "startTime": "2025-12-01T00:00:00Z",
+      "endTime": "2025-12-01T23:59:59Z"
+    }
+  ]
+}
+```
+
+**Error Response (401 Unauthorized):**
+```json
+{
+  "status": "error",
+  "message": "Unauthorized - JWT token required"
+}
+```
+
+**Usage Example (React + TypeScript):**
+```typescript
+// Get day-offs
+const getDayOffs = async () => {
+  const token = localStorage.getItem('token');
+  
+  const response = await fetch('http://localhost:8000/api/trainers/day-offs', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  const data = await response.json();
+  if (data.status === 'success') {
+    console.log('Day-Offs:', data.dayOffs);
+    // Display in calendar format
+  }
+};
+```
+
+---
+
+### 8.2 Add Day-Off (Trainer)
+
+**Endpoint:** `POST /api/trainers/day-offs`
+
+**Description:** เพิ่มวันหยุดใหม่ของเทรนเนอร์ พร้อม validation (Use Case 3P: Q3P.2 + Q3P.3 + Q3P.4)
+
+**Authorization:** Required (JWT Token - Trainer role)
+
+**Business Logic Flow:**
+1. ดึง `trainerUsername` จาก JWT token
+2. **Input Validation:**
+   - Parse `dayOffDate` (YYYY-MM-DD format)
+   - Convert to full day range:
+     - `NewStartTime` = Day_Off_Date 00:00:00
+     - `NewEndTime` = Day_Off_Date 23:59:59
+3. **Duplicate Validation (Q3P.2):**
+   - ตรวจสอบว่ามีวันหยุดในวันเดียวกันแล้วหรือไม่
+   - ถ้า `duplicate_count > 0` → Return error "Day-off already exists for this date"
+4. **Appointment Overlap Validation (Q3P.3):**
+   - ตรวจสอบว่ามีนัดหมายที่ทับกับวันหยุดหรือไม่
+   - ถ้า `overlapped_count > 0` → Return error "Cannot create day-off: There are existing appointments on this date"
+5. **Insert Day-Off (Q3P.4):**
+   - บันทึกวันหยุดใหม่ด้วย `schedule_type = 'DAY_OFF'`
+   - Return success message
+
+**SQL Queries:**
+
+**Q3P.2: Check Duplicate Day-Off**
+```sql
+SELECT COUNT(id) AS duplicate_count
+FROM training_schedules
+WHERE trainer_username = ?
+  AND schedule_type = 'DAY_OFF'
+  AND DATE(start_time) = ?;
+```
+
+**Q3P.3: Check Appointment Overlap**
+```sql
+SELECT COUNT(id) AS overlapped_count
+FROM training_schedules
+WHERE trainer_username = ?
+  AND schedule_type = 'APPOINTMENT'
+  AND start_time < ?
+  AND end_time > ?;
+```
+
+**Q3P.4: Insert Day-Off**
+```sql
+INSERT INTO training_schedules (
+  trainer_username,
+  start_time,
+  end_time,
+  schedule_type
+) VALUES (?, ?, ?, 'DAY_OFF');
+```
+
+**Request Body:**
+```json
+{
+  "dayOffDate": "2025-12-25"
+}
+```
+
+**Request Validation:**
+- `dayOffDate`: Required, format `YYYY-MM-DD`
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "success",
+  "message": "Day off created successfully"
+}
+```
+
+**Error Responses:**
+
+**400 Bad Request - Invalid Date Format:**
+```json
+{
+  "status": "error",
+  "message": "Invalid date format. Expected YYYY-MM-DD"
+}
+```
+
+**400 Bad Request - Duplicate Day-Off:**
+```json
+{
+  "status": "error",
+  "message": "Day-off already exists for this date"
+}
+```
+
+**400 Bad Request - Appointment Overlap:**
+```json
+{
+  "status": "error",
+  "message": "Cannot create day-off: There are existing appointments on this date"
+}
+```
+
+**400 Bad Request - Missing Required Field:**
+```json
+{
+  "status": "error",
+  "message": "dayOffDate is required"
+}
+```
+
+**Usage Example (React + TypeScript):**
+```typescript
+interface AddDayOffRequest {
+  dayOffDate: string; // YYYY-MM-DD format
+}
+
+// Add day-off
+const addDayOff = async (date: string) => {
+  const token = localStorage.getItem('token');
+  
+  const response = await fetch('http://localhost:8000/api/trainers/day-offs', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      dayOffDate: date // "2025-12-25"
+    })
+  });
+
+  const data = await response.json();
+  
+  if (data.status === 'success') {
+    alert('วันหยุดถูกเพิ่มเรียบร้อยแล้ว');
+    // Refresh day-offs list
+    await getDayOffs();
+  } else {
+    alert(data.message); // Show validation error
+  }
+};
+
+// Example usage:
+// addDayOff('2025-12-25');
+```
+
+---
+
+### 8.3 Delete Day-Off (Trainer)
+
+**Endpoint:** `DELETE /api/trainers/day-offs/:id`
+
+**Description:** ลบวันหยุดของเทรนเนอร์ (Use Case 3P: Q3P.5)
+
+**Authorization:** Required (JWT Token - Trainer role)
+
+**Business Logic:**
+1. ดึง `trainerUsername` จาก JWT token
+2. ดึง `scheduleId` จาก URL parameter
+3. **Ownership Validation:**
+   - ตรวจสอบว่า day-off นี้เป็นของ trainer ที่ login อยู่
+   - ถ้าไม่ใช่ → Return error "Day-off not found or does not belong to you"
+4. **Delete Day-Off (Q3P.5):**
+   - ลบ record ที่มี `id = scheduleId` และ `schedule_type = 'DAY_OFF'`
+   - Return success message
+
+**SQL Query (Q3P.5):**
+```sql
+DELETE FROM training_schedules
+WHERE id = ? AND schedule_type = 'DAY_OFF';
+```
+
+**URL Parameters:**
+- `id` (required): Schedule ID ของวันหยุดที่ต้องการลบ
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "success",
+  "message": "Day-off deleted successfully"
+}
+```
+
+**Error Responses:**
+
+**400 Bad Request - Invalid ID:**
+```json
+{
+  "status": "error",
+  "message": "Invalid ID parameter"
+}
+```
+
+**404 Not Found - Day-Off Not Found:**
+```json
+{
+  "status": "error",
+  "message": "Day-off not found or does not belong to you"
+}
+```
+
+**Usage Example (React + TypeScript):**
+```typescript
+// Delete day-off
+const deleteDayOff = async (scheduleId: number) => {
+  const token = localStorage.getItem('token');
+  
+  if (!confirm('คุณต้องการลบวันหยุดนี้หรือไม่?')) {
+    return;
+  }
+  
+  const response = await fetch(`http://localhost:8000/api/trainers/day-offs/${scheduleId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  const data = await response.json();
+  
+  if (data.status === 'success') {
+    alert('วันหยุดถูกลบเรียบร้อยแล้ว');
+    // Refresh day-offs list
+    await getDayOffs();
+  } else {
+    alert(data.message); // Show error
+  }
+};
+
+// Example usage:
+// deleteDayOff(10);
+```
+
+---
+
+### 8.4 Use Case 3P Complete Flow
+
+**Frontend Implementation Example:**
+
+```typescript
+import { useState, useEffect } from 'react';
+
+interface DayOff {
+  scheduleId: number;
+  startTime: string;
+  endTime: string;
+}
+
+const TrainerDayOffsPage = () => {
+  const [dayOffs, setDayOffs] = useState<DayOff[]>([]);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [loading, setLoading] = useState(false);
+  const token = localStorage.getItem('token');
+
+  // Fetch day-offs on component mount
+  useEffect(() => {
+    fetchDayOffs();
+  }, []);
+
+  const fetchDayOffs = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:8000/api/trainers/day-offs', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await response.json();
+      if (data.status === 'success') {
+        setDayOffs(data.dayOffs);
+      }
+    } catch (error) {
+      console.error('Error fetching day-offs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddDayOff = async () => {
+    if (!selectedDate) {
+      alert('กรุณาเลือกวันที่');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:8000/api/trainers/day-offs', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ dayOffDate: selectedDate })
+      });
+      
+      const data = await response.json();
+      
+      if (data.status === 'success') {
+        alert('เพิ่มวันหยุดสำเร็จ');
+        setSelectedDate('');
+        await fetchDayOffs();
+      } else {
+        alert(data.message);
+      }
+    } catch (error) {
+      console.error('Error adding day-off:', error);
+      alert('เกิดข้อผิดพลาดในการเพิ่มวันหยุด');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteDayOff = async (scheduleId: number) => {
+    if (!confirm('คุณต้องการลบวันหยุดนี้หรือไม่?')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`http://localhost:8000/api/trainers/day-offs/${scheduleId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data.status === 'success') {
+        alert('ลบวันหยุดสำเร็จ');
+        await fetchDayOffs();
+      } else {
+        alert(data.message);
+      }
+    } catch (error) {
+      console.error('Error deleting day-off:', error);
+      alert('เกิดข้อผิดพลาดในการลบวันหยุด');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <h1>จัดการวันหยุด (Day-Offs Management)</h1>
+      
+      {/* Add Day-Off Form */}
+      <div>
+        <h2>เพิ่มวันหยุด</h2>
+        <input
+          type="date"
+          value={selectedDate}
+          onChange={(e) => setSelectedDate(e.target.value)}
+          min={new Date().toISOString().split('T')[0]}
+        />
+        <button onClick={handleAddDayOff} disabled={loading}>
+          เพิ่มวันหยุด
+        </button>
+      </div>
+
+      {/* Day-Offs List */}
+      <div>
+        <h2>รายการวันหยุด</h2>
+        {loading ? (
+          <p>Loading...</p>
+        ) : dayOffs.length === 0 ? (
+          <p>ไม่มีวันหยุด</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>วันที่</th>
+                <th>เวลาเริ่มต้น</th>
+                <th>เวลาสิ้นสุด</th>
+                <th>จัดการ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dayOffs.map((dayOff) => (
+                <tr key={dayOff.scheduleId}>
+                  <td>
+                    {new Date(dayOff.startTime).toLocaleDateString('th-TH')}
+                  </td>
+                  <td>
+                    {new Date(dayOff.startTime).toLocaleTimeString('th-TH')}
+                  </td>
+                  <td>
+                    {new Date(dayOff.endTime).toLocaleTimeString('th-TH')}
+                  </td>
+                  <td>
+                    <button 
+                      onClick={() => handleDeleteDayOff(dayOff.scheduleId)}
+                      disabled={loading}
+                    >
+                      ลบ
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default TrainerDayOffsPage;
+```
+
+---
+
+## 9. Error Codes
 
 ### Common Error Messages
 

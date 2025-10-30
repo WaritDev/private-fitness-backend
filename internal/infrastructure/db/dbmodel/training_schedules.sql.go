@@ -44,6 +44,50 @@ func (q *Queries) BookAppointment(ctx context.Context, arg BookAppointmentParams
 	return err
 }
 
+const checkDayOffAppointmentOverlap = `-- name: CheckDayOffAppointmentOverlap :one
+SELECT COUNT(id) AS overlapped_count
+FROM training_schedules
+WHERE trainer_username = ?
+  AND schedule_type = 'APPOINTMENT'
+  AND start_time < ?
+  AND end_time > ?
+`
+
+type CheckDayOffAppointmentOverlapParams struct {
+	TrainerUsername sql.NullString `json:"trainerUsername"`
+	StartTime       time.Time      `json:"startTime"`
+	EndTime         time.Time      `json:"endTime"`
+}
+
+// Q3P.3: Check if day-off overlaps with existing appointments
+func (q *Queries) CheckDayOffAppointmentOverlap(ctx context.Context, arg CheckDayOffAppointmentOverlapParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, checkDayOffAppointmentOverlap, arg.TrainerUsername, arg.StartTime, arg.EndTime)
+	var overlapped_count int64
+	err := row.Scan(&overlapped_count)
+	return overlapped_count, err
+}
+
+const checkDayOffDuplicate = `-- name: CheckDayOffDuplicate :one
+SELECT COUNT(id) AS duplicate_count
+FROM training_schedules
+WHERE trainer_username = ?
+  AND schedule_type = 'DAY_OFF'
+  AND DATE(start_time) = ?
+`
+
+type CheckDayOffDuplicateParams struct {
+	TrainerUsername sql.NullString `json:"trainerUsername"`
+	StartTime       time.Time      `json:"startTime"`
+}
+
+// Q3P.2: Check if day-off already exists for the same date
+func (q *Queries) CheckDayOffDuplicate(ctx context.Context, arg CheckDayOffDuplicateParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, checkDayOffDuplicate, arg.TrainerUsername, arg.StartTime)
+	var duplicate_count int64
+	err := row.Scan(&duplicate_count)
+	return duplicate_count, err
+}
+
 const checkTimeSlotAvailability = `-- name: CheckTimeSlotAvailability :one
 SELECT COUNT(id) AS overlapped_count
 FROM training_schedules
@@ -66,6 +110,29 @@ func (q *Queries) CheckTimeSlotAvailability(ctx context.Context, arg CheckTimeSl
 	var overlapped_count int64
 	err := row.Scan(&overlapped_count)
 	return overlapped_count, err
+}
+
+const createDayOff = `-- name: CreateDayOff :exec
+INSERT INTO training_schedules (
+  trainer_username,
+  start_time,
+  end_time,
+  schedule_type
+) VALUES (
+  ?, ?, ?, 'DAY_OFF'
+)
+`
+
+type CreateDayOffParams struct {
+	TrainerUsername sql.NullString `json:"trainerUsername"`
+	StartTime       time.Time      `json:"startTime"`
+	EndTime         time.Time      `json:"endTime"`
+}
+
+// Q3P.4: Create day-off
+func (q *Queries) CreateDayOff(ctx context.Context, arg CreateDayOffParams) error {
+	_, err := q.db.ExecContext(ctx, createDayOff, arg.TrainerUsername, arg.StartTime, arg.EndTime)
+	return err
 }
 
 const createTrainingSchedule = `-- name: CreateTrainingSchedule :exec
@@ -114,6 +181,18 @@ WHERE id = ?
 // การตรวจสอบ customer_username ทำใน use case layer ก่อนเรียก query นี้
 func (q *Queries) DeleteAppointment(ctx context.Context, id int32) error {
 	_, err := q.db.ExecContext(ctx, deleteAppointment, id)
+	return err
+}
+
+const deleteDayOff = `-- name: DeleteDayOff :exec
+DELETE FROM training_schedules
+WHERE id = ?
+  AND schedule_type = 'DAY_OFF'
+`
+
+// Q3P.5: Delete day-off
+func (q *Queries) DeleteDayOff(ctx context.Context, id int32) error {
+	_, err := q.db.ExecContext(ctx, deleteDayOff, id)
 	return err
 }
 
@@ -238,6 +317,56 @@ func (q *Queries) GetDayOffSchedules(ctx context.Context, arg GetDayOffSchedules
 	for rows.Next() {
 		var i GetDayOffSchedulesRow
 		if err := rows.Scan(&i.StartTime, &i.EndTime); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTrainerDayOffs = `-- name: GetTrainerDayOffs :many
+
+SELECT
+  id,
+  trainer_username,
+  start_time,
+  end_time
+FROM training_schedules
+WHERE trainer_username = ?
+  AND schedule_type = 'DAY_OFF'
+ORDER BY start_time DESC
+`
+
+type GetTrainerDayOffsRow struct {
+	ID              int32          `json:"id"`
+	TrainerUsername sql.NullString `json:"trainerUsername"`
+	StartTime       time.Time      `json:"startTime"`
+	EndTime         time.Time      `json:"endTime"`
+}
+
+// Use Case 3P: Manage Day-Offs
+// Q3P.1: Get all day-offs for a trainer
+func (q *Queries) GetTrainerDayOffs(ctx context.Context, trainerUsername sql.NullString) ([]GetTrainerDayOffsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTrainerDayOffs, trainerUsername)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTrainerDayOffsRow
+	for rows.Next() {
+		var i GetTrainerDayOffsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TrainerUsername,
+			&i.StartTime,
+			&i.EndTime,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

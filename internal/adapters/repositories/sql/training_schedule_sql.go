@@ -160,3 +160,63 @@ func (r *TrainingScheduleRepository) DeleteAppointment(ctx context.Context, tx i
 	qtx := r.q.WithTx(sqlTx)
 	return qtx.DeleteAppointment(ctx, appointmentID)
 }
+
+// ========== Use Case 3P: Manage Day-Offs ==========
+
+// GetTrainerDayOffs - Q3P.1: ดึงรายการวันหยุดทั้งหมดของ Trainer
+func (r *TrainingScheduleRepository) GetTrainerDayOffs(ctx context.Context, trainerUsername string) ([]repositories.DayOffInfo, error) {
+	rows, err := r.q.GetTrainerDayOffs(ctx, sql.NullString{String: trainerUsername, Valid: true})
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]repositories.DayOffInfo, len(rows))
+	for i, row := range rows {
+		result[i] = repositories.DayOffInfo{
+			ScheduleID: row.ID,
+			StartTime:  row.StartTime,
+			EndTime:    row.EndTime,
+		}
+	}
+
+	return result, nil
+}
+
+// CheckDayOffDuplicate - Q3P.2: ตรวจสอบว่ามีวันหยุดซ้ำในวันนั้นหรือไม่
+func (r *TrainingScheduleRepository) CheckDayOffDuplicate(ctx context.Context, trainerUsername string, dayOffDate time.Time) (int64, error) {
+	count, err := r.q.CheckDayOffDuplicate(ctx, dbmodel.CheckDayOffDuplicateParams{
+		TrainerUsername: sql.NullString{String: trainerUsername, Valid: true},
+		StartTime:       dayOffDate,
+	})
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// CheckDayOffAppointmentOverlap - Q3P.3: ตรวจสอบว่ามีนัดหมายใน day-off หรือไม่
+func (r *TrainingScheduleRepository) CheckDayOffAppointmentOverlap(ctx context.Context, trainerUsername string, startTime, endTime time.Time) (int64, error) {
+	count, err := r.q.CheckDayOffAppointmentOverlap(ctx, dbmodel.CheckDayOffAppointmentOverlapParams{
+		TrainerUsername: sql.NullString{String: trainerUsername, Valid: true},
+		EndTime:         endTime,   // WHERE start_time < ?
+		StartTime:       startTime, // AND end_time > ?
+	})
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// CreateDayOff - Q3P.4: สร้างวันหยุดใหม่
+func (r *TrainingScheduleRepository) CreateDayOff(ctx context.Context, trainerUsername string, startTime, endTime time.Time) error {
+	return r.q.CreateDayOff(ctx, dbmodel.CreateDayOffParams{
+		TrainerUsername: sql.NullString{String: trainerUsername, Valid: true},
+		StartTime:       startTime,
+		EndTime:         endTime,
+	})
+}
+
+// DeleteDayOff - Q3P.5: ลบวันหยุด
+func (r *TrainingScheduleRepository) DeleteDayOff(ctx context.Context, scheduleID int32) error {
+	return r.q.DeleteDayOff(ctx, scheduleID)
+}
