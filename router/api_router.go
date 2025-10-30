@@ -13,11 +13,15 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 		})
 	})
 
-	app.Get("/api/manager/dashboard", handler.Manager.GetDashboard)
+	
 	// api 
 	apiGroup := app.Group("/api")
-
+	app.Get("/manager/dashboard", handler.Manager.GetDashboard)
 	// Auth routes
 	authGroup := apiGroup.Group("/auth")
 	authGroup.Post("/login", handler.Auth.Login)
+	authGroup.Post("/signup", handler.Auth.Signup)
+	authGroup.Post("/logout", handler.Auth.Logout)
+	authGroup.Get("/logout", handler.Auth.Logout)
+	authGroup.Get("/me", handler.Auth.Me)
 }

@@ -24,10 +24,34 @@ INSERT INTO
     marketing_source
   )
 VALUES
-  ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+  (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
-func (q *Queries) CreateCustomer(ctx context.Context) error {
-	_, err := q.db.ExecContext(ctx, createCustomer)
+type CreateCustomerParams struct {
+	Username                     string                 `json:"username"`
+	HealthInfo                   string                 `json:"healthInfo"`
+	Address                      string                 `json:"address"`
+	CompanyName                  string                 `json:"companyName"`
+	CompanyPosition              string                 `json:"companyPosition"`
+	MaritalStatus                CustomersMaritalStatus `json:"maritalStatus"`
+	EmergencyContactName         string                 `json:"emergencyContactName"`
+	EmergencyContactRelationship string                 `json:"emergencyContactRelationship"`
+	EmergencyContactPhone        string                 `json:"emergencyContactPhone"`
+	MarketingSource              string                 `json:"marketingSource"`
+}
+
+func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) error {
+	_, err := q.db.ExecContext(ctx, createCustomer,
+		arg.Username,
+		arg.HealthInfo,
+		arg.Address,
+		arg.CompanyName,
+		arg.CompanyPosition,
+		arg.MaritalStatus,
+		arg.EmergencyContactName,
+		arg.EmergencyContactRelationship,
+		arg.EmergencyContactPhone,
+		arg.MarketingSource,
+	)
 	return err
 }

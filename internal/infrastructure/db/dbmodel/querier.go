@@ -21,6 +21,7 @@ type Querier interface {
 	NewMembersInRange(ctx context.Context, arg NewMembersInRangeParams) (int64, error)
 	TopSellingProducts(ctx context.Context, arg TopSellingProductsParams) ([]TopSellingProductsRow, error)
 	TotalRevenue(ctx context.Context, arg TotalRevenueParams) (int64, error)
+	CheckUsernameExists(ctx context.Context, username string) (int64, error)
 }
 
 var _ Querier = (*Queries)(nil)

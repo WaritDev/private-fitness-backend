@@ -6,7 +6,34 @@ import (
 	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db/dbmodel"
 )
 
+type CreateUserParams struct {
+	Username    string
+	Password    string
+	Role        string
+	FirstName   string
+	LastName    string
+	Gender      *string
+	DateOfBirth *string
+	PhoneNumber *string
+	Email       *string
+}
+
+type CreateCustomerParams struct {
+	Username                     string
+	HealthInfo                   *string
+	Address                      *string
+	CompanyName                  *string
+	CompanyPosition              *string
+	MaritalStatus                *string
+	EmergencyContactName         *string
+	EmergencyContactRelationship *string
+	EmergencyContactPhone        *string
+	MarketingSource              *string
+}
+
 type UserRepo interface {
-	ListUsers(ctx context.Context) ([]*dbmodel.User, error)
-	GetUserByUsername(ctx context.Context) (dbmodel.GetUserByUsernameRow, error)
+	List(ctx context.Context) ([]dbmodel.User, error)
+	GetByUsername(ctx context.Context, username string) (dbmodel.GetUserByUsernameRow, error)
+	CheckUsernameExists(ctx context.Context, username string) (bool, error)
+	CreateUserWithCustomer(ctx context.Context, user CreateUserParams, customer CreateCustomerParams) error
 }
