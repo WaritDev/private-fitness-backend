@@ -47,6 +47,24 @@ func (r *UserRepository) CheckUsernameExists(ctx context.Context, username strin
 	return count > 0, nil
 }
 
+// CheckPhoneNumberExists checks if phone number exists in database (Q3S.1)
+func (r *UserRepository) CheckPhoneNumberExists(ctx context.Context, phoneNumber string) (bool, error) {
+	count, err := r.q.CheckPhoneNumberExists(ctx, phoneNumber)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+// CheckEmailExists checks if email exists in database (Q3S.2)
+func (r *UserRepository) CheckEmailExists(ctx context.Context, email string) (bool, error) {
+	count, err := r.q.CheckEmailExists(ctx, email)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
 func (r *UserRepository) CreateUserWithCustomer(ctx context.Context, user repositories.CreateUserParams, customer repositories.CreateCustomerParams) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {

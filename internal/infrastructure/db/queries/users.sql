@@ -18,4 +18,13 @@ SELECT COUNT(username) as count
 FROM users
 WHERE username = ?;
 
+-- name: CheckEmailExists :one
+SELECT COUNT(email) as count
+FROM users
+WHERE email = ?;
+
+-- name: CheckPhoneNumberExists :one
+SELECT COUNT(phone_number) as count
+FROM users
+WHERE phone_number = ?;
 

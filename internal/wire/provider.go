@@ -27,6 +27,8 @@ var RepositorySet = wire.NewSet(
 	sql.ProvideProductRepository,
 	sql.ProvideStaffRepository,
 
+	sql.ProvideTrainerRepository,        // Already returns interface, no need to bind
+	sql.ProvidePaymentAccountRepository, // Already returns interface, no need to bind
 	// Bind adapters -> domain interfaces
 	wire.Bind(new(repositories.UserRepo), new(*sql.UserRepository)),
 	wire.Bind(new(repositories.AuthRepo), new(*sql.AuthRepository)),
@@ -39,6 +41,8 @@ var ServiceSet = wire.NewSet(
 	usecases.ProvideManagerDashboardUsecase,
 	usecases.ProvideProductUseCase,
 	usecases.ProvideStaffUsecase,
+	usecases.ProvideSessionUseCase,
+	usecases.ProvidePaymentUseCase,
 )
 
 var HandlerSet = wire.NewSet(
@@ -48,4 +52,6 @@ var HandlerSet = wire.NewSet(
 	rest.ProvideManagerDashboardHandler,
 	rest.ProvideProductHandler,
 	rest.ProvideStaffHandler,
+	rest.ProvideTrainerHandler,
+	rest.ProvidePaymentHandler,
 )

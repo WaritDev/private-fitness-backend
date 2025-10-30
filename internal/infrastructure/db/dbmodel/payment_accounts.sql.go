@@ -7,6 +7,7 @@ package dbmodel
 
 import (
 	"context"
+	"database/sql"
 )
 
 const createPaymentAccount = `-- name: CreatePaymentAccount :exec
@@ -42,4 +43,64 @@ func (q *Queries) CreatePaymentAccount(ctx context.Context, arg CreatePaymentAcc
 		arg.IsActive,
 	)
 	return err
+}
+
+const getPaymentInfoByProductId = `-- name: GetPaymentInfoByProductId :one
+SELECT 
+  p.id AS product_id,
+  p.name AS product_name,
+  p.type AS product_type,
+  p.category AS product_category,
+  p.list_price,
+  p.duration_days,
+  p.session_amount,
+  pa.id AS payment_account_id,
+  pa.account_name,
+  pa.account_number,
+  pa.bank_name,
+  pa.qr_code_image_url,
+  pa.is_active AS account_active
+FROM products p
+JOIN payment_accounts pa ON pa.id = p.payment_account_id
+WHERE p.id = ?
+  AND p.is_active = TRUE
+  AND pa.is_active = TRUE
+`
+
+type GetPaymentInfoByProductIdRow struct {
+	ProductID        int32            `json:"productId"`
+	ProductName      string           `json:"productName"`
+	ProductType      ProductsType     `json:"productType"`
+	ProductCategory  ProductsCategory `json:"productCategory"`
+	ListPrice        string           `json:"listPrice"`
+	DurationDays     sql.NullInt32    `json:"durationDays"`
+	SessionAmount    sql.NullInt32    `json:"sessionAmount"`
+	PaymentAccountID int32            `json:"paymentAccountId"`
+	AccountName      string           `json:"accountName"`
+	AccountNumber    string           `json:"accountNumber"`
+	BankName         string           `json:"bankName"`
+	QrCodeImageUrl   string           `json:"qrCodeImageUrl"`
+	AccountActive    bool             `json:"accountActive"`
+}
+
+// Q5S.1: ดึงข้อมูลสินค้าและบัญชีรับชำระเงินเพื่อแสดงหน้าชำระเงิน
+func (q *Queries) GetPaymentInfoByProductId(ctx context.Context, id int32) (GetPaymentInfoByProductIdRow, error) {
+	row := q.db.QueryRowContext(ctx, getPaymentInfoByProductId, id)
+	var i GetPaymentInfoByProductIdRow
+	err := row.Scan(
+		&i.ProductID,
+		&i.ProductName,
+		&i.ProductType,
+		&i.ProductCategory,
+		&i.ListPrice,
+		&i.DurationDays,
+		&i.SessionAmount,
+		&i.PaymentAccountID,
+		&i.AccountName,
+		&i.AccountNumber,
+		&i.BankName,
+		&i.QrCodeImageUrl,
+		&i.AccountActive,
+	)
+	return i, err
 }

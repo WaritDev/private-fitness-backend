@@ -19,6 +19,10 @@ type Querier interface {
 	CheckinsToday(ctx context.Context) (int64, error)
 	CompletedPTInRange(ctx context.Context, arg CompletedPTInRangeParams) (int64, error)
 	CountStaffs(ctx context.Context) (int64, error)
+	CheckEmailExists(ctx context.Context, email string) (int64, error)
+	CheckPhoneNumberExists(ctx context.Context, phoneNumber string) (int64, error)
+	CheckScheduleOverlap(ctx context.Context, arg CheckScheduleOverlapParams) (int64, error)
+	CountAppointmentsOnDate(ctx context.Context, arg CountAppointmentsOnDateParams) (int64, error)
 	CreateCustomer(ctx context.Context, arg CreateCustomerParams) error
 	CreateCustomerDuration(ctx context.Context, arg CreateCustomerDurationParams) error
 	CreatePaymentAccount(ctx context.Context, arg CreatePaymentAccountParams) error
@@ -30,13 +34,16 @@ type Querier interface {
 	DeleteTrainerAvailabilityByTrainer(ctx context.Context, trainerUsername string) error
 	DeleteTrainingScheduleByTrainer(ctx context.Context, trainerUsername sql.NullString) error
 	DeleteUserByUsername(ctx context.Context, username string) error
+	FindAvailableTrainers(ctx context.Context, arg FindAvailableTrainersParams) ([]FindAvailableTrainersRow, error)
 	GetCustomerDurationById(ctx context.Context, id int32) (CustomerDuration, error)
 	GetCustomerDurationsByUsername(ctx context.Context, customerUsername sql.NullString) ([]CustomerDuration, error)
+	GetPaymentInfoByProductId(ctx context.Context, id int32) (GetPaymentInfoByProductIdRow, error)
 	GetProductById(ctx context.Context, id int32) (Product, error)
 	GetStaffByUsername(ctx context.Context, username string) (GetStaffByUsernameRow, error)
 	GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error)
 	GetUserRole(ctx context.Context, username string) (UsersRole, error)
 	ListAllProducts(ctx context.Context) ([]Product, error)
+	ListAllTrainers(ctx context.Context) ([]ListAllTrainersRow, error)
 	ListDurations(ctx context.Context) ([]ListDurationsRow, error)
 	ListSessions(ctx context.Context) ([]ListSessionsRow, error)
 	ListStaffs(ctx context.Context, arg ListStaffsParams) ([]ListStaffsRow, error)
