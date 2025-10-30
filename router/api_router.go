@@ -22,6 +22,7 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	staffs.Post("/create", handler.Staff.CreateStaff)
 	staffs.Post("/:username/update", handler.Staff.UpdateStaff)
 	staffs.Delete("/:username", handler.Staff.DeleteStaff)
+	staffs.Get("/:username", handler.Staff.GetStaffByUsername)
 
 	// Manager routes
 	managers := apiGroup.Group("/manager")

@@ -19,6 +19,7 @@ type StaffRepository interface {
 	UpdateNoPassword(ctx context.Context, p UpdateStaffNoPassParams) error
 	UpdateWithPassword(ctx context.Context, p UpdateStaffWithPassParams) error
 	DeleteStaffCascade(ctx context.Context, username string) error
+	GetByUsername(ctx context.Context, username string) (dbmodel.GetStaffByUsernameRow, error)
 }
 
 type CreateStaffParams struct {
