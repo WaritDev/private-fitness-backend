@@ -27,16 +27,18 @@ var RepositorySet = wire.NewSet(
 	sql.ProvideProductRepository,
 	sql.ProvideStaffRepository,
 	sql.ProvideCustomerRepository,
-	sql.ProvideCustomerDurationRepository,
 
-	sql.ProvideTrainerRepository,        // Already returns interface, no need to bind
-	sql.ProvidePaymentAccountRepository, // Already returns interface, no need to bind
+	sql.ProvideTrainerRepository,          // Already returns interface, no need to bind
+	sql.ProvidePaymentAccountRepository,   // Already returns interface, no need to bind
+	sql.ProvideCustomerSessionRepository,  // Already returns interface, no need to bind
+	sql.ProvideCustomerDurationRepository, // Already returns interface, no need to bind
+	sql.ProvideTrainingScheduleRepository, // Already returns interface, no need to bind
+	sql.ProvideCustomerLogRepository,      // Already returns interface, no need to bind
 	// Bind adapters -> domain interfaces
 	wire.Bind(new(repositories.UserRepo), new(*sql.UserRepository)),
 	wire.Bind(new(repositories.AuthRepo), new(*sql.AuthRepository)),
 	wire.Bind(new(repositories.StaffRepository), new(*sql.StaffRepository)),
 	wire.Bind(new(repositories.CustomerRepository), new(*sql.CustomerRepository)),
-	wire.Bind(new(repositories.CustomerDurationRepository), new(*sql.CustomerDurationRepository)),
 )
 
 var ServiceSet = wire.NewSet(
@@ -49,6 +51,8 @@ var ServiceSet = wire.NewSet(
 	usecases.ProvidePaymentUseCase,
 	usecases.ProvideCustomerUsecase,
 	usecases.ProvideCustomerDurationUseCase,
+	usecases.ProvideCustomerSessionUseCase,
+	usecases.ProvideBookingUseCase,
 )
 
 var HandlerSet = wire.NewSet(
@@ -60,6 +64,8 @@ var HandlerSet = wire.NewSet(
 	rest.ProvideStaffHandler,
 	rest.ProvideTrainerHandler,
 	rest.ProvidePaymentHandler,
-	rest.ProvideCustomerHandler,
 	rest.ProvideCustomerDurationHandler,
+	rest.ProvideCustomerHandler, 
+	rest.ProvideCustomerSessionHandler,
+	rest.ProvideBookingHandler,
 )

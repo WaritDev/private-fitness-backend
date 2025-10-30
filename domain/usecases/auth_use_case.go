@@ -93,7 +93,7 @@ func (u *AuthUseCase) Signup(ctx context.Context, req requests.SignupRequest) er
 		Gender:      stringPtr(req.Gender),
 		DateOfBirth: stringPtr(req.DateOfBirth),
 		PhoneNumber: stringPtr(req.PhoneNumber),
-		Email:       stringPtr(req.Email),
+		Gmail:       stringPtr(req.Gmail),
 	}
 
 	// Prepare customer params

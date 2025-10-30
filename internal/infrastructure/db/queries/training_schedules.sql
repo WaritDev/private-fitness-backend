@@ -1,0 +1,80 @@
+-- name: CreateTrainingSchedule :exec
+INSERT INTO training_schedules (
+  trainer_username,
+  customer_username,
+  session_id,
+  start_time,
+  end_time,
+  schedule_type
+) VALUES (
+  ?, ?, ?, ?, ?, ?
+);
+
+-- name: GetDayOffSchedules :many
+-- Q3C.3a - ดึงวันหยุดหรือช่วงเวลาที่ไม่รับนัด (DAY_OFF)
+SELECT
+  start_time,
+  end_time
+FROM training_schedules
+WHERE trainer_username = ?
+  AND schedule_type = 'DAY_OFF'
+  AND start_time < ?
+  AND end_time > ?;
+
+-- name: GetAppointmentSchedules :many
+-- Q3C.3b - ดึงนัดที่ถูกจองแล้ว (APPOINTMENT)
+SELECT
+  start_time,
+  end_time,
+  customer_username
+FROM training_schedules
+WHERE trainer_username = ?
+  AND schedule_type = 'APPOINTMENT'
+  AND start_time < ?
+  AND end_time > ?;
+
+-- name: CheckTimeSlotAvailability :one
+-- Q3C.5 - ตรวจสอบว่าช่วงเวลาที่เลือกยังว่างอยู่จริง
+-- คืนค่า overlapped_count ถ้าเป็น 0 แสดงว่ายังว่างอยู่
+-- Logic: ช่วงเวลาซ้อนทับกันเมื่อ start_time < endTime AND end_time > startTime
+SELECT COUNT(id) AS overlapped_count
+FROM training_schedules
+WHERE trainer_username = ?
+  AND start_time < ?
+  AND end_time > ?;
+
+-- name: BookAppointment :exec
+-- Q3C.6 - บันทึกการจองนัด (APPOINTMENT)
+INSERT INTO training_schedules (
+  trainer_username,
+  customer_username,
+  session_id,
+  start_time,
+  end_time,
+  schedule_type
+) VALUES (
+  ?, ?, ?, ?, ?, 'APPOINTMENT'
+);
+
+-- name: GetAppointmentById :one
+-- ดึงข้อมูลการจองตาม ID เพื่อตรวจสอบก่อนยกเลิก
+SELECT
+  id,
+  trainer_username,
+  customer_username,
+  session_id,
+  start_time,
+  end_time,
+  schedule_type
+FROM training_schedules
+WHERE id = ?
+  AND schedule_type = 'APPOINTMENT';
+
+-- name: DeleteAppointment :exec
+-- ยกเลิกการจอง - ลบ training_schedule record
+-- Logic: DELETE FROM training_schedules WHERE id = ? AND schedule_type = 'APPOINTMENT'
+-- Note: ใช้ id เพียงอย่างเดียว เพราะ id เป็น Primary Key (unique)
+-- การตรวจสอบ customer_username ทำใน use case layer ก่อนเรียก query นี้
+DELETE FROM training_schedules
+WHERE id = ?
+  AND schedule_type = 'APPOINTMENT';

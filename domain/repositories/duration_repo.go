@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db/dbmodel"
@@ -19,6 +20,8 @@ type CustomerDurationRepository interface {
 	UpdateEditableFields(ctx context.Context, p UpdateCustomerDurationEditableFieldsParams) error
 
 	Delete(ctx context.Context, id int32) error
+	// RegisterDuration - Use Case 2.1C: สร้าง User, Customer, CustomerDuration ในครั้งเดียว (Transaction)
+	RegisterDuration(ctx context.Context, tx *sql.Tx, params RegisterDurationParams) (int32, error)
 }
 
 type CreateCustomerDurationParams struct {
@@ -73,4 +76,36 @@ type UpdateCustomerDurationEditableFieldsParams struct {
 	PricePaid      string  // e.g. "5000.00"
 	DiscountAmount *string // nil = ไม่อัปเดต/ให้เป็น NULL, ไม่ nil = "0.00", "100.00"
 	Status         string  // "ACTIVE" | "EXPIRED" | "FROZEN" | "CANCELLED"
+}
+// RegisterDurationParams - Parameters สำหรับ RegisterDuration (Use Case 2.1C)
+type RegisterDurationParams struct {
+	// User table
+	Username    string
+	Password    string // Already hashed
+	FirstName   string
+	LastName    string
+	Gender      string
+	DateOfBirth time.Time
+	PhoneNumber string
+	Gmail       string
+
+	// Customer table
+	HealthInfo                   string
+	Address                      string
+	CompanyName                  string
+	CompanyPosition              string
+	MaritalStatus                string
+	EmergencyContactName         string
+	EmergencyContactRelationship string
+	EmergencyContactPhone        string
+	MarketingSource              string
+
+	// Customer Duration table
+	ProductID      int32
+	SalesUsername  string
+	PurchaseDate   time.Time
+	StartDate      time.Time
+	EndDate        time.Time
+	PricePaid      string // DECIMAL as string
+	DiscountAmount string // DECIMAL as string
 }

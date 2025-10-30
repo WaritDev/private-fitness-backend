@@ -12,11 +12,16 @@ import (
 
 // CustomerDurationRepository implements domain/repositories.CustomerDurationRepository using sqlc
 type CustomerDurationRepository struct {
-	q *dbmodel.Queries
+	q  *dbmodel.Queries
+	db *sql.DB
 }
 
-func ProvideCustomerDurationRepository(db *sql.DB) *CustomerDurationRepository {
-	return &CustomerDurationRepository{q: dbmodel.New(db)}
+// ProvideCustomerDurationRepository creates a new CustomerDurationRepository
+func ProvideCustomerDurationRepository(q *dbmodel.Queries, db *sql.DB) repositories.CustomerDurationRepository {
+	return &CustomerDurationRepository{
+		q:  q,
+		db: db,
+	}
 }
 
 func (r *CustomerDurationRepository) Create(ctx context.Context, params repositories.CreateCustomerDurationParams) error {
@@ -166,4 +171,69 @@ func (r *CustomerDurationRepository) Delete(ctx context.Context, id int32) error
 		return sql.ErrNoRows
 	}
 	return nil
+}
+// RegisterDuration - Use Case 2.1C: Transaction: Create User → Customer → CustomerDuration
+func (r *CustomerDurationRepository) RegisterDuration(ctx context.Context, tx *sql.Tx, params repositories.RegisterDurationParams) (int32, error) {
+	// Use transaction queries
+	qtx := r.q.WithTx(tx)
+
+	// 1. Create User (Q2.1C.2 - part 1)
+	err := qtx.CreateUser(ctx, dbmodel.CreateUserParams{
+		Username:    params.Username,
+		Password:    params.Password,
+		Role:        dbmodel.UsersRoleCUSTOMER,
+		FirstName:   params.FirstName,
+		LastName:    params.LastName,
+		Gender:      dbmodel.UsersGender(params.Gender),
+		DateOfBirth: params.DateOfBirth,
+		PhoneNumber: params.PhoneNumber,
+		Gmail:       params.Gmail,
+		Specialty:   sql.NullString{Valid: false},
+		IsActive:    sql.NullBool{Bool: true, Valid: true},
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	// 2. Create Customer (Q2.1C.2 - part 2)
+	err = qtx.CreateCustomer(ctx, dbmodel.CreateCustomerParams{
+		Username:                     params.Username,
+		HealthInfo:                   params.HealthInfo,
+		Address:                      params.Address,
+		CompanyName:                  params.CompanyName,
+		CompanyPosition:              params.CompanyPosition,
+		MaritalStatus:                dbmodel.CustomersMaritalStatus(params.MaritalStatus),
+		EmergencyContactName:         params.EmergencyContactName,
+		EmergencyContactRelationship: params.EmergencyContactRelationship,
+		EmergencyContactPhone:        params.EmergencyContactPhone,
+		MarketingSource:              params.MarketingSource,
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	// 3. Create Customer Duration (Q2.1C.2 - part 3)
+	err = qtx.CreateCustomerDuration(ctx, dbmodel.CreateCustomerDurationParams{
+		CustomerUsername: sql.NullString{String: params.Username, Valid: true},
+		SalesUsername:    sql.NullString{String: params.SalesUsername, Valid: true},
+		ProductID:        sql.NullInt32{Int32: params.ProductID, Valid: true},
+		PurchaseDate:     params.PurchaseDate,
+		StartDate:        params.StartDate,
+		EndDate:          params.EndDate,
+		PricePaid:        params.PricePaid,
+		DiscountAmount:   sql.NullString{String: params.DiscountAmount, Valid: true},
+		Status:           dbmodel.CustomerDurationsStatusACTIVE,
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	// Get the created duration ID
+	var durationID int32
+	err = tx.QueryRowContext(ctx, "SELECT LAST_INSERT_ID()").Scan(&durationID)
+	if err != nil {
+		return 0, err
+	}
+
+	return durationID, nil
 }

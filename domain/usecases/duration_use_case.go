@@ -8,26 +8,34 @@ import (
 	"math"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/WaritDev/private-fitness-backend/domain/repositories"
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
 	"github.com/WaritDev/private-fitness-backend/domain/responses"
 	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db/dbmodel"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type CustomerDurationUseCase struct {
 	durationRepo repositories.CustomerDurationRepository
 	productRepo  repositories.ProductRepository
+	userRepo     repositories.UserRepo
+	db           *sql.DB
 }
 
 func ProvideCustomerDurationUseCase(
 	durationRepo repositories.CustomerDurationRepository,
 	productRepo repositories.ProductRepository,
+	userRepo repositories.UserRepo,
+	db *sql.DB,
 ) *CustomerDurationUseCase {
 	return &CustomerDurationUseCase{
 		durationRepo: durationRepo,
 		productRepo:  productRepo,
+		userRepo:     userRepo,
+		db:           db,
 	}
 }
 
@@ -210,5 +218,104 @@ func (uc *CustomerDurationUseCase) Delete(
 
 	return responses.CustomerDurationDeletedResponse{
 		Message: fmt.Sprintf("Package ID: %d deleted successfully", id),
+	}, nil
+}
+// RegisterCustomerDuration - Use Case 2.1C: ลงทะเบียนผู้ใช้งานสำหรับแพ็กเกจ Duration
+func (u *CustomerDurationUseCase) RegisterCustomerDuration(ctx context.Context, req requests.RegisterCustomerDurationRequest) (*responses.RegisterCustomerDurationResponse, error) {
+	// Validate username not exists (Q2.1C.1)
+	exists, err := u.userRepo.CheckUsernameExists(ctx, req.Username)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check username: %w", err)
+	}
+	if exists {
+		return nil, fmt.Errorf("USERNAME_ALREADY_EXISTS")
+	}
+
+	// Hash password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	// Parse date of birth
+	dob, err := time.Parse("2006-01-02", req.DateOfBirth)
+	if err != nil {
+		return nil, fmt.Errorf("invalid date format for dateOfBirth, expected YYYY-MM-DD: %w", err)
+	}
+
+	// Parse start date
+	startDate, err := time.Parse("2006-01-02", req.StartDate)
+	if err != nil {
+		return nil, fmt.Errorf("invalid date format for startDate, expected YYYY-MM-DD: %w", err)
+	}
+
+	// Calculate end date (StartDate + DurationDays)
+	endDate := startDate.AddDate(0, 0, int(req.DurationDays))
+
+	// Convert prices to DECIMAL strings
+	pricePaidStr := fmt.Sprintf("%.2f", req.PricePaid)
+	discountAmountStr := fmt.Sprintf("%.2f", req.DiscountAmount)
+
+	// Prepare parameters
+	params := repositories.RegisterDurationParams{
+		// User
+		Username:    req.Username,
+		Password:    string(hashedPassword),
+		FirstName:   req.FirstName,
+		LastName:    req.LastName,
+		Gender:      req.Gender,
+		DateOfBirth: dob,
+		PhoneNumber: req.PhoneNumber,
+		Gmail:       strings.ToLower(req.Gmail), // Lowercase as per spec
+		// Customer
+		HealthInfo:                   req.HealthInfo,
+		Address:                      req.Address,
+		CompanyName:                  req.CompanyName,
+		CompanyPosition:              req.CompanyPosition,
+		MaritalStatus:                req.MaritalStatus,
+		EmergencyContactName:         req.EmergencyContactName,
+		EmergencyContactRelationship: req.EmergencyContactRelationship,
+		EmergencyContactPhone:        req.EmergencyContactPhone,
+		MarketingSource:              req.MarketingSource,
+		// CustomerDuration
+		ProductID:      req.ProductID,
+		SalesUsername:  req.SalesUsername,
+		PurchaseDate:   time.Now(),
+		StartDate:      startDate,
+		EndDate:        endDate,
+		PricePaid:      pricePaidStr,
+		DiscountAmount: discountAmountStr,
+	}
+
+	// Begin transaction
+	tx, err := u.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback() // Rollback if not committed
+
+	// Execute registration (creates User, Customer, CustomerDuration)
+	durationID, err := u.durationRepo.RegisterDuration(ctx, tx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to register customer duration: %w", err)
+	}
+
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	// Build response
+	return &responses.RegisterCustomerDurationResponse{
+		Username:       req.Username,
+		DurationID:     durationID,
+		ProductID:      req.ProductID,
+		SalesUsername:  req.SalesUsername,
+		StartDate:      startDate,
+		EndDate:        endDate,
+		DurationDays:   req.DurationDays,
+		PricePaid:      pricePaidStr,
+		DiscountAmount: discountAmountStr,
+		Message:        "Customer duration registered successfully",
 	}, nil
 }

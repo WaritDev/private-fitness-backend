@@ -11,16 +11,25 @@ import (
 
 type Querier interface {
 	ActiveMembersToday(ctx context.Context) (int64, error)
+	// Q3C.6 - บันทึกการจองนัด (APPOINTMENT)
+	BookAppointment(ctx context.Context, arg BookAppointmentParams) error
+	// ตรวจสอบสิทธิ์การจองของ Customer
+	// ต้องมี Session package แบบ ACTIVE และยังมีสิทธิ์คงเหลือ (used_sessions < total_sessions)
+	CheckBookingPermission(ctx context.Context, customerUsername sql.NullString) (int64, error)
 	CheckCustomerGmailExistsExcept(ctx context.Context, arg CheckCustomerGmailExistsExceptParams) (int64, error)
 	CheckCustomerPhoneExistsExcept(ctx context.Context, arg CheckCustomerPhoneExistsExceptParams) (int64, error)
-	CheckEmailExists(ctx context.Context, email string) (int64, error)
 	CheckGmailExists(ctx context.Context, lower string) (int64, error)
 	CheckGmailExistsExceptUsername(ctx context.Context, arg CheckGmailExistsExceptUsernameParams) (int64, error)
+	CheckGmailExistsUser(ctx context.Context, gmail string) (int64, error)
 	CheckPhoneExists(ctx context.Context, phoneNumber string) (int64, error)
 	CheckPhoneExistsExceptUsername(ctx context.Context, arg CheckPhoneExistsExceptUsernameParams) (int64, error)
-	CheckPhoneNumberExists(ctx context.Context, phoneNumber string) (int64, error)
+	CheckPhoneNumberExistsUser(ctx context.Context, phoneNumber string) (int64, error)
 	// ตรวจสอบว่ามีนัดซ้อนทับหรือไม่
 	CheckScheduleOverlap(ctx context.Context, arg CheckScheduleOverlapParams) (int64, error)
+	// Q3C.5 - ตรวจสอบว่าช่วงเวลาที่เลือกยังว่างอยู่จริง
+	// คืนค่า overlapped_count ถ้าเป็น 0 แสดงว่ายังว่างอยู่
+	// Logic: ช่วงเวลาซ้อนทับกันเมื่อ start_time < endTime AND end_time > startTime
+	CheckTimeSlotAvailability(ctx context.Context, arg CheckTimeSlotAvailabilityParams) (int64, error)
 	CheckUsernameExists(ctx context.Context, username string) (int64, error)
 	CheckinsToday(ctx context.Context) (int64, error)
 	CompletedPTInRange(ctx context.Context, arg CompletedPTInRangeParams) (int64, error)
@@ -31,9 +40,22 @@ type Querier interface {
 	CountStaffs(ctx context.Context) (int64, error)
 	CreateCustomer(ctx context.Context, arg CreateCustomerParams) error
 	CreateCustomerDuration(ctx context.Context, arg CreateCustomerDurationParams) error
+	CreateCustomerLog(ctx context.Context, arg CreateCustomerLogParams) error
+	CreateCustomerSession(ctx context.Context, arg CreateCustomerSessionParams) error
 	CreatePaymentAccount(ctx context.Context, arg CreatePaymentAccountParams) error
 	CreateStaff(ctx context.Context, arg CreateStaffParams) error
+	CreateTrainingSchedule(ctx context.Context, arg CreateTrainingScheduleParams) error
 	CreateUser(ctx context.Context, arg CreateUserParams) error
+	// ยกเลิกการจอง - ลดจำนวนครั้งที่ใช้ไป (used_sessions - 1)
+	// Logic: UPDATE customer_sessions SET used_sessions = used_sessions - 1 WHERE id = ? AND used_sessions > 0
+	// Note: id คือ customer_sessions.id (ได้จาก training_schedules.session_id)
+	// ต้องมี used_sessions > 0 เพื่อป้องกันค่าติดลบ
+	DecrementUsedSessions(ctx context.Context, id int32) error
+	// ยกเลิกการจอง - ลบ training_schedule record
+	// Logic: DELETE FROM training_schedules WHERE id = ? AND schedule_type = 'APPOINTMENT'
+	// Note: ใช้ id เพียงอย่างเดียว เพราะ id เป็น Primary Key (unique)
+	// การตรวจสอบ customer_username ทำใน use case layer ก่อนเรียก query นี้
+	DeleteAppointment(ctx context.Context, id int32) error
 	DeleteCustomerByUsername(ctx context.Context, username string) error
 	DeleteCustomerDurationByCustomer(ctx context.Context, customerUsername sql.NullString) error
 	DeleteCustomerDurationByID(ctx context.Context, id int32) (sql.Result, error)
@@ -48,17 +70,28 @@ type Querier interface {
 	DeleteUserByUsername(ctx context.Context, username string) error
 	// Q4S.1 แก้ไข: หาเทรนเนอร์ที่ว่างในวันและเวลาที่กำหนด
 	FindAvailableTrainers(ctx context.Context, arg FindAvailableTrainersParams) ([]FindAvailableTrainersRow, error)
+	// หา Session package ACTIVE ของ Customer (สำหรับการจอง)
+	GetActiveSessionByCustomer(ctx context.Context, customerUsername sql.NullString) (GetActiveSessionByCustomerRow, error)
+	// ดึงข้อมูลการจองตาม ID เพื่อตรวจสอบก่อนยกเลิก
+	GetAppointmentById(ctx context.Context, id int32) (GetAppointmentByIdRow, error)
+	// Q3C.3b - ดึงนัดที่ถูกจองแล้ว (APPOINTMENT)
+	GetAppointmentSchedules(ctx context.Context, arg GetAppointmentSchedulesParams) ([]GetAppointmentSchedulesRow, error)
 	GetCustomerByUsername(ctx context.Context, username string) (GetCustomerByUsernameRow, error)
 	GetCustomerDurationByID(ctx context.Context, id int32) (GetCustomerDurationByIDRow, error)
 	GetCustomerDurationById(ctx context.Context, id int32) (CustomerDuration, error)
 	GetCustomerDurationsByUsername(ctx context.Context, customerUsername sql.NullString) ([]CustomerDuration, error)
 	GetDurationDaysForDurationID(ctx context.Context, id int32) (sql.NullInt32, error)
+	// Q3C.3a - ดึงวันหยุดหรือช่วงเวลาที่ไม่รับนัด (DAY_OFF)
+	GetDayOffSchedules(ctx context.Context, arg GetDayOffSchedulesParams) ([]GetDayOffSchedulesRow, error)
 	// Q5S.1: ดึงข้อมูลสินค้าและบัญชีรับชำระเงินเพื่อแสดงหน้าชำระเงิน
 	GetPaymentInfoByProductId(ctx context.Context, id int32) (GetPaymentInfoByProductIdRow, error)
 	GetProductById(ctx context.Context, id int32) (Product, error)
 	GetStaffByUsername(ctx context.Context, username string) (GetStaffByUsernameRow, error)
+	GetTrainingAvaliabilitiesByTrainerUsername(ctx context.Context, trainerUsername string) ([]GetTrainingAvaliabilitiesByTrainerUsernameRow, error)
 	GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error)
 	GetUserRole(ctx context.Context, username string) (UsersRole, error)
+	// Q3C.6 - อัปเดตจำนวนครั้งที่ใช้ไปแล้ว
+	IncrementUsedSessions(ctx context.Context, id int32) error
 	ListAllProducts(ctx context.Context) ([]Product, error)
 	// ดึงรายชื่อเทรนเนอร์ทั้งหมดที่ active (สำหรับ dropdown)
 	ListAllTrainers(ctx context.Context) ([]ListAllTrainersRow, error)

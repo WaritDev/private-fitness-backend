@@ -42,7 +42,7 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	// Auth routes
 	authGroup := apiGroup.Group("/auth")
 	authGroup.Post("/login", handler.Auth.Login)
-	authGroup.Post("/signup", handler.Auth.Signup)
+	// NOTE: /signup removed - registration now requires Sales pre-entry (Use Case 3S + 4S) before customer completes (Use Case 2.2C)
 	authGroup.Post("/logout", handler.Auth.Logout)
 	authGroup.Get("/logout", handler.Auth.Logout)
 	authGroup.Get("/me", handler.Auth.Me)
@@ -60,17 +60,28 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 
 	// User validation routes (for Use Case: กรอกข้อมูลสมาชิก)
 	users := apiGroup.Group("/users")
-	users.Get("/check-phone", handler.User.CheckPhoneNumber) // Q3S.1
-	users.Get("/check-email", handler.User.CheckEmail)       // Q3S.2
+	users.Get("/check-phone", handler.User.CheckPhoneNumber)
+	users.Get("/check-gmail", handler.User.CheckGmail)
 
 	// Trainer routes (for Use Case: กรอกข้อมูลสมัครคอร์ส Sessions)
 	trainers := apiGroup.Group("/trainers")
-	trainers.Post("/match", handler.Trainer.MatchTrainer) // Q4S - Match trainer by day/time
-	trainers.Get("/", handler.Trainer.ListAllTrainers)    // List all active trainers
+	trainers.Post("/match", handler.Trainer.MatchTrainer)
+	trainers.Get("/", handler.Trainer.ListAllTrainers) // List all active trainers
 
 	// Payment routes (for Use Case: ยืนยันการชำระเงิน)
 	payments := apiGroup.Group("/payments")
-	payments.Get("/info/:productId", handler.Payment.GetPaymentInfo) // Q5S.1 - Get payment info with QR code
+	payments.Get("/info/:productId", handler.Payment.GetPaymentInfo)
+
+	// Customer registration routes (after Sales pre-entry)
+	customers.Post("/sessions/register", handler.CustomerSession.Register)
+	customers.Post("/durations/register", handler.CustomerDuration.Register)
+	customers.Get("/sessions/check-permission", handler.CustomerSession.CheckPermission) // Check booking permission
+
+	// Booking routes (Use Case 3C: จองเวลาออกกำลังกายกับเทรนเนอร์)
+	bookings := apiGroup.Group("/bookings")
+	bookings.Get("/slots", handler.Booking.GetBookingSlots)           // Get available booking slots
+	bookings.Post("/book", handler.Booking.BookAppointment)           // Q3C: Book appointment with trainer
+	bookings.Delete("/cancel/:id", handler.Booking.CancelAppointment) // Cancel appointment
 
 	// Protected routes
 	// customers := apiGroup.Group("/customer/")

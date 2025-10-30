@@ -632,7 +632,6 @@ type TrainingSchedule struct {
 type User struct {
 	Username    string         `json:"username"`
 	Password    string         `json:"password"`
-	Email       string         `json:"email"`
 	Role        UsersRole      `json:"role"`
 	FirstName   string         `json:"firstName"`
 	LastName    string         `json:"lastName"`
