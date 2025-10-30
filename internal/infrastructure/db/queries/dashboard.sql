@@ -1,50 +1,50 @@
--- name: TotalRevenue :one
-SELECT CAST(COALESCE(SUM(amt), 0) AS SIGNED) AS total
-FROM (
-  SELECT Price_Paid AS amt
-  FROM CUSTOMER_DURATIONS
-  WHERE Purchase_Date BETWEEN sqlc.arg(start) AND sqlc.arg(end)
-  UNION ALL
-  SELECT Price_Paid AS amt
-  FROM CUSTOMER_SESSIONS
-  WHERE Purchase_Date BETWEEN sqlc.arg(start) AND sqlc.arg(end)
-) t;
-
 -- name: ActiveMembersToday :one
-SELECT CAST(COUNT(DISTINCT Customer_Username) AS SIGNED) AS c
-FROM CUSTOMER_DURATIONS
-WHERE Status = 'ACTIVE'
-  AND CURDATE() BETWEEN DATE(Start_Date) AND DATE(End_Date);
+SELECT CAST(COUNT(DISTINCT customer_username) AS SIGNED) AS c
+FROM customer_durations
+WHERE status = 'ACTIVE'
+  AND CURDATE() BETWEEN DATE(start_date) AND DATE(end_date);
 
 -- name: CheckinsToday :one
 SELECT CAST(COUNT(*) AS SIGNED) AS c
-FROM CUSTOMER_LOGS
-WHERE Log_Type = 'CHECK_IN'
-  AND DATE(`Timestamp`) = CURDATE();
+FROM customer_logs
+WHERE log_type = 'CHECK_IN'
+  AND DATE(`created_at`) = CURDATE();
 
 -- name: CompletedPTInRange :one
 SELECT CAST(COUNT(*) AS SIGNED) AS c
-FROM TRAINING_SCHEDULES
-WHERE Schedule_Type = 'APPOINTMENT'
-  AND Start_Time BETWEEN sqlc.arg(start) AND sqlc.arg(end)
-  AND Start_Time < NOW();
-
--- name: TopSellingProducts :many
-SELECT p.Name AS name, COUNT(*) AS units
-FROM (
-  SELECT Product_Id FROM CUSTOMER_DURATIONS
-  WHERE Purchase_Date BETWEEN sqlc.arg(start) AND sqlc.arg(end)
-  UNION ALL
-  SELECT Product_Id FROM CUSTOMER_SESSIONS
-  WHERE Purchase_Date BETWEEN sqlc.arg(start) AND sqlc.arg(end)
-) s
-JOIN PRODUCTS p ON p.Product_Id = s.Product_Id
-GROUP BY p.Name
-ORDER BY units DESC
-LIMIT 5;
+FROM training_schedules
+WHERE schedule_type = 'APPOINTMENT'
+  AND start_time BETWEEN sqlc.arg(start) AND sqlc.arg(end)
+  AND start_time < NOW();
 
 -- name: NewMembersInRange :one
 SELECT CAST(COUNT(*) AS SIGNED) AS c
-FROM USERS
-WHERE Role = 'CUSTOMER'
-  AND Created_At BETWEEN sqlc.arg(start) AND sqlc.arg(end);
+FROM users
+WHERE role = 'CUSTOMER'
+  AND created_at BETWEEN sqlc.arg(start) AND sqlc.arg(end);
+
+-- name: RevenueDurations :one
+SELECT CAST(COALESCE(SUM(price_paid), 0) AS SIGNED) AS total
+FROM customer_durations
+WHERE purchase_date BETWEEN sqlc.arg(start) AND sqlc.arg(end);
+
+-- name: RevenueSessions :one
+SELECT CAST(COALESCE(SUM(price_paid), 0) AS SIGNED) AS total
+FROM customer_sessions
+WHERE purchase_date BETWEEN sqlc.arg(start) AND sqlc.arg(end);
+
+-- name: TopSellingProductsDurations :many
+SELECT p.name AS name, COUNT(*) AS units
+FROM customer_durations d
+JOIN products p ON p.id = d.product_id
+WHERE d.purchase_date BETWEEN sqlc.arg(start) AND sqlc.arg(end)
+GROUP BY p.name
+ORDER BY units DESC;
+
+-- name: TopSellingProductsSessions :many
+SELECT p.name AS name, COUNT(*) AS units
+FROM customer_sessions s
+JOIN products p ON p.id = s.product_id
+WHERE s.purchase_date BETWEEN sqlc.arg(start) AND sqlc.arg(end)
+GROUP BY p.name
+ORDER BY units DESC;
