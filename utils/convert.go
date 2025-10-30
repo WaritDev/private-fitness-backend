@@ -28,6 +28,14 @@ func CoalesceTrueBool(p *bool) sql.NullBool {
 	return sql.NullBool{Bool: *p, Valid: true}
 }
 
+func CoalesceBool(b *bool) bool {
+    if b == nil {
+        return true
+    }
+    return *b
+}
+
+
 func NullInt32FromPtr(p *int32) sql.NullInt32 {
 	if p == nil {
 		return sql.NullInt32{}
