@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS `products` (
   `duration_days` INT NULL,
   `session_amount` INT NULL,
   `is_active` TINYINT(1) DEFAULT 1,
+  `payment_account_id` INT NOT NULL,
+  CONSTRAINT `fk_product_payment_account` FOREIGN KEY (`payment_account_id`) REFERENCES `payment_accounts`(`id`) ON DELETE CASCADE,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

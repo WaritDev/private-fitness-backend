@@ -10,6 +10,96 @@ import (
 	"database/sql"
 )
 
+const getProductById = `-- name: GetProductById :one
+SELECT
+  id,
+  name,
+  type,
+  category,
+  list_price,
+  duration_days,
+  session_amount,
+  is_active,
+  payment_account_id,
+  created_at,
+  updated_at
+FROM products
+WHERE id = ?
+LIMIT 1
+`
+
+func (q *Queries) GetProductById(ctx context.Context, id int32) (Product, error) {
+	row := q.db.QueryRowContext(ctx, getProductById, id)
+	var i Product
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Type,
+		&i.Category,
+		&i.ListPrice,
+		&i.DurationDays,
+		&i.SessionAmount,
+		&i.IsActive,
+		&i.PaymentAccountID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const listAllProducts = `-- name: ListAllProducts :many
+SELECT
+  id,
+  name,
+  type,
+  category,
+  list_price,
+  duration_days,
+  session_amount,
+  is_active,
+  payment_account_id,
+  created_at,
+  updated_at
+FROM products
+WHERE is_active = TRUE
+ORDER BY category, list_price ASC
+`
+
+func (q *Queries) ListAllProducts(ctx context.Context) ([]Product, error) {
+	rows, err := q.db.QueryContext(ctx, listAllProducts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Product
+	for rows.Next() {
+		var i Product
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Type,
+			&i.Category,
+			&i.ListPrice,
+			&i.DurationDays,
+			&i.SessionAmount,
+			&i.IsActive,
+			&i.PaymentAccountID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listDurations = `-- name: ListDurations :many
 SELECT
   id,             
@@ -19,7 +109,8 @@ SELECT
   list_price,       
   duration_days,    
   session_amount,   
-  is_active
+  is_active,
+  payment_account_id
 FROM products
 WHERE
   type = 'DURATION'
@@ -28,14 +119,15 @@ ORDER BY list_price ASC
 `
 
 type ListDurationsRow struct {
-	ID            int32            `json:"id"`
-	Name          string           `json:"name"`
-	Type          ProductsType     `json:"type"`
-	Category      ProductsCategory `json:"category"`
-	ListPrice     string           `json:"listPrice"`
-	DurationDays  sql.NullInt32    `json:"durationDays"`
-	SessionAmount sql.NullInt32    `json:"sessionAmount"`
-	IsActive      sql.NullBool     `json:"isActive"`
+	ID               int32            `json:"id"`
+	Name             string           `json:"name"`
+	Type             ProductsType     `json:"type"`
+	Category         ProductsCategory `json:"category"`
+	ListPrice        string           `json:"listPrice"`
+	DurationDays     sql.NullInt32    `json:"durationDays"`
+	SessionAmount    sql.NullInt32    `json:"sessionAmount"`
+	IsActive         sql.NullBool     `json:"isActive"`
+	PaymentAccountID int32            `json:"paymentAccountId"`
 }
 
 func (q *Queries) ListDurations(ctx context.Context) ([]ListDurationsRow, error) {
@@ -56,6 +148,7 @@ func (q *Queries) ListDurations(ctx context.Context) ([]ListDurationsRow, error)
 			&i.DurationDays,
 			&i.SessionAmount,
 			&i.IsActive,
+			&i.PaymentAccountID,
 		); err != nil {
 			return nil, err
 		}
@@ -79,7 +172,8 @@ SELECT
   list_price,
   duration_days,
   session_amount,
-  is_active
+  is_active,
+  payment_account_id
 FROM products
 WHERE
   type = 'SESSION'
@@ -88,14 +182,15 @@ ORDER BY list_price ASC
 `
 
 type ListSessionsRow struct {
-	ID            int32            `json:"id"`
-	Name          string           `json:"name"`
-	Type          ProductsType     `json:"type"`
-	Category      ProductsCategory `json:"category"`
-	ListPrice     string           `json:"listPrice"`
-	DurationDays  sql.NullInt32    `json:"durationDays"`
-	SessionAmount sql.NullInt32    `json:"sessionAmount"`
-	IsActive      sql.NullBool     `json:"isActive"`
+	ID               int32            `json:"id"`
+	Name             string           `json:"name"`
+	Type             ProductsType     `json:"type"`
+	Category         ProductsCategory `json:"category"`
+	ListPrice        string           `json:"listPrice"`
+	DurationDays     sql.NullInt32    `json:"durationDays"`
+	SessionAmount    sql.NullInt32    `json:"sessionAmount"`
+	IsActive         sql.NullBool     `json:"isActive"`
+	PaymentAccountID int32            `json:"paymentAccountId"`
 }
 
 func (q *Queries) ListSessions(ctx context.Context) ([]ListSessionsRow, error) {
@@ -116,6 +211,7 @@ func (q *Queries) ListSessions(ctx context.Context) ([]ListSessionsRow, error) {
 			&i.DurationDays,
 			&i.SessionAmount,
 			&i.IsActive,
+			&i.PaymentAccountID,
 		); err != nil {
 			return nil, err
 		}

@@ -586,17 +586,27 @@ type CustomerSession struct {
 	UpdatedAt        sql.NullTime           `json:"updatedAt"`
 }
 
+type PaymentAccount struct {
+	ID             int32  `json:"id"`
+	AccountName    string `json:"accountName"`
+	AccountNumber  string `json:"accountNumber"`
+	BankName       string `json:"bankName"`
+	QrCodeImageUrl string `json:"qrCodeImageUrl"`
+	IsActive       bool   `json:"isActive"`
+}
+
 type Product struct {
-	ID            int32            `json:"id"`
-	Name          string           `json:"name"`
-	Type          ProductsType     `json:"type"`
-	Category      ProductsCategory `json:"category"`
-	ListPrice     string           `json:"listPrice"`
-	DurationDays  sql.NullInt32    `json:"durationDays"`
-	SessionAmount sql.NullInt32    `json:"sessionAmount"`
-	IsActive      sql.NullBool     `json:"isActive"`
-	CreatedAt     sql.NullTime     `json:"createdAt"`
-	UpdatedAt     sql.NullTime     `json:"updatedAt"`
+	ID               int32            `json:"id"`
+	Name             string           `json:"name"`
+	Type             ProductsType     `json:"type"`
+	Category         ProductsCategory `json:"category"`
+	ListPrice        string           `json:"listPrice"`
+	DurationDays     sql.NullInt32    `json:"durationDays"`
+	SessionAmount    sql.NullInt32    `json:"sessionAmount"`
+	IsActive         sql.NullBool     `json:"isActive"`
+	PaymentAccountID int32            `json:"paymentAccountId"`
+	CreatedAt        sql.NullTime     `json:"createdAt"`
+	UpdatedAt        sql.NullTime     `json:"updatedAt"`
 }
 
 type TrainingAvailability struct {

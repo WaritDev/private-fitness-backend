@@ -24,4 +24,18 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	authGroup.Post("/logout", handler.Auth.Logout)
 	authGroup.Get("/logout", handler.Auth.Logout)
 	authGroup.Get("/me", handler.Auth.Me)
+
+	products := apiGroup.Group("/products")
+	products.Get("/", handler.Product.ListAllProducts)
+	products.Get("/:id", handler.Product.GetProductByID)
+
+	durations := products.Group("/durations")
+	durations.Get("/", handler.Product.ListDurations)
+
+	sessions := products.Group("/sessions")
+	sessions.Get("/", handler.Product.ListSessions)
+
+	// Protected routes
+	// customers := apiGroup.Group("/customer/")
+	// customers.
 }

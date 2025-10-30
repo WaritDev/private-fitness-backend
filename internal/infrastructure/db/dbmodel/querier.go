@@ -6,6 +6,7 @@ package dbmodel
 
 import (
 	"context"
+	"database/sql"
 )
 
 type Querier interface {
@@ -14,8 +15,14 @@ type Querier interface {
 	CheckinsToday(ctx context.Context) (int64, error)
 	CompletedPTInRange(ctx context.Context, arg CompletedPTInRangeParams) (int64, error)
 	CreateCustomer(ctx context.Context, arg CreateCustomerParams) error
+	CreateCustomerDuration(ctx context.Context, arg CreateCustomerDurationParams) error
+	CreatePaymentAccount(ctx context.Context, arg CreatePaymentAccountParams) error
 	CreateUser(ctx context.Context, arg CreateUserParams) error
+	GetCustomerDurationById(ctx context.Context, id int32) (CustomerDuration, error)
+	GetCustomerDurationsByUsername(ctx context.Context, customerUsername sql.NullString) ([]CustomerDuration, error)
+	GetProductById(ctx context.Context, id int32) (Product, error)
 	GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error)
+	ListAllProducts(ctx context.Context) ([]Product, error)
 	ListDurations(ctx context.Context) ([]ListDurationsRow, error)
 	ListSessions(ctx context.Context) ([]ListSessionsRow, error)
 	ListUsers(ctx context.Context) ([]ListUsersRow, error)
