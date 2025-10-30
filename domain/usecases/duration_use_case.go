@@ -2,13 +2,18 @@ package usecases
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
+	"math"
+	"regexp"
 	"strconv"
 	"time"
 
 	"github.com/WaritDev/private-fitness-backend/domain/repositories"
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
 	"github.com/WaritDev/private-fitness-backend/domain/responses"
+	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db/dbmodel"
 )
 
 type CustomerDurationUseCase struct {
@@ -108,4 +113,102 @@ func (u *CustomerDurationUseCase) mapToResponse(d repositories.CustomerDurationI
 		CreatedAt:        d.CreatedAt,
 		UpdatedAt:        d.UpdatedAt,
 	}
+}
+
+func (uc *CustomerDurationUseCase) List(ctx context.Context, req requests.ListCustomerDurationsRequest) (responses.ListCustomerDurationsResponse, error) {
+	limit := req.Limit
+	if limit <= 0 || limit > 100 { limit = 10 }
+	page := req.Page
+	if page <= 0 { page = 1 }
+	offset := (page - 1) * limit
+
+	data, err := uc.durationRepo.List(ctx, limit, offset)
+	if err != nil { return responses.ListCustomerDurationsResponse{}, err }
+	total, err := uc.durationRepo.Count(ctx)
+	if err != nil { return responses.ListCustomerDurationsResponse{}, err }
+
+	if len(data) == 0 {
+		data = []dbmodel.ListCustomerDurationsRow{}
+	}
+
+	return responses.ListCustomerDurationsResponse{
+		Data: data,
+		Meta: responses.PageMeta{
+			Page:       page,
+			Limit:      limit,
+			TotalItems: total,
+			TotalPages: int32(math.Ceil(float64(total)/float64(limit))),
+		},
+	}, nil
+}
+
+var reYMD = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
+func (uc *CustomerDurationUseCase) UpdateDuration(
+	ctx context.Context,
+	id int32,
+	req requests.UpdateCustomerDurationRequest,
+) (responses.CustomerDurationUpdatedResponse, error) {
+
+	// 1) Validate input
+	if !reYMD.MatchString(req.StartDate) {
+		return responses.CustomerDurationUpdatedResponse{}, errors.New("invalid startDate (YYYY-MM-DD)")
+	}
+	if req.PricePaid < 0 {
+		return responses.CustomerDurationUpdatedResponse{}, errors.New("pricePaid must be >= 0")
+	}
+	// DiscountAmount เป็น float64 (ไม่ใช่ *float64) => เช็คค่าตรง ๆ
+	if req.DiscountAmount < 0 {
+		return responses.CustomerDurationUpdatedResponse{}, errors.New("discountAmount must be >= 0")
+	}
+	switch req.Status {
+	case "ACTIVE", "EXPIRED", "FROZEN", "CANCELLED":
+	default:
+		return responses.CustomerDurationUpdatedResponse{}, errors.New("invalid status")
+	}
+
+	// 2) ตรวจสอบว่า product ที่อ้างอิงเป็น DURATION และมี duration_days > 0
+	days, err := uc.durationRepo.GetDurationDaysForDurationID(ctx, id)
+	if err != nil {
+		return responses.CustomerDurationUpdatedResponse{}, fmt.Errorf("duration not found or product invalid: %w", err)
+	}
+	if days <= 0 {
+		return responses.CustomerDurationUpdatedResponse{}, errors.New("invalid product duration_days")
+	}
+
+	// 3) แปลงราคาเป็น string ตามที่ repo/db ต้องการ
+	pricePaidStr := fmt.Sprintf("%.2f", req.PricePaid)
+	discountStr := fmt.Sprintf("%.2f", req.DiscountAmount)
+
+	// 4) Persist (SQL จะคำนวณ end_date = start + duration_days - 1)
+	err = uc.durationRepo.UpdateEditableFields(ctx, repositories.UpdateCustomerDurationEditableFieldsParams{
+		ID:             id,
+		StartDateYMD:   req.StartDate,     // ← ใช้ D ใหญ่ ให้ตรง struct
+		PricePaid:      pricePaidStr,
+		DiscountAmount: &discountStr,      // ← domain param เป็น *string
+		Status:         req.Status,
+	})
+	if err != nil {
+		return responses.CustomerDurationUpdatedResponse{}, err
+	}
+
+	return responses.CustomerDurationUpdatedResponse{
+		Message: fmt.Sprintf("Duration Package ID: %d updated successfully", id),
+	}, nil
+}
+
+func (uc *CustomerDurationUseCase) Delete(
+	ctx context.Context,
+	id int32,
+) (responses.CustomerDurationDeletedResponse, error) {
+
+	if err := uc.durationRepo.Delete(ctx, id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return responses.CustomerDurationDeletedResponse{}, fmt.Errorf("duration package not found")
+		}
+		return responses.CustomerDurationDeletedResponse{}, err
+	}
+
+	return responses.CustomerDurationDeletedResponse{
+		Message: fmt.Sprintf("Package ID: %d deleted successfully", id),
+	}, nil
 }
