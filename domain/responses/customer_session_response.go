@@ -1,6 +1,10 @@
 package responses
 
-import "time"
+import (
+	"time"
+
+	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db/dbmodel"
+)
 
 // RegisterCustomerSessionResponse - Response หลังจากลงทะเบียนสำเร็จ
 type RegisterCustomerSessionResponse struct {
@@ -43,4 +47,17 @@ type CustomerSessionPackageResponse struct {
 	DiscountAmount    float64   `json:"discountAmount"`
 	Status            string    `json:"status"`
 	CreatedAt         time.Time `json:"createdAt"`
+}
+
+type ListCustomerSessionsResponse struct {
+	Data []dbmodel.ListCustomerSessionsRow `json:"data"`
+	Meta PageMeta                           `json:"meta"`
+}
+
+type CustomerSessionUpdatedResponse struct {
+	Message string `json:"message"`
+}
+
+type CustomerSessionDeletedResponse struct {
+    Message string `json:"message"`
 }
