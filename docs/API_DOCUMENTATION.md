@@ -14,8 +14,9 @@
 4. [Payment APIs](#4-payment-apis)
 5. [Customer Registration APIs](#5-customer-registration-apis)
 6. [Booking APIs](#6-booking-apis)
-7. [Response Format](#7-response-format)
-8. [Error Codes](#8-error-codes)
+7. [Trainer / Working Hours APIs](#7-trainer--working-hours-apis)
+8. [Response Format](#8-response-format)
+9. [Error Codes](#9-error-codes)
 
 ---
 
@@ -1482,6 +1483,279 @@ if (data.result.success) {
 | 400 | Bad Request | Request ไม่ถูกต้อง, validation error |
 | 404 | Not Found | ไม่พบข้อมูลที่ขอ |
 | 500 | Internal Server Error | Server error |
+
+---
+
+## 7. Trainer / Working Hours APIs
+
+### 7.1 Get Working Hours (Trainer)
+
+**Endpoint:** `GET /api/trainers/working-hours`
+
+**Description:** ดึงรายการเวลาทำงานทั้งหมดของเทรนเนอร์ (Use Case 1P Step 2: Q1P.1)
+
+**Authorization:** Required (JWT Token - Trainer role)
+
+**Business Logic:**
+1. ดึง `trainerUsername` จาก JWT token
+2. Query เวลาทำงานทั้งหมดจากตาราง `training_availabilities` (Q1P.1)
+3. เรียงลำดับตาม day_of_week (MONDAY → SUNDAY) และ start_time
+4. แสดงผลในรูปแบบตาราง
+
+**SQL Query (Q1P.1):**
+```sql
+SELECT
+  id,
+  trainer_username,
+  day_of_week,
+  start_time,
+  end_time
+FROM training_availabilities
+WHERE trainer_username = ?
+ORDER BY FIELD(day_of_week, 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'),
+         start_time ASC;
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "success",
+  "message": "Working hours retrieved successfully",
+  "workingHours": [
+    {
+      "availabilityId": 1,
+      "dayOfWeek": "MONDAY",
+      "startTime": "09:00",
+      "endTime": "12:00"
+    },
+    {
+      "availabilityId": 2,
+      "dayOfWeek": "MONDAY",
+      "startTime": "14:00",
+      "endTime": "18:00"
+    },
+    {
+      "availabilityId": 3,
+      "dayOfWeek": "WEDNESDAY",
+      "startTime": "10:00",
+      "endTime": "16:00"
+    }
+  ]
+}
+```
+
+**Error Response (401 Unauthorized):**
+```json
+{
+  "status": "error",
+  "message": "Unauthorized - JWT token required"
+}
+```
+
+**Usage Example (React + TypeScript):**
+```typescript
+// Get working hours
+const getWorkingHours = async () => {
+  const token = localStorage.getItem('token');
+  
+  const response = await fetch('http://localhost:8000/api/trainers/working-hours', {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  const data = await response.json();
+  if (data.status === 'success') {
+    console.log('Working Hours:', data.workingHours);
+    // Display in table format
+  }
+};
+```
+
+---
+
+### 7.2 Add Working Time (Trainer)
+
+**Endpoint:** `POST /api/trainers/working-hours`
+
+**Description:** เพิ่มเวลาทำงานใหม่ของเทรนเนอร์ (Use Case 1P Step 6-9: Q1P.2 + Q1P.3)
+
+**Authorization:** Required (JWT Token - Trainer role)
+
+**Business Logic:**
+1. ดึง `trainerUsername` จาก JWT token
+2. **Step 7: Validation**
+   - ตรวจสอบค่าว่าง: `dayOfWeek`, `startTime`, `endTime` (Model)
+   - ตรวจสอบรูปแบบเวลา: HH:MM format (Model)
+   - ตรวจสอบ `endTime` > `startTime` (Model)
+   - ตรวจสอบเวลาทับซ้อน: Q1P.2 ต้อง return `overlapped_count = 0` (Database)
+3. **Step 8:** หากผ่าน validation → บันทึกข้อมูลด้วย Q1P.3
+4. **Step 9:** แสดง success message และ redirect กลับหน้า Working Hours
+
+**SQL Queries:**
+
+**Q1P.2: Check Time Overlap**
+```sql
+SELECT COUNT(id) AS overlapped_count
+FROM training_availabilities
+WHERE trainer_username = ?
+  AND day_of_week = ?
+  AND (? < end_time AND ? > start_time);
+```
+
+**Q1P.3: Insert New Working Time**
+```sql
+INSERT INTO training_availabilities (
+  trainer_username,
+  day_of_week,
+  start_time,
+  end_time
+) VALUES (?, ?, ?, ?);
+```
+
+**Request Body:**
+```json
+{
+  "dayOfWeek": "TUESDAY",
+  "startTime": "09:00",
+  "endTime": "13:00"
+}
+```
+
+**Request Validation:**
+- `dayOfWeek`: Required, must be one of: `MONDAY`, `TUESDAY`, `WEDNESDAY`, `THURSDAY`, `FRIDAY`, `SATURDAY`, `SUNDAY`
+- `startTime`: Required, format `HH:MM` (24-hour)
+- `endTime`: Required, format `HH:MM` (24-hour), must be after `startTime`
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "success",
+  "message": "Working time added successfully"
+}
+```
+
+**Error Responses:**
+
+**400 Bad Request - Invalid Time Format:**
+```json
+{
+  "status": "error",
+  "message": "Invalid start time format. Expected HH:MM"
+}
+```
+
+**400 Bad Request - End Time Before Start Time:**
+```json
+{
+  "status": "error",
+  "message": "End time must be after start time"
+}
+```
+
+**400 Bad Request - Time Overlap:**
+```json
+{
+  "status": "error",
+  "message": "Working time overlaps with existing schedule"
+}
+```
+
+**400 Bad Request - Invalid Day:**
+```json
+{
+  "status": "error",
+  "message": "Invalid dayOfWeek. Must be MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, or SUNDAY"
+}
+```
+
+**Usage Example (React + TypeScript):**
+```typescript
+interface AddWorkingTimeRequest {
+  dayOfWeek: 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+  startTime: string; // HH:MM format
+  endTime: string;   // HH:MM format
+}
+
+// Add working time
+const addWorkingTime = async (data: AddWorkingTimeRequest) => {
+  const token = localStorage.getItem('token');
+  
+  const response = await fetch('http://localhost:8000/api/trainers/working-hours', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
+  });
+
+  const result = await response.json();
+  
+  if (result.status === 'success') {
+    // Show success popup
+    alert('Working time added successfully');
+    // Redirect back to Working Hours page
+    window.location.href = '/trainer/working-hours';
+  } else {
+    // Show error popup
+    alert(result.message);
+  }
+};
+
+// Example usage in form submit
+const handleSubmit = (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  const formData: AddWorkingTimeRequest = {
+    dayOfWeek: 'TUESDAY',
+    startTime: '09:00',
+    endTime: '13:00'
+  };
+  
+  addWorkingTime(formData);
+};
+```
+
+**Frontend Workflow (Use Case 1P):**
+```
+1. Trainer clicks "Working Hours" menu
+   ↓
+2. System redirects to Working Hours page
+   → Call GET /api/trainers/working-hours (Q1P.1)
+   ↓
+3. Display working hours table
+   ↓
+4. Trainer clicks "Add Working Time" button
+   ↓
+5. System shows Add Working Time form
+   - Day_of_Week dropdown (Monday-Sunday)
+   - Start_Time input (HH:MM)
+   - End_Time input (HH:MM)
+   ↓
+6. Trainer fills form and clicks "Save"
+   → Call POST /api/trainers/working-hours (Q1P.2 + Q1P.3)
+   ↓
+7. System validates:
+   - Empty fields → Show error in form
+   - Invalid time format → Show error popup
+   - End_Time <= Start_Time → Show error popup
+   - Time overlap → Show error popup
+   ↓
+8. If validation passes:
+   → Show success popup "Working time added successfully"
+   → Redirect back to Working Hours page
+   → Auto refresh with GET /api/trainers/working-hours
+```
+
+**Security Considerations:**
+- ✅ JWT authentication required (Trainer role)
+- ✅ Username extracted from JWT token (prevent spoofing)
+- ✅ Server-side validation for all fields
+- ✅ Time overlap check at database level
+- ✅ SQL injection prevention (parameterized queries via sqlc)
 
 ---
 

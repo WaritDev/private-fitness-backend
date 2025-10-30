@@ -13,6 +13,15 @@ type TrainerInfo struct {
 	CreatedAt time.Time
 }
 
+// TrainerAvailability - Trainer availability information
+type TrainerAvailability struct {
+	ID              int32
+	TrainerUsername string
+	DayOfWeek       string
+	StartTime       time.Time
+	EndTime         time.Time
+}
+
 // TrainerRepository - Repository interface for trainer operations
 type TrainerRepository interface {
 	// FindAvailableTrainers finds trainers available on specific day and time
@@ -26,4 +35,15 @@ type TrainerRepository interface {
 
 	// ListAllTrainers lists all active trainers
 	ListAllTrainers(ctx context.Context) ([]TrainerInfo, error)
+
+	// Use Case 1P: Manage Working Hours
+
+	// GetTrainerAvailability gets all working hours for a trainer (Q1P.1)
+	GetTrainerAvailability(ctx context.Context, trainerUsername string) ([]TrainerAvailability, error)
+
+	// CheckTimeOverlap checks if new time slot overlaps with existing ones (Q1P.2)
+	CheckTimeOverlap(ctx context.Context, trainerUsername string, dayOfWeek string, startTime, endTime time.Time) (int64, error)
+
+	// CreateTrainerAvailability creates new working time slot (Q1P.3)
+	CreateTrainerAvailability(ctx context.Context, trainerUsername string, dayOfWeek string, startTime, endTime time.Time) error
 }

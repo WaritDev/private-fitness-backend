@@ -17,3 +17,26 @@ type TrainerListResponse struct {
 	Username string `json:"username"` // Username
 	Name     string `json:"name"`     // ชื่อเต็ม
 }
+
+// Use Case 1P: Manage Working Hours
+
+// TrainerAvailabilityResponse - Response สำหรับแสดงเวลาทำงานของ Trainer
+type TrainerAvailabilityResponse struct {
+	AvailabilityID int32  `json:"availabilityId"` // ID ของเวลาทำงาน
+	DayOfWeek      string `json:"dayOfWeek"`      // วันในสัปดาห์
+	StartTime      string `json:"startTime"`      // เวลาเริ่มต้น (HH:MM format)
+	EndTime        string `json:"endTime"`        // เวลาสิ้นสุด (HH:MM format)
+}
+
+// WorkingHoursResponse - Response สำหรับรายการเวลาทำงานทั้งหมด
+type WorkingHoursResponse struct {
+	Status       string                        `json:"status"`       // สถานะ "success"
+	Message      string                        `json:"message"`      // ข้อความ
+	WorkingHours []TrainerAvailabilityResponse `json:"workingHours"` // รายการเวลาทำงาน
+}
+
+// AddWorkingTimeResponse - Response สำหรับการเพิ่มเวลาทำงาน
+type AddWorkingTimeResponse struct {
+	Status  string `json:"status"`  // สถานะ "success" หรือ "error"
+	Message string `json:"message"` // ข้อความ
+}

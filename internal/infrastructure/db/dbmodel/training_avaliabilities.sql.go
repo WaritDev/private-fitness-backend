@@ -10,6 +10,108 @@ import (
 	"time"
 )
 
+const checkTimeOverlap = `-- name: CheckTimeOverlap :one
+SELECT COUNT(id) AS overlapped_count
+FROM training_availabilities
+WHERE trainer_username = ?
+  AND day_of_week = ?
+  AND (
+    (? < end_time AND ? > start_time)
+  )
+`
+
+type CheckTimeOverlapParams struct {
+	TrainerUsername string                          `json:"trainerUsername"`
+	DayOfWeek       TrainingAvailabilitiesDayOfWeek `json:"dayOfWeek"`
+	EndTime         time.Time                       `json:"endTime"`
+	StartTime       time.Time                       `json:"startTime"`
+}
+
+// Q1P.2: Check Time Overlap (Validation before adding)
+func (q *Queries) CheckTimeOverlap(ctx context.Context, arg CheckTimeOverlapParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, checkTimeOverlap,
+		arg.TrainerUsername,
+		arg.DayOfWeek,
+		arg.EndTime,
+		arg.StartTime,
+	)
+	var overlapped_count int64
+	err := row.Scan(&overlapped_count)
+	return overlapped_count, err
+}
+
+const createTrainerAvailability = `-- name: CreateTrainerAvailability :exec
+INSERT INTO training_availabilities (
+  trainer_username,
+  day_of_week,
+  start_time,
+  end_time
+) VALUES (?, ?, ?, ?)
+`
+
+type CreateTrainerAvailabilityParams struct {
+	TrainerUsername string                          `json:"trainerUsername"`
+	DayOfWeek       TrainingAvailabilitiesDayOfWeek `json:"dayOfWeek"`
+	StartTime       time.Time                       `json:"startTime"`
+	EndTime         time.Time                       `json:"endTime"`
+}
+
+// Q1P.3: Create Trainer Availability (Add Working Time)
+func (q *Queries) CreateTrainerAvailability(ctx context.Context, arg CreateTrainerAvailabilityParams) error {
+	_, err := q.db.ExecContext(ctx, createTrainerAvailability,
+		arg.TrainerUsername,
+		arg.DayOfWeek,
+		arg.StartTime,
+		arg.EndTime,
+	)
+	return err
+}
+
+const getTrainerAvailability = `-- name: GetTrainerAvailability :many
+
+SELECT
+  id,
+  trainer_username,
+  day_of_week,
+  start_time,
+  end_time
+FROM training_availabilities
+WHERE trainer_username = ?
+ORDER BY FIELD(day_of_week, 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'),
+         start_time ASC
+`
+
+// Use Case 1P: Manage Working Hours
+// Q1P.1: Get Trainer Availability with ID (Get Working Hours)
+func (q *Queries) GetTrainerAvailability(ctx context.Context, trainerUsername string) ([]TrainingAvailability, error) {
+	rows, err := q.db.QueryContext(ctx, getTrainerAvailability, trainerUsername)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TrainingAvailability
+	for rows.Next() {
+		var i TrainingAvailability
+		if err := rows.Scan(
+			&i.ID,
+			&i.TrainerUsername,
+			&i.DayOfWeek,
+			&i.StartTime,
+			&i.EndTime,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTrainingAvaliabilitiesByTrainerUsername = `-- name: GetTrainingAvaliabilitiesByTrainerUsername :many
 SELECT 
   trainer_username,

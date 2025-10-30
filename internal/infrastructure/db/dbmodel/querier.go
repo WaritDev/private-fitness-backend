@@ -27,6 +27,8 @@ type Querier interface {
 	CheckPhoneNumberExistsUser(ctx context.Context, phoneNumber string) (int64, error)
 	// ตรวจสอบว่ามีนัดซ้อนทับหรือไม่
 	CheckScheduleOverlap(ctx context.Context, arg CheckScheduleOverlapParams) (int64, error)
+	// Q1P.2: Check Time Overlap (Validation before adding)
+	CheckTimeOverlap(ctx context.Context, arg CheckTimeOverlapParams) (int64, error)
 	// Q3C.5 - ตรวจสอบว่าช่วงเวลาที่เลือกยังว่างอยู่จริง
 	// คืนค่า overlapped_count ถ้าเป็น 0 แสดงว่ายังว่างอยู่
 	// Logic: ช่วงเวลาซ้อนทับกันเมื่อ start_time < endTime AND end_time > startTime
@@ -50,6 +52,8 @@ type Querier interface {
 	CreateCustomerSession(ctx context.Context, arg CreateCustomerSessionParams) error
 	CreatePaymentAccount(ctx context.Context, arg CreatePaymentAccountParams) error
 	CreateStaff(ctx context.Context, arg CreateStaffParams) error
+	// Q1P.3: Create Trainer Availability (Add Working Time)
+	CreateTrainerAvailability(ctx context.Context, arg CreateTrainerAvailabilityParams) error
 	CreateTrainingSchedule(ctx context.Context, arg CreateTrainingScheduleParams) error
 	CreateUser(ctx context.Context, arg CreateUserParams) error
 	// ยกเลิกการจอง - ลดจำนวนครั้งที่ใช้ไป (used_sessions - 1)
@@ -104,6 +108,9 @@ type Querier interface {
 	GetPaymentInfoByProductId(ctx context.Context, id int32) (GetPaymentInfoByProductIdRow, error)
 	GetProductById(ctx context.Context, id int32) (Product, error)
 	GetStaffByUsername(ctx context.Context, username string) (GetStaffByUsernameRow, error)
+	// Use Case 1P: Manage Working Hours
+	// Q1P.1: Get Trainer Availability with ID (Get Working Hours)
+	GetTrainerAvailability(ctx context.Context, trainerUsername string) ([]TrainingAvailability, error)
 	GetTrainingAvaliabilitiesByTrainerUsername(ctx context.Context, trainerUsername string) ([]GetTrainingAvaliabilitiesByTrainerUsernameRow, error)
 	GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error)
 	GetUserRole(ctx context.Context, username string) (UsersRole, error)

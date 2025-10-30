@@ -55,6 +55,7 @@ var ServiceSet = wire.NewSet(
 	usecases.ProvideBookingUseCase,
 	usecases.ProvideCustomerLogUsecase,
 	usecases.ProvideMemberUseCase,
+	usecases.ProvideTrainerUseCase, // Use Case 1P: Manage Working Hours
 )
 
 var HandlerSet = wire.NewSet(
