@@ -3,6 +3,7 @@ package rest
 import (
 	"strconv"
 
+	"github.com/WaritDev/private-fitness-backend/domain/requests"
 	"github.com/WaritDev/private-fitness-backend/domain/usecases"
 	"github.com/gofiber/fiber/v2"
 )
@@ -104,4 +105,68 @@ func (h *ProductHandler) ListSessions(c *fiber.Ctx) error {
 		"message":     "Session packages retrieved successfully",
 		"result":      products,
 	})
+}
+
+func (h *ProductHandler) List(c *fiber.Ctx) error {
+	page, _  := strconv.Atoi(c.Query("page", "1"))
+	limit, _ := strconv.Atoi(c.Query("limit", "10"))
+
+	req := requests.ListProductsRequest{
+		Page:  int32(page),
+		Limit: int32(limit),
+	}
+	resp, err := h.UC.List(c.Context(), req)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.Status(fiber.StatusOK).JSON(resp)
+}
+
+func (h *ProductHandler) Create(c *fiber.Ctx) error {
+	var req requests.CreateProductRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid json"})
+	}
+
+	res, err := h.UC.Create(c.Context(), req)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(res)
+}
+
+func (h *ProductHandler) Update(c *fiber.Ctx) error {
+    idStr := c.Params("id")
+    id, err := strconv.Atoi(idStr)
+    if err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid id"})
+    }
+
+    var req requests.UpdateProductRequest
+    if err := c.BodyParser(&req); err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+    }
+
+    res, err := h.UC.Update(c.Context(), int32(id), req)
+    if err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+    }
+
+    return c.JSON(res)
+}
+
+func (h *ProductHandler) Delete(c *fiber.Ctx) error {
+    idStr := c.Params("id")
+    id, err := strconv.Atoi(idStr)
+    if err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid product id"})
+    }
+
+    res, err := h.UC.Delete(c.Context(), int32(id))
+    if err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+    }
+
+    return c.Status(fiber.StatusOK).JSON(res)
 }

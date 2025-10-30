@@ -60,6 +60,10 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	// Otherwise /durations will be matched as id="durations"
 	products.Get("/durations", handler.Product.ListDurations)
 	products.Get("/sessions", handler.Product.ListSessions)
+	products.Get("/", handler.Product.List)
+	products.Post("/create", handler.Product.Create)
+	products.Post("/:id/update", handler.Product.Update)
+	products.Delete("/:id", handler.Product.Delete)
 
 	// Dynamic route must be last
 	products.Get("/:id", handler.Product.GetProductByID)
