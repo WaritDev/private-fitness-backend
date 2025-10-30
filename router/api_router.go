@@ -40,6 +40,7 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	durations.Get("/", handler.CustomerDuration.ListDurations)
 	durations.Post("/:id/update", handler.CustomerDuration.Update)
 	durations.Delete("/:id", handler.CustomerDuration.Delete)
+	durations.Get("/:id", handler.CustomerDuration.GetByID)
 
 	// Customer Session routes
 	sessions := apiGroup.Group("/customer-sessions")

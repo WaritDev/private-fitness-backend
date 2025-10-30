@@ -6,3 +6,7 @@ type PurchaseDurationRequest struct {
 	PricePaid      float64 `json:"pricePaid" validate:"required,gt=0"`
 	DiscountAmount float64 `json:"discountAmount" validate:"gte=0"`
 }
+
+type GetCustomerDurationByIDRequest struct {
+	ID string `json:"id"`
+}

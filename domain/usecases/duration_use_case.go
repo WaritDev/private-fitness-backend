@@ -15,6 +15,7 @@ import (
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
 	"github.com/WaritDev/private-fitness-backend/domain/responses"
 	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db/dbmodel"
+	"github.com/WaritDev/private-fitness-backend/utils"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -364,4 +365,43 @@ func (u *CustomerDurationUseCase) RegisterCustomerDuration(ctx context.Context, 
 		DiscountAmount: discountAmountStr,
 		Message:        "Customer duration registered successfully",
 	}, nil
+}
+
+func (uc *CustomerDurationUseCase) GetByID(ctx context.Context, id string) (responses.CustomerDuration, error) {
+	if strings.TrimSpace(id) == "" {
+		return responses.CustomerDuration{}, errors.New("id required")
+	}
+
+	id32, err := utils.Atoi32(id)
+	if err != nil {
+		return responses.CustomerDuration{}, errors.New("invalid id")
+	}
+
+	row, err := uc.durationRepo.GetByID(ctx, id32)
+	if err != nil {
+		return responses.CustomerDuration{}, err
+	}
+
+	pricePaid, err := utils.ParseDecimalToInt64(row.PricePaid, 2)
+	if err != nil {
+		return responses.CustomerDuration{}, err
+	}
+	discount, err := utils.ParseDecimalToInt64(row.DiscountAmount, 2)
+	if err != nil {
+		return responses.CustomerDuration{}, err
+	}
+
+	resp := responses.CustomerDuration{
+		ID:               utils.Itoa(row.ID),                // int32 -> string
+		CustomerUsername: row.CustomerUsername,              // string
+		ProductID:        utils.Itoa(row.ProductID),         // int32 -> string
+		SalesUsername:    utils.PtrToString(row.SalesUsername), // *string -> string ("" ถ้า nil)
+		PurchaseDate:     utils.ToYMD(row.PurchaseDate),
+		StartDate:        utils.ToYMD(row.StartDate),
+		EndDate:          utils.ToYMD(row.EndDate),
+		PricePaid:        pricePaid,
+		DiscountAmount:   discount,
+		Status:           strings.ToUpper(string(row.Status)), // enum (alias of string) -> string
+	}
+	return resp, nil
 }

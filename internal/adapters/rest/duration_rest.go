@@ -1,6 +1,8 @@
 package rest
 
 import (
+	"database/sql"
+	"errors"
 	"strconv"
 	"strings"
 
@@ -309,4 +311,20 @@ func (h *CustomerDurationHandler) Register(c *fiber.Ctx) error {
 		"message":     "Customer duration registered successfully",
 		"result":      result,
 	})
+}
+
+func (h *CustomerDurationHandler) GetByID(c *fiber.Ctx) error {
+	id := strings.TrimSpace(c.Params("id"))
+	if id == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "id required"})
+	}
+
+	out, err := h.UC.GetByID(c.Context(), id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"message": "customer_duration not found"})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"message": err.Error()})
+	}
+	return c.JSON(out)
 }
