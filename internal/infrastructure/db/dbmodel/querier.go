@@ -38,6 +38,7 @@ type Querier interface {
 	// นับจำนวนนัดหมายของเทรนเนอร์ในวันที่กำหนด
 	CountAppointmentsOnDate(ctx context.Context, arg CountAppointmentsOnDateParams) (int64, error)
 	CountCustomerDurations(ctx context.Context) (int64, error)
+	CountCustomerLogs(ctx context.Context) (int64, error)
 	CountCustomerSessions(ctx context.Context) (int64, error)
 	CountCustomers(ctx context.Context) (int64, error)
 	CountProductReferences(ctx context.Context, arg CountProductReferencesParams) (CountProductReferencesRow, error)
@@ -65,6 +66,7 @@ type Querier interface {
 	DeleteCustomerDurationByCustomer(ctx context.Context, customerUsername sql.NullString) error
 	DeleteCustomerDurationByID(ctx context.Context, id int32) (sql.Result, error)
 	DeleteCustomerDurationBySales(ctx context.Context, salesUsername sql.NullString) error
+	DeleteCustomerLogByID(ctx context.Context, id int32) (sql.Result, error)
 	DeleteCustomerLogsByCustomer(ctx context.Context, customerUsername sql.NullString) error
 	DeleteCustomerSessionByCustomer(ctx context.Context, customerUsername sql.NullString) error
 	DeleteCustomerSessionByID(ctx context.Context, id int32) (sql.Result, error)
@@ -93,6 +95,7 @@ type Querier interface {
 	GetCustomerDurationByID(ctx context.Context, id int32) (GetCustomerDurationByIDRow, error)
 	GetCustomerDurationById(ctx context.Context, id int32) (CustomerDuration, error)
 	GetCustomerDurationsByUsername(ctx context.Context, customerUsername sql.NullString) ([]CustomerDuration, error)
+	GetCustomerLogByID(ctx context.Context, id int32) (GetCustomerLogByIDRow, error)
 	GetCustomerSessionByID(ctx context.Context, id int32) (GetCustomerSessionByIDRow, error)
 	// Q3C.3a - ดึงวันหยุดหรือช่วงเวลาที่ไม่รับนัด (DAY_OFF)
 	GetDayOffSchedules(ctx context.Context, arg GetDayOffSchedulesParams) ([]GetDayOffSchedulesRow, error)
@@ -112,6 +115,7 @@ type Querier interface {
 	// ดึงรายชื่อเทรนเนอร์ทั้งหมดที่ active (สำหรับ dropdown)
 	ListAllTrainers(ctx context.Context) ([]ListAllTrainersRow, error)
 	ListCustomerDurations(ctx context.Context, arg ListCustomerDurationsParams) ([]ListCustomerDurationsRow, error)
+	ListCustomerLogs(ctx context.Context, arg ListCustomerLogsParams) ([]ListCustomerLogsRow, error)
 	ListCustomerSessions(ctx context.Context, arg ListCustomerSessionsParams) ([]ListCustomerSessionsRow, error)
 	ListCustomers(ctx context.Context, arg ListCustomersParams) ([]ListCustomersRow, error)
 	ListDurations(ctx context.Context) ([]ListDurationsRow, error)
@@ -125,6 +129,7 @@ type Querier interface {
 	TopSellingProductsDurations(ctx context.Context, arg TopSellingProductsDurationsParams) ([]TopSellingProductsDurationsRow, error)
 	TopSellingProductsSessions(ctx context.Context, arg TopSellingProductsSessionsParams) ([]TopSellingProductsSessionsRow, error)
 	UpdateCustomerDurationEditableFields(ctx context.Context, arg UpdateCustomerDurationEditableFieldsParams) error
+	UpdateCustomerLogByID(ctx context.Context, arg UpdateCustomerLogByIDParams) (sql.Result, error)
 	UpdateCustomerSessionEditableFields(ctx context.Context, arg UpdateCustomerSessionEditableFieldsParams) error
 	// อัปเดต users: ไม่มีการเปลี่ยน password
 	UpdateCustomerUserNoPassword(ctx context.Context, arg UpdateCustomerUserNoPasswordParams) error
