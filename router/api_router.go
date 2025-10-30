@@ -14,8 +14,8 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	})
 
 	app.Get("/api/manager/dashboard", handler.Manager.GetDashboard)
-	
-	// api 
+
+	// api
 	apiGroup := app.Group("/api")
 	// Auth routes
 	authGroup := apiGroup.Group("/auth")
@@ -27,13 +27,19 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 
 	products := apiGroup.Group("/products")
 	products.Get("/", handler.Product.ListAllProducts)
+
+	// ⚠️ IMPORTANT: Specific routes MUST come BEFORE dynamic routes (/:id)
+	// Otherwise /durations will be matched as id="durations"
+	products.Get("/durations", handler.Product.ListDurations)
+	products.Get("/sessions", handler.Product.ListSessions)
+
+	// Dynamic route must be last
 	products.Get("/:id", handler.Product.GetProductByID)
 
-	durations := products.Group("/durations")
-	durations.Get("/", handler.Product.ListDurations)
-
-	sessions := products.Group("/sessions")
-	sessions.Get("/", handler.Product.ListSessions)
+	// User validation routes (for Use Case: กรอกข้อมูลสมาชิก)
+	users := apiGroup.Group("/users")
+	users.Get("/check-phone", handler.User.CheckPhoneNumber) // Q3S.1
+	users.Get("/check-email", handler.User.CheckEmail)       // Q3S.2
 
 	// Protected routes
 	// customers := apiGroup.Group("/customer/")

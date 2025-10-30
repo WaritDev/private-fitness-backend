@@ -11,6 +11,32 @@ import (
 	"time"
 )
 
+const checkEmailExists = `-- name: CheckEmailExists :one
+SELECT COUNT(email) as count
+FROM users
+WHERE email = ?
+`
+
+func (q *Queries) CheckEmailExists(ctx context.Context, email string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, checkEmailExists, email)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const checkPhoneNumberExists = `-- name: CheckPhoneNumberExists :one
+SELECT COUNT(phone_number) as count
+FROM users
+WHERE phone_number = ?
+`
+
+func (q *Queries) CheckPhoneNumberExists(ctx context.Context, phoneNumber string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, checkPhoneNumberExists, phoneNumber)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const checkUsernameExists = `-- name: CheckUsernameExists :one
 SELECT COUNT(username) as count
 FROM users

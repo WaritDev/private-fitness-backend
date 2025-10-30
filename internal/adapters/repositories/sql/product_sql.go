@@ -27,7 +27,16 @@ func (r *ProductRepository) ListAll(ctx context.Context) ([]repositories.Product
 
 	result := make([]repositories.ProductInfo, len(rows))
 	for i, row := range rows {
-		result[i] = r.mapToProductInfo(row, true)
+		// Use mapListRowToProductInfo for ListAllProductsRow type
+		info := r.mapListRowToProductInfo(row.ID, row.Name, string(row.Type), string(row.Category), row.ListPrice, row.DurationDays, row.SessionAmount, row.IsActive, row.PaymentAccountID)
+		// Add timestamps
+		if row.CreatedAt.Valid {
+			info.CreatedAt = row.CreatedAt.Time
+		}
+		if row.UpdatedAt.Valid {
+			info.UpdatedAt = row.UpdatedAt.Time
+		}
+		result[i] = info
 	}
 	return result, nil
 }
