@@ -33,6 +33,12 @@ func InitializeHandler() *rest.Handler {
 	productRepository := sql.ProvideProductRepository(queries)
 	productUseCase := usecases.ProvideProductUseCase(productRepository)
 	productHandler := rest.ProvideProductHandler(productUseCase)
-	handler := rest.ProvideHandler(userHandler, managerDashboardHandler, authHandler, productHandler)
+	trainerRepository := sql.ProvideTrainerRepository(queries)
+	sessionUseCase := usecases.ProvideSessionUseCase(trainerRepository)
+	trainerHandler := rest.ProvideTrainerHandler(sessionUseCase)
+	paymentAccountRepository := sql.ProvidePaymentAccountRepository(queries)
+	paymentUseCase := usecases.ProvidePaymentUseCase(paymentAccountRepository)
+	paymentHandler := rest.ProvidePaymentHandler(paymentUseCase)
+	handler := rest.ProvideHandler(userHandler, managerDashboardHandler, authHandler, productHandler, trainerHandler, paymentHandler)
 	return handler
 }

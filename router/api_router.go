@@ -41,6 +41,15 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	users.Get("/check-phone", handler.User.CheckPhoneNumber) // Q3S.1
 	users.Get("/check-email", handler.User.CheckEmail)       // Q3S.2
 
+	// Trainer routes (for Use Case: กรอกข้อมูลสมัครคอร์ส Sessions)
+	trainers := apiGroup.Group("/trainers")
+	trainers.Post("/match", handler.Trainer.MatchTrainer) // Q4S - Match trainer by day/time
+	trainers.Get("/", handler.Trainer.ListAllTrainers)    // List all active trainers
+
+	// Payment routes (for Use Case: ยืนยันการชำระเงิน)
+	payments := apiGroup.Group("/payments")
+	payments.Get("/info/:productId", handler.Payment.GetPaymentInfo) // Q5S.1 - Get payment info with QR code
+
 	// Protected routes
 	// customers := apiGroup.Group("/customer/")
 	// customers.
