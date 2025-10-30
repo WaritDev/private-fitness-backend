@@ -20,7 +20,7 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	// Auth routes
 	authGroup := apiGroup.Group("/auth")
 	authGroup.Post("/login", handler.Auth.Login)
-	authGroup.Post("/signup", handler.Auth.Signup)
+	// NOTE: /signup removed - registration now requires Sales pre-entry (Use Case 3S + 4S) before customer completes (Use Case 2.2C)
 	authGroup.Post("/logout", handler.Auth.Logout)
 	authGroup.Get("/logout", handler.Auth.Logout)
 	authGroup.Get("/me", handler.Auth.Me)
@@ -49,6 +49,11 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	// Payment routes (for Use Case: ยืนยันการชำระเงิน)
 	payments := apiGroup.Group("/payments")
 	payments.Get("/info/:productId", handler.Payment.GetPaymentInfo) // Q5S.1 - Get payment info with QR code
+
+	// Customer registration routes (after Sales pre-entry)
+	customers := apiGroup.Group("/customers")
+	customers.Post("/sessions/register", handler.CustomerSession.Register)   // Use Case 2.2C - Session package registration
+	customers.Post("/durations/register", handler.CustomerDuration.Register) // Use Case 2.1C - Duration package registration
 
 	// Protected routes
 	// customers := apiGroup.Group("/customer/")

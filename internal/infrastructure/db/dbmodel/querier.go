@@ -22,7 +22,10 @@ type Querier interface {
 	CountAppointmentsOnDate(ctx context.Context, arg CountAppointmentsOnDateParams) (int64, error)
 	CreateCustomer(ctx context.Context, arg CreateCustomerParams) error
 	CreateCustomerDuration(ctx context.Context, arg CreateCustomerDurationParams) error
+	CreateCustomerLog(ctx context.Context, arg CreateCustomerLogParams) error
+	CreateCustomerSession(ctx context.Context, arg CreateCustomerSessionParams) error
 	CreatePaymentAccount(ctx context.Context, arg CreatePaymentAccountParams) error
+	CreateTrainingSchedule(ctx context.Context, arg CreateTrainingScheduleParams) error
 	CreateUser(ctx context.Context, arg CreateUserParams) error
 	// Q4S.1 แก้ไข: หาเทรนเนอร์ที่ว่างในวันและเวลาที่กำหนด
 	FindAvailableTrainers(ctx context.Context, arg FindAvailableTrainersParams) ([]FindAvailableTrainersRow, error)
