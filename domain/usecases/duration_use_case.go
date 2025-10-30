@@ -123,17 +123,61 @@ func (u *CustomerDurationUseCase) mapToResponse(d repositories.CustomerDurationI
 	}
 }
 
+// GetCustomerActiveDuration - ดึงข้อมูล Duration packages ที่ ACTIVE ของลูกค้า (คล้าย GetCustomerActiveSessions)
+func (u *CustomerDurationUseCase) GetCustomerActiveDuration(ctx context.Context, username string) ([]responses.CustomerDurationPackageResponse, error) {
+	// เรียก repository เพื่อดึงข้อมูล
+	packages, err := u.durationRepo.GetCustomerActiveDuration(ctx, username)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get active duration packages: %w", err)
+	}
+
+	// แปลงเป็น response DTO
+	result := make([]responses.CustomerDurationPackageResponse, 0, len(packages))
+	for _, pkg := range packages {
+		// Convert DECIMAL strings to float64
+		pricePaid, _ := strconv.ParseFloat(pkg.PricePaid, 64)
+		discountAmount, _ := strconv.ParseFloat(pkg.DiscountAmount, 64)
+
+		result = append(result, responses.CustomerDurationPackageResponse{
+			ID:               pkg.ID,
+			CustomerUsername: pkg.CustomerUsername,
+			ProductID:        pkg.ProductID,
+			ProductName:      pkg.ProductName,
+			DurationDays:     pkg.DurationDays,
+			SalesUsername:    pkg.SalesUsername,
+			PurchaseDate:     pkg.PurchaseDate,
+			StartDate:        pkg.StartDate,
+			EndDate:          pkg.EndDate,
+			DaysRemaining:    pkg.DaysRemaining,
+			PricePaid:        pricePaid,
+			DiscountAmount:   discountAmount,
+			Status:           pkg.Status,
+			CreatedAt:        pkg.CreatedAt,
+		})
+	}
+
+	return result, nil
+}
+
 func (uc *CustomerDurationUseCase) List(ctx context.Context, req requests.ListCustomerDurationsRequest) (responses.ListCustomerDurationsResponse, error) {
 	limit := req.Limit
-	if limit <= 0 || limit > 100 { limit = 10 }
+	if limit <= 0 || limit > 100 {
+		limit = 10
+	}
 	page := req.Page
-	if page <= 0 { page = 1 }
+	if page <= 0 {
+		page = 1
+	}
 	offset := (page - 1) * limit
 
 	data, err := uc.durationRepo.List(ctx, limit, offset)
-	if err != nil { return responses.ListCustomerDurationsResponse{}, err }
+	if err != nil {
+		return responses.ListCustomerDurationsResponse{}, err
+	}
 	total, err := uc.durationRepo.Count(ctx)
-	if err != nil { return responses.ListCustomerDurationsResponse{}, err }
+	if err != nil {
+		return responses.ListCustomerDurationsResponse{}, err
+	}
 
 	if len(data) == 0 {
 		data = []dbmodel.ListCustomerDurationsRow{}
@@ -145,12 +189,13 @@ func (uc *CustomerDurationUseCase) List(ctx context.Context, req requests.ListCu
 			Page:       page,
 			Limit:      limit,
 			TotalItems: total,
-			TotalPages: int32(math.Ceil(float64(total)/float64(limit))),
+			TotalPages: int32(math.Ceil(float64(total) / float64(limit))),
 		},
 	}, nil
 }
 
 var reYMD = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
+
 func (uc *CustomerDurationUseCase) UpdateDuration(
 	ctx context.Context,
 	id int32,
@@ -190,9 +235,9 @@ func (uc *CustomerDurationUseCase) UpdateDuration(
 	// 4) Persist (SQL จะคำนวณ end_date = start + duration_days - 1)
 	err = uc.durationRepo.UpdateEditableFields(ctx, repositories.UpdateCustomerDurationEditableFieldsParams{
 		ID:             id,
-		StartDateYMD:   req.StartDate,     // ← ใช้ D ใหญ่ ให้ตรง struct
+		StartDateYMD:   req.StartDate, // ← ใช้ D ใหญ่ ให้ตรง struct
 		PricePaid:      pricePaidStr,
-		DiscountAmount: &discountStr,      // ← domain param เป็น *string
+		DiscountAmount: &discountStr, // ← domain param เป็น *string
 		Status:         req.Status,
 	})
 	if err != nil {
@@ -220,6 +265,7 @@ func (uc *CustomerDurationUseCase) Delete(
 		Message: fmt.Sprintf("Package ID: %d deleted successfully", id),
 	}, nil
 }
+
 // RegisterCustomerDuration - Use Case 2.1C: ลงทะเบียนผู้ใช้งานสำหรับแพ็กเกจ Duration
 func (u *CustomerDurationUseCase) RegisterCustomerDuration(ctx context.Context, req requests.RegisterCustomerDurationRequest) (*responses.RegisterCustomerDurationResponse, error) {
 	// Validate username not exists (Q2.1C.1)

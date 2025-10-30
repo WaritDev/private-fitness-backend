@@ -163,6 +163,38 @@ func (h *CustomerDurationHandler) GetMyDurations(c *fiber.Ctx) error {
 	})
 }
 
+// GetActiveDuration - GET /api/customers/durations/active/:username
+// ดึงข้อมูล Duration packages ที่ ACTIVE ของลูกค้า (คล้าย GetActiveSessions)
+func (h *CustomerDurationHandler) GetActiveDuration(c *fiber.Ctx) error {
+	username := c.Params("username")
+	if username == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":      "Bad Request",
+			"status_code": fiber.StatusBadRequest,
+			"message":     "Username is required",
+			"result":      nil,
+		})
+	}
+
+	// เรียก use case
+	packages, err := h.UC.GetCustomerActiveDuration(c.Context(), username)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":      "Internal Server Error",
+			"status_code": fiber.StatusInternalServerError,
+			"message":     err.Error(),
+			"result":      nil,
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":      "OK",
+		"status_code": fiber.StatusOK,
+		"message":     "Active duration packages retrieved successfully",
+		"result":      packages,
+	})
+}
+
 func (h *CustomerDurationHandler) ListDurations(c *fiber.Ctx) error {
 	var q requests.ListCustomerDurationsRequest
 	if err := c.QueryParser(&q); err != nil {
@@ -211,6 +243,7 @@ func (h *CustomerDurationHandler) Delete(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(resp)
 }
+
 // Register - POST /api/customers/durations/register
 // Use Case 2.1C: ลงทะเบียนผู้ใช้งานสำหรับแพ็กเกจ Duration
 func (h *CustomerDurationHandler) Register(c *fiber.Ctx) error {

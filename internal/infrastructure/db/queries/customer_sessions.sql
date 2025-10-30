@@ -76,5 +76,3 @@ JOIN products p ON cs.product_id = p.id
 WHERE cs.customer_username = ?
   AND cs.status = 'ACTIVE'
 ORDER BY cs.created_at DESC;
-
--- name: GetCustomerSessionByProductIdAndCustomerUsername :one
