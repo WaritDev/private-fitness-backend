@@ -27,6 +27,23 @@ type TrainingScheduleRepository interface {
 
 	// DeleteAppointment - ลบการจอง (ใช้ใน Transaction)
 	DeleteAppointment(ctx context.Context, tx interface{}, appointmentID int32) error
+
+	// Use Case 3P: Manage Day-Offs
+
+	// GetTrainerDayOffs - Q3P.1: ดึงรายการวันหยุดทั้งหมดของ Trainer
+	GetTrainerDayOffs(ctx context.Context, trainerUsername string) ([]DayOffInfo, error)
+
+	// CheckDayOffDuplicate - Q3P.2: ตรวจสอบว่ามีวันหยุดซ้ำในวันนั้นหรือไม่
+	CheckDayOffDuplicate(ctx context.Context, trainerUsername string, dayOffDate time.Time) (int64, error)
+
+	// CheckDayOffAppointmentOverlap - Q3P.3: ตรวจสอบว่ามีนัดหมายใน day-off หรือไม่
+	CheckDayOffAppointmentOverlap(ctx context.Context, trainerUsername string, startTime, endTime time.Time) (int64, error)
+
+	// CreateDayOff - Q3P.4: สร้างวันหยุดใหม่
+	CreateDayOff(ctx context.Context, trainerUsername string, startTime, endTime time.Time) error
+
+	// DeleteDayOff - Q3P.5: ลบวันหยุด
+	DeleteDayOff(ctx context.Context, scheduleID int32) error
 }
 
 // TrainerAvailabilityInfo - ข้อมูลเวลาทำงานประจำสัปดาห์
@@ -68,4 +85,11 @@ type AppointmentDetail struct {
 	StartTime        time.Time
 	EndTime          time.Time
 	ScheduleType     string
+}
+
+// DayOffInfo - ข้อมูลวันหยุดของ Trainer (Use Case 3P)
+type DayOffInfo struct {
+	ScheduleID int32
+	StartTime  time.Time
+	EndTime    time.Time
 }

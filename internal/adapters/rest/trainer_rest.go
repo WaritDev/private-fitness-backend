@@ -10,11 +10,13 @@ import (
 
 type TrainerHandler struct {
 	sessionUC *usecases.SessionUseCase
+	trainerUC *usecases.TrainerUseCase
 }
 
-func ProvideTrainerHandler(sessionUC *usecases.SessionUseCase) *TrainerHandler {
+func ProvideTrainerHandler(sessionUC *usecases.SessionUseCase, trainerUC *usecases.TrainerUseCase) *TrainerHandler {
 	return &TrainerHandler{
 		sessionUC: sessionUC,
+		trainerUC: trainerUC,
 	}
 }
 
@@ -113,4 +115,276 @@ func (h *TrainerHandler) ListAllTrainers(c *fiber.Ctx) error {
 		"message":     "Trainers retrieved successfully",
 		"result":      result,
 	})
+}
+
+// Use Case 1P: Manage Working Hours
+
+// GET /api/trainers/working-hours - ดึงรายการเวลาทำงานของเทรนเนอร์
+func (h *TrainerHandler) GetWorkingHours(c *fiber.Ctx) error {
+	// ดึง trainerUsername จาก JWT claims
+	trainerUsername := c.Locals("username").(string)
+
+	// เรียก use case
+	result, err := h.trainerUC.GetWorkingHours(c.Context(), trainerUsername)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(result)
+}
+
+// POST /api/trainers/working-hours - เพิ่มเวลาทำงานใหม่
+func (h *TrainerHandler) AddWorkingTime(c *fiber.Ctx) error {
+	// ดึง trainerUsername จาก JWT claims
+	trainerUsername := c.Locals("username").(string)
+
+	// Parse request body
+	var req requests.AddWorkingTimeRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid request body",
+		})
+	}
+
+	// Validate required fields (Fiber validator will check this)
+	if req.DayOfWeek == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "dayOfWeek is required",
+		})
+	}
+
+	if req.StartTime == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "startTime is required",
+		})
+	}
+
+	if req.EndTime == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "endTime is required",
+		})
+	}
+
+	// Validate day of week
+	validDays := []string{"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"}
+	isValidDay := false
+	for _, day := range validDays {
+		if req.DayOfWeek == day {
+			isValidDay = true
+			break
+		}
+	}
+	if !isValidDay {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid dayOfWeek. Must be MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, or SUNDAY",
+		})
+	}
+
+	// เรียก use case (จะทำ validation ทั้งหมดใน use case)
+	result, err := h.trainerUC.AddWorkingTime(c.Context(), trainerUsername, req)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": err.Error(),
+		})
+	}
+
+	// ถ้า result status = error แสดงว่าเกิด validation error
+	if result.Status == "error" {
+		return c.Status(fiber.StatusBadRequest).JSON(result)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(result)
+}
+
+// PUT /api/trainers/working-hours/:id - แก้ไขเวลาทำงาน (Q1P.4)
+func (h *TrainerHandler) UpdateWorkingTime(c *fiber.Ctx) error {
+	// ดึง trainerUsername จาก JWT claims
+	trainerUsername := c.Locals("username").(string)
+
+	// ดึง ID จาก URL parameter
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid ID parameter",
+		})
+	}
+
+	// Parse request body
+	var req requests.UpdateWorkingTimeRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid request body",
+		})
+	}
+
+	// Validate required fields
+	if req.DayOfWeek == "" || req.StartTime == "" || req.EndTime == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "dayOfWeek, startTime, and endTime are required",
+		})
+	}
+
+	// Validate day of week
+	validDays := []string{"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"}
+	isValidDay := false
+	for _, day := range validDays {
+		if req.DayOfWeek == day {
+			isValidDay = true
+			break
+		}
+	}
+	if !isValidDay {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid dayOfWeek. Must be MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, or SUNDAY",
+		})
+	}
+
+	// เรียก use case
+	result, err := h.trainerUC.UpdateWorkingTime(c.Context(), trainerUsername, int32(id), req)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": err.Error(),
+		})
+	}
+
+	// ถ้า result status = error แสดงว่าเกิด validation error
+	if result.Status == "error" {
+		return c.Status(fiber.StatusBadRequest).JSON(result)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(result)
+}
+
+// DELETE /api/trainers/working-hours/:id - ลบเวลาทำงาน (Q1P.5)
+func (h *TrainerHandler) DeleteWorkingTime(c *fiber.Ctx) error {
+	// ดึง trainerUsername จาก JWT claims
+	trainerUsername := c.Locals("username").(string)
+
+	// ดึง ID จาก URL parameter
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid ID parameter",
+		})
+	}
+
+	// เรียก use case
+	result, err := h.trainerUC.DeleteWorkingTime(c.Context(), trainerUsername, int32(id))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": err.Error(),
+		})
+	}
+
+	// ถ้า result status = error แสดงว่าเกิด validation error
+	if result.Status == "error" {
+		return c.Status(fiber.StatusNotFound).JSON(result)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(result)
+}
+
+// ========== Use Case 3P: Manage Day-Offs ==========
+
+// GET /api/trainers/day-offs - ดึงรายการวันหยุดของเทรนเนอร์
+func (h *TrainerHandler) GetDayOffs(c *fiber.Ctx) error {
+	// ดึง trainerUsername จาก JWT claims
+	trainerUsername := c.Locals("username").(string)
+
+	// เรียก use case
+	result, err := h.trainerUC.GetDayOffs(c.Context(), trainerUsername)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(result)
+}
+
+// POST /api/trainers/day-offs - เพิ่มวันหยุดใหม่
+func (h *TrainerHandler) AddDayOff(c *fiber.Ctx) error {
+	// ดึง trainerUsername จาก JWT claims
+	trainerUsername := c.Locals("username").(string)
+
+	// Parse request body
+	var req requests.AddDayOffRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid request body",
+		})
+	}
+
+	// Validate required field
+	if req.DayOffDate == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "dayOffDate is required",
+		})
+	}
+
+	// เรียก use case (จะทำ validation ทั้งหมดใน use case)
+	result, err := h.trainerUC.AddDayOff(c.Context(), trainerUsername, req)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": err.Error(),
+		})
+	}
+
+	// ถ้า result status = error แสดงว่าเกิด validation error
+	if result.Status == "error" {
+		return c.Status(fiber.StatusBadRequest).JSON(result)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(result)
+}
+
+// DELETE /api/trainers/day-offs/:id - ลบวันหยุด
+func (h *TrainerHandler) DeleteDayOff(c *fiber.Ctx) error {
+	// ดึง trainerUsername จาก JWT claims
+	trainerUsername := c.Locals("username").(string)
+
+	// ดึง ID จาก URL parameter
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid ID parameter",
+		})
+	}
+
+	// เรียก use case
+	result, err := h.trainerUC.DeleteDayOff(c.Context(), trainerUsername, int32(id))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": err.Error(),
+		})
+	}
+
+	// ถ้า result status = error แสดงว่าเกิด validation error
+	if result.Status == "error" {
+		return c.Status(fiber.StatusNotFound).JSON(result)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(result)
 }

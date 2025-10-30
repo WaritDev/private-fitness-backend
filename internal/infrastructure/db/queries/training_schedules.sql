@@ -78,3 +78,51 @@ WHERE id = ?
 DELETE FROM training_schedules
 WHERE id = ?
   AND schedule_type = 'APPOINTMENT';
+
+-- Use Case 3P: Manage Day-Offs
+
+-- Q3P.1: Get all day-offs for a trainer
+-- name: GetTrainerDayOffs :many
+SELECT
+  id,
+  trainer_username,
+  start_time,
+  end_time
+FROM training_schedules
+WHERE trainer_username = ?
+  AND schedule_type = 'DAY_OFF'
+ORDER BY start_time DESC;
+
+-- Q3P.2: Check if day-off already exists for the same date
+-- name: CheckDayOffDuplicate :one
+SELECT COUNT(id) AS duplicate_count
+FROM training_schedules
+WHERE trainer_username = ?
+  AND schedule_type = 'DAY_OFF'
+  AND DATE(start_time) = ?;
+
+-- Q3P.3: Check if day-off overlaps with existing appointments
+-- name: CheckDayOffAppointmentOverlap :one
+SELECT COUNT(id) AS overlapped_count
+FROM training_schedules
+WHERE trainer_username = ?
+  AND schedule_type = 'APPOINTMENT'
+  AND start_time < ?
+  AND end_time > ?;
+
+-- Q3P.4: Create day-off
+-- name: CreateDayOff :exec
+INSERT INTO training_schedules (
+  trainer_username,
+  start_time,
+  end_time,
+  schedule_type
+) VALUES (
+  ?, ?, ?, 'DAY_OFF'
+);
+
+-- Q3P.5: Delete day-off
+-- name: DeleteDayOff :exec
+DELETE FROM training_schedules
+WHERE id = ?
+  AND schedule_type = 'DAY_OFF';

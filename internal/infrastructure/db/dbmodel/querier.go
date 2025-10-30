@@ -18,6 +18,10 @@ type Querier interface {
 	CheckBookingPermission(ctx context.Context, customerUsername sql.NullString) (int64, error)
 	CheckCustomerGmailExistsExcept(ctx context.Context, arg CheckCustomerGmailExistsExceptParams) (int64, error)
 	CheckCustomerPhoneExistsExcept(ctx context.Context, arg CheckCustomerPhoneExistsExceptParams) (int64, error)
+	// Q3P.3: Check if day-off overlaps with existing appointments
+	CheckDayOffAppointmentOverlap(ctx context.Context, arg CheckDayOffAppointmentOverlapParams) (int64, error)
+	// Q3P.2: Check if day-off already exists for the same date
+	CheckDayOffDuplicate(ctx context.Context, arg CheckDayOffDuplicateParams) (int64, error)
 	CheckGmailExists(ctx context.Context, lower string) (int64, error)
 	CheckGmailExistsExceptUsername(ctx context.Context, arg CheckGmailExistsExceptUsernameParams) (int64, error)
 	CheckGmailExistsUser(ctx context.Context, gmail string) (int64, error)
@@ -27,6 +31,8 @@ type Querier interface {
 	CheckPhoneNumberExistsUser(ctx context.Context, phoneNumber string) (int64, error)
 	// ตรวจสอบว่ามีนัดซ้อนทับหรือไม่
 	CheckScheduleOverlap(ctx context.Context, arg CheckScheduleOverlapParams) (int64, error)
+	// Q1P.2: Check Time Overlap (Validation before adding)
+	CheckTimeOverlap(ctx context.Context, arg CheckTimeOverlapParams) (int64, error)
 	// Q3C.5 - ตรวจสอบว่าช่วงเวลาที่เลือกยังว่างอยู่จริง
 	// คืนค่า overlapped_count ถ้าเป็น 0 แสดงว่ายังว่างอยู่
 	// Logic: ช่วงเวลาซ้อนทับกันเมื่อ start_time < endTime AND end_time > startTime
@@ -49,8 +55,12 @@ type Querier interface {
 	CreateCustomerDuration(ctx context.Context, arg CreateCustomerDurationParams) error
 	CreateCustomerLog(ctx context.Context, arg CreateCustomerLogParams) error
 	CreateCustomerSession(ctx context.Context, arg CreateCustomerSessionParams) error
+	// Q3P.4: Create day-off
+	CreateDayOff(ctx context.Context, arg CreateDayOffParams) error
 	CreatePaymentAccount(ctx context.Context, arg CreatePaymentAccountParams) error
 	CreateStaff(ctx context.Context, arg CreateStaffParams) error
+	// Q1P.3: Create Trainer Availability (Add Working Time)
+	CreateTrainerAvailability(ctx context.Context, arg CreateTrainerAvailabilityParams) error
 	CreateTrainingSchedule(ctx context.Context, arg CreateTrainingScheduleParams) error
 	CreateUser(ctx context.Context, arg CreateUserParams) error
 	// ยกเลิกการจอง - ลดจำนวนครั้งที่ใช้ไป (used_sessions - 1)
@@ -73,8 +83,12 @@ type Querier interface {
 	DeleteCustomerSessionByID(ctx context.Context, id int32) (sql.Result, error)
 	DeleteCustomerSessionBySales(ctx context.Context, salesUsername sql.NullString) error
 	DeleteCustomerSessionByTrainer(ctx context.Context, trainerUsername sql.NullString) error
+	// Q3P.5: Delete day-off
+	DeleteDayOff(ctx context.Context, id int32) error
 	DeletePaymentAccountByID(ctx context.Context, id int32) (sql.Result, error)
 	DeleteProductByID(ctx context.Context, id int32) (sql.Result, error)
+	// Q1P.5: Delete Trainer Availability (Remove Working Time)
+	DeleteTrainerAvailability(ctx context.Context, id int32) error
 	DeleteTrainerAvailabilityByTrainer(ctx context.Context, trainerUsername string) error
 	DeleteTrainingScheduleByCustomer(ctx context.Context, customerUsername sql.NullString) error
 	DeleteTrainingScheduleByTrainer(ctx context.Context, trainerUsername sql.NullString) error
@@ -106,15 +120,21 @@ type Querier interface {
 	GetPaymentInfoByProductId(ctx context.Context, id int32) (GetPaymentInfoByProductIdRow, error)
 	GetProductById(ctx context.Context, id int32) (Product, error)
 	GetStaffByUsername(ctx context.Context, username string) (GetStaffByUsernameRow, error)
+	// Use Case 1P: Manage Working Hours
+	// Q1P.1: Get Trainer Availability with ID (Get Working Hours)
+	GetTrainerAvailability(ctx context.Context, trainerUsername string) ([]TrainingAvailability, error)
+	// Use Case 3P: Manage Day-Offs
+	// Q3P.1: Get all day-offs for a trainer
+	GetTrainerDayOffs(ctx context.Context, trainerUsername sql.NullString) ([]GetTrainerDayOffsRow, error)
 	GetTrainingAvaliabilitiesByTrainerUsername(ctx context.Context, trainerUsername string) ([]GetTrainingAvaliabilitiesByTrainerUsernameRow, error)
 	GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error)
 	GetUserRole(ctx context.Context, username string) (UsersRole, error)
 	// Q3C.6 - อัปเดตจำนวนครั้งที่ใช้ไปแล้ว
 	IncrementUsedSessions(ctx context.Context, id int32) error
-	InsertPaymentAccount(ctx context.Context, arg InsertPaymentAccountParams) (sql.Result, error)
 	// Q5C.2 - อัปเดตจำนวนครั้งที่ใช้ไปแล้วสำหรับ Check-in (Use Case 5C)
 	// ใช้ session package ACTIVE ที่ใหม่ที่สุด
 	IncrementUsedSessionsByUsername(ctx context.Context, customerUsername sql.NullString) error
+	InsertPaymentAccount(ctx context.Context, arg InsertPaymentAccountParams) (sql.Result, error)
 	InsertProductDuration(ctx context.Context, arg InsertProductDurationParams) (sql.Result, error)
 	InsertProductSession(ctx context.Context, arg InsertProductSessionParams) (sql.Result, error)
 	ListAllProducts(ctx context.Context) ([]Product, error)
@@ -149,6 +169,8 @@ type Querier interface {
 	UpdateProductSession(ctx context.Context, arg UpdateProductSessionParams) error
 	UpdateStaffNoPassword(ctx context.Context, arg UpdateStaffNoPasswordParams) error
 	UpdateStaffWithPassword(ctx context.Context, arg UpdateStaffWithPasswordParams) error
+	// Q1P.4: Update Trainer Availability (Edit Working Time)
+	UpdateTrainerAvailability(ctx context.Context, arg UpdateTrainerAvailabilityParams) error
 	// Q0S.2: Update updated_at when user logs in (track last active time)
 	UpdateUserLoginTimestamp(ctx context.Context, username string) error
 }
