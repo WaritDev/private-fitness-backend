@@ -31,3 +31,11 @@ type UpdateWorkingTimeRequest struct {
 type AddDayOffRequest struct {
 	DayOffDate string `json:"dayOffDate" validate:"required"` // วันหยุด (YYYY-MM-DD format)
 }
+
+// Use Case: Trainer Calendar & Check-in Confirmation
+
+// ConfirmCheckInRequest - Request สำหรับ Trainer confirm check-in
+type ConfirmCheckInRequest struct {
+	SessionID        int32  `json:"sessionId" validate:"required"`        // schedule ID (จาก training_schedules)
+	CustomerUsername string `json:"customerUsername" validate:"required"` // username ของลูกค้า
+}

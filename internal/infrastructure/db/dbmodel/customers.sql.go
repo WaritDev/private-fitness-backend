@@ -49,20 +49,6 @@ func (q *Queries) CheckCustomerPhoneExistsExcept(ctx context.Context, arg CheckC
 	return count, err
 }
 
-const countCustomers = `-- name: CountCustomers :one
-SELECT COUNT(u.username) AS total_items
-FROM users u
-JOIN customers c ON c.username = u.username
-WHERE u.role = 'CUSTOMER'
-`
-
-func (q *Queries) CountCustomers(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countCustomers)
-	var total_items int64
-	err := row.Scan(&total_items)
-	return total_items, err
-}
-
 const createCustomer = `-- name: CreateCustomer :exec
 INSERT INTO
   customers (
@@ -252,13 +238,7 @@ FROM users u
 JOIN customers c ON c.username = u.username
 WHERE u.role = 'CUSTOMER'
 ORDER BY u.is_active DESC, u.first_name ASC, u.last_name ASC
-LIMIT ? OFFSET ?
 `
-
-type ListCustomersParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
-}
 
 type ListCustomersRow struct {
 	Username                     string                 `json:"username"`
@@ -280,8 +260,8 @@ type ListCustomersRow struct {
 	MarketingSource              string                 `json:"marketingSource"`
 }
 
-func (q *Queries) ListCustomers(ctx context.Context, arg ListCustomersParams) ([]ListCustomersRow, error) {
-	rows, err := q.db.QueryContext(ctx, listCustomers, arg.Limit, arg.Offset)
+func (q *Queries) ListCustomers(ctx context.Context) ([]ListCustomersRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCustomers)
 	if err != nil {
 		return nil, err
 	}

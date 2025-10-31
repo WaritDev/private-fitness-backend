@@ -18,25 +18,7 @@ func ProvideCustomerLogHandler(uc *usecases.CustomerLogUsecase) *CustomerLogHand
 
 // GET /api/customer-logs?page=1&limit=10
 func (h *CustomerLogHandler) List(c *fiber.Ctx) error {
-	// ดึง query param
-	pageStr := c.Query("page", "1")
-	limitStr := c.Query("limit", "10")
-
-	page, err := strconv.Atoi(pageStr)
-	if err != nil || page <= 0 {
-		page = 1
-	}
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil || limit <= 0 {
-		limit = 10
-	}
-
-	req := requests.ListCustomerLogsRequest{
-		Page:  int32(page),
-		Limit: int32(limit),
-	}
-
-	res, err := h.uc.List(c.Context(), req)
+	res, err := h.uc.List(c.Context())
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}

@@ -8,19 +8,8 @@ package dbmodel
 import (
 	"context"
 	"database/sql"
+	"time"
 )
-
-const countCustomerLogs = `-- name: CountCustomerLogs :one
-SELECT COUNT(cl.id) AS total_items
-FROM customer_logs cl
-`
-
-func (q *Queries) CountCustomerLogs(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countCustomerLogs)
-	var total_items int64
-	err := row.Scan(&total_items)
-	return total_items, err
-}
 
 const createCustomerLog = `-- name: CreateCustomerLog :exec
 INSERT INTO customer_logs (
@@ -38,6 +27,30 @@ type CreateCustomerLogParams struct {
 
 func (q *Queries) CreateCustomerLog(ctx context.Context, arg CreateCustomerLogParams) error {
 	_, err := q.db.ExecContext(ctx, createCustomerLog, arg.CustomerUsername, arg.LogType)
+	return err
+}
+
+const createPendingCheckInLog = `-- name: CreatePendingCheckInLog :exec
+INSERT INTO customer_logs (
+  customer_username,
+  log_type,
+  status,
+  schedule_id
+) VALUES (
+  ?, 'CHECK_IN', 'PENDING', ?
+)
+`
+
+type CreatePendingCheckInLogParams struct {
+	CustomerUsername sql.NullString `json:"customerUsername"`
+	ScheduleID       sql.NullInt32  `json:"scheduleId"`
+}
+
+// สร้าง pending check-in log สำหรับลูกค้าที่สแกน QR Code
+// NOTE: ต้องรัน migration ก่อน (เพิ่ม status และ schedule_id columns)
+// หากยังไม่ได้รัน migration ให้ใช้ CreateCustomerLog แทน และจัดการใน use case layer
+func (q *Queries) CreatePendingCheckInLog(ctx context.Context, arg CreatePendingCheckInLogParams) error {
+	_, err := q.db.ExecContext(ctx, createPendingCheckInLog, arg.CustomerUsername, arg.ScheduleID)
 	return err
 }
 
@@ -87,6 +100,80 @@ func (q *Queries) GetCustomerLogByID(ctx context.Context, id int32) (GetCustomer
 	return i, err
 }
 
+const getPendingCheckInsByTrainer = `-- name: GetPendingCheckInsByTrainer :many
+SELECT 
+  cl.id AS log_id,
+  cl.customer_username,
+  u.first_name AS customer_first_name,
+  u.last_name AS customer_last_name,
+  cl.created_at AS checkin_time,
+  ts.id AS schedule_id,
+  ts.start_time AS appointment_start_time,
+  ts.end_time AS appointment_end_time,
+  cs.id AS session_id,
+  cs.total_sessions,
+  cs.used_sessions
+FROM customer_logs cl
+JOIN training_schedules ts ON ts.id = cl.schedule_id
+JOIN users u ON u.username = cl.customer_username
+LEFT JOIN customer_sessions cs ON cs.id = ts.session_id
+WHERE ts.trainer_username = ?
+  AND cl.log_type = 'CHECK_IN'
+  AND cl.status = 'PENDING'
+  AND DATE(ts.start_time) = CURDATE()
+ORDER BY cl.created_at DESC
+`
+
+type GetPendingCheckInsByTrainerRow struct {
+	LogID                int32          `json:"logId"`
+	CustomerUsername     sql.NullString `json:"customerUsername"`
+	CustomerFirstName    string         `json:"customerFirstName"`
+	CustomerLastName     string         `json:"customerLastName"`
+	CheckinTime          sql.NullTime   `json:"checkinTime"`
+	ScheduleID           int32          `json:"scheduleId"`
+	AppointmentStartTime time.Time      `json:"appointmentStartTime"`
+	AppointmentEndTime   time.Time      `json:"appointmentEndTime"`
+	SessionID            sql.NullInt32  `json:"sessionId"`
+	TotalSessions        sql.NullInt32  `json:"totalSessions"`
+	UsedSessions         sql.NullInt32  `json:"usedSessions"`
+}
+
+// ดึง pending check-ins ของลูกค้าที่มี schedule กับ trainer นี้
+func (q *Queries) GetPendingCheckInsByTrainer(ctx context.Context, trainerUsername sql.NullString) ([]GetPendingCheckInsByTrainerRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPendingCheckInsByTrainer, trainerUsername)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPendingCheckInsByTrainerRow
+	for rows.Next() {
+		var i GetPendingCheckInsByTrainerRow
+		if err := rows.Scan(
+			&i.LogID,
+			&i.CustomerUsername,
+			&i.CustomerFirstName,
+			&i.CustomerLastName,
+			&i.CheckinTime,
+			&i.ScheduleID,
+			&i.AppointmentStartTime,
+			&i.AppointmentEndTime,
+			&i.SessionID,
+			&i.TotalSessions,
+			&i.UsedSessions,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listCustomerLogs = `-- name: ListCustomerLogs :many
 SELECT
   cl.id                    AS log_id,
@@ -99,13 +186,7 @@ FROM customer_logs cl
 JOIN customers c ON c.username = cl.customer_username
 JOIN users     u ON u.username = c.username
 ORDER BY cl.created_at DESC, cl.id DESC
-LIMIT ? OFFSET ?
 `
-
-type ListCustomerLogsParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
-}
 
 type ListCustomerLogsRow struct {
 	LogID             int32               `json:"logId"`
@@ -116,8 +197,8 @@ type ListCustomerLogsRow struct {
 	LogType           CustomerLogsLogType `json:"logType"`
 }
 
-func (q *Queries) ListCustomerLogs(ctx context.Context, arg ListCustomerLogsParams) ([]ListCustomerLogsRow, error) {
-	rows, err := q.db.QueryContext(ctx, listCustomerLogs, arg.Limit, arg.Offset)
+func (q *Queries) ListCustomerLogs(ctx context.Context) ([]ListCustomerLogsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCustomerLogs)
 	if err != nil {
 		return nil, err
 	}
@@ -144,6 +225,17 @@ func (q *Queries) ListCustomerLogs(ctx context.Context, arg ListCustomerLogsPara
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateCheckInLogStatus = `-- name: UpdateCheckInLogStatus :execresult
+UPDATE customer_logs
+SET status = 'CONFIRMED'
+WHERE id = ? AND status = 'PENDING'
+`
+
+// อัปเดต status ของ check-in log จาก PENDING เป็น CONFIRMED
+func (q *Queries) UpdateCheckInLogStatus(ctx context.Context, id int32) (sql.Result, error) {
+	return q.db.ExecContext(ctx, updateCheckInLogStatus, id)
 }
 
 const updateCustomerLogByID = `-- name: UpdateCustomerLogByID :execresult

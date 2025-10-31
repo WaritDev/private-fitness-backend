@@ -151,17 +151,9 @@ func (r *ProductRepository) mapToProductInfo(row dbmodel.Product, includeTimesta
 	}
 }
 
-func (r *ProductRepository) List(ctx context.Context, limit, offset int32) ([]dbmodel.ListProductsRow, error) {
-	return r.q.ListProducts(ctx, dbmodel.ListProductsParams{
-		Limit:  limit,
-		Offset: offset,
-	})
+func (r *ProductRepository) List(ctx context.Context) ([]dbmodel.ListProductsRow, error) {
+	return r.q.ListProducts(ctx)
 }
-
-func (r *ProductRepository) Count(ctx context.Context) (int64, error) {
-	return r.q.CountProducts(ctx)
-}
-
 func (r *ProductRepository) CheckPaymentAccountActive(ctx context.Context, id int32) (int64, error) {
 	return r.q.CheckPaymentAccountActive(ctx, id)
 }

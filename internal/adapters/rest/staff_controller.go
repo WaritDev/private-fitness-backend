@@ -27,11 +27,7 @@ func (h *StaffHandler) Register(r fiber.Router) {
 }
 
 func (h *StaffHandler) ListStaffs(c *fiber.Ctx) error {
-	var q requests.ListStaffsRequest
-	if err := c.QueryParser(&q); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	}
-	resp, err := h.uc.ListStaffs(c.Context(), q)
+	resp, err := h.uc.ListStaffs(c.Context())
 	if err != nil { return fiber.NewError(fiber.StatusBadRequest, err.Error()) }
 	return c.Status(fiber.StatusOK).JSON(resp)
 }

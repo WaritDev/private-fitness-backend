@@ -108,6 +108,13 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	dayOffsGroup.Post("/", handler.Trainer.AddDayOff)         // Q3P.2 + Q3P.3 + Q3P.4: Add new day-off
 	dayOffsGroup.Delete("/:id", handler.Trainer.DeleteDayOff) // Q3P.5: Delete day-off
 
+	// Use Case: Trainer Calendar & Check-in Confirmation (Trainer must be logged in)
+	calendarGroup := trainers.Group("/calendar", middleware.AuthMiddleware(handler.Auth.UC))
+	calendarGroup.Get("/", handler.Trainer.GetCalendar) // Get appointments with pending check-ins
+
+	checkinGroup := trainers.Group("/checkin", middleware.AuthMiddleware(handler.Auth.UC))
+	checkinGroup.Post("/", handler.Trainer.ConfirmCheckIn) // Trainer confirm check-in and deduct session
+
 	// Payment routes (for Use Case: ยืนยันการชำระเงิน)
 	payments := apiGroup.Group("/payments")
 	payments.Get("/info/:productId", handler.Payment.GetPaymentInfo)

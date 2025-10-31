@@ -80,3 +80,34 @@ type DeleteDayOffResponse struct {
 	Status  string `json:"status"`  // สถานะ "success" หรือ "error"
 	Message string `json:"message"` // ข้อความ
 }
+
+// Use Case: Trainer Calendar & Check-in Confirmation
+
+// CalendarAppointment - ข้อมูล appointment ใน calendar
+type CalendarAppointment struct {
+	ScheduleID        int32     `json:"scheduleId"`        // ID จาก training_schedules
+	CustomerUsername  string    `json:"customerUsername"` // Username ของลูกค้า
+	CustomerFirstName string    `json:"customerFirstName"` // ชื่อลูกค้า
+	CustomerLastName  string    `json:"customerLastName"`  // นามสกุลลูกค้า
+	StartTime         time.Time `json:"startTime"`         // เวลาเริ่มต้น
+	EndTime           time.Time `json:"endTime"`           // เวลาสิ้นสุด
+	SessionID         int32     `json:"sessionId"`         // ID ของ session package
+	TotalSessions     int32     `json:"totalSessions"`     // จำนวน session ทั้งหมด
+	UsedSessions      int32     `json:"usedSessions"`      // จำนวน session ที่ใช้ไปแล้ว
+	CheckinStatus     string    `json:"checkinStatus"`      // "PENDING", "CONFIRMED", "NONE"
+	CheckinLogID      int32     `json:"checkinLogId"`       // ID ของ check-in log (ถ้ามี)
+	CheckinTime       time.Time `json:"checkinTime"`        // เวลาที่ check-in (ถ้ามี)
+}
+
+// TrainerCalendarResponse - Response สำหรับ calendar ของ Trainer
+type TrainerCalendarResponse struct {
+	Status       string               `json:"status"`       // สถานะ "success"
+	Message      string               `json:"message"`      // ข้อความ
+	Appointments []CalendarAppointment `json:"appointments"` // รายการ appointments
+}
+
+// ConfirmCheckInResponse - Response สำหรับ confirm check-in
+type ConfirmCheckInResponse struct {
+	Status  string `json:"status"`  // สถานะ "success" หรือ "error"
+	Message string `json:"message"` // ข้อความ
+}

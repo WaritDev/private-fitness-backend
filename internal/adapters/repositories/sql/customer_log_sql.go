@@ -33,15 +33,8 @@ func (r *CustomerLogRepository) CreateCustomerLog(ctx context.Context, tx *sql.T
 	return nil
 }
 
-func (r *CustomerLogRepository) List(ctx context.Context, limit, offset int32) ([]dbmodel.ListCustomerLogsRow, error) {
-	return r.q.ListCustomerLogs(ctx, dbmodel.ListCustomerLogsParams{
-		Limit:  limit,
-		Offset: offset,
-	})
-}
-
-func (r *CustomerLogRepository) Count(ctx context.Context) (int64, error) {
-	return r.q.CountCustomerLogs(ctx)
+func (r *CustomerLogRepository) List(ctx context.Context) ([]dbmodel.ListCustomerLogsRow, error) {
+	return r.q.ListCustomerLogs(ctx)
 }
 
 func (r *CustomerLogRepository) UpdateByID(ctx context.Context, id int32, ts time.Time, logType string) (int64, error) {
@@ -66,4 +59,57 @@ func (r *CustomerLogRepository) DeleteByID(ctx context.Context, id int32) (int64
 
 func (r *CustomerLogRepository) GetByID(ctx context.Context, id int32) (dbmodel.GetCustomerLogByIDRow, error) {
 	return r.q.GetCustomerLogByID(ctx, id)
+}
+
+// CreatePendingCheckInLog - สร้าง pending check-in log
+func (r *CustomerLogRepository) CreatePendingCheckInLog(ctx context.Context, customerUsername string, scheduleID int32) error {
+	err := r.q.CreatePendingCheckInLog(ctx, dbmodel.CreatePendingCheckInLogParams{
+		CustomerUsername: sql.NullString{String: customerUsername, Valid: true},
+		ScheduleID:       sql.NullInt32{Int32: scheduleID, Valid: true},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create pending check-in log: %w", err)
+	}
+	return nil
+}
+
+// GetPendingCheckInsByTrainer - ดึง pending check-ins ของ trainer
+func (r *CustomerLogRepository) GetPendingCheckInsByTrainer(ctx context.Context, trainerUsername string) ([]repositories.PendingCheckInInfo, error) {
+	rows, err := r.q.GetPendingCheckInsByTrainer(ctx, sql.NullString{String: trainerUsername, Valid: true})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get pending check-ins: %w", err)
+	}
+
+	result := make([]repositories.PendingCheckInInfo, len(rows))
+	for i, row := range rows {
+		var checkinTime time.Time
+		if row.CheckinTime.Valid {
+			checkinTime = row.CheckinTime.Time
+		}
+
+		result[i] = repositories.PendingCheckInInfo{
+			LogID:                row.LogID,
+			CustomerUsername:     row.CustomerUsername.String,
+			CustomerFirstName:    row.CustomerFirstName,
+			CustomerLastName:     row.CustomerLastName,
+			CheckInTime:          checkinTime,
+			ScheduleID:           row.ScheduleID,
+			AppointmentStartTime: row.AppointmentStartTime,
+			AppointmentEndTime:   row.AppointmentEndTime,
+			SessionID:            row.SessionID,
+			TotalSessions:        row.TotalSessions,
+			UsedSessions:         row.UsedSessions,
+		}
+	}
+
+	return result, nil
+}
+
+// UpdateCheckInLogStatus - อัปเดต status จาก PENDING เป็น CONFIRMED
+func (r *CustomerLogRepository) UpdateCheckInLogStatus(ctx context.Context, logID int32) (int64, error) {
+	res, err := r.q.UpdateCheckInLogStatus(ctx, logID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to update check-in log status: %w", err)
+	}
+	return res.RowsAffected()
 }

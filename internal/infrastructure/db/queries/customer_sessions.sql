@@ -115,15 +115,7 @@ FROM customer_sessions cs
 JOIN users cu ON cu.username = cs.customer_username
 JOIN users tu ON tu.username = cs.trainer_username
 JOIN products p ON p.id = cs.product_id
-ORDER BY cs.created_at DESC, cs.id DESC
-LIMIT ? OFFSET ?;
-
--- name: CountCustomerSessions :one
-SELECT COUNT(cs.id) AS total_items
-FROM customer_sessions cs
-JOIN users cu ON cu.username = cs.customer_username
-JOIN users tu ON tu.username = cs.trainer_username
-JOIN products p ON p.id = cs.product_id;
+ORDER BY cs.created_at DESC, cs.id DESC;
 
 -- name: GetCustomerSessionByID :one
 SELECT

@@ -41,21 +41,6 @@ func (q *Queries) CheckTrainerExists(ctx context.Context, username string) (int6
 	return cnt, err
 }
 
-const countCustomerSessions = `-- name: CountCustomerSessions :one
-SELECT COUNT(cs.id) AS total_items
-FROM customer_sessions cs
-JOIN users cu ON cu.username = cs.customer_username
-JOIN users tu ON tu.username = cs.trainer_username
-JOIN products p ON p.id = cs.product_id
-`
-
-func (q *Queries) CountCustomerSessions(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countCustomerSessions)
-	var total_items int64
-	err := row.Scan(&total_items)
-	return total_items, err
-}
-
 const createCustomerSession = `-- name: CreateCustomerSession :exec
 INSERT INTO customer_sessions (
   customer_username,
@@ -348,13 +333,7 @@ JOIN users cu ON cu.username = cs.customer_username
 JOIN users tu ON tu.username = cs.trainer_username
 JOIN products p ON p.id = cs.product_id
 ORDER BY cs.created_at DESC, cs.id DESC
-LIMIT ? OFFSET ?
 `
-
-type ListCustomerSessionsParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
-}
 
 type ListCustomerSessionsRow struct {
 	ID                int32                  `json:"id"`
@@ -379,8 +358,8 @@ type ListCustomerSessionsRow struct {
 	Status            CustomerSessionsStatus `json:"status"`
 }
 
-func (q *Queries) ListCustomerSessions(ctx context.Context, arg ListCustomerSessionsParams) ([]ListCustomerSessionsRow, error) {
-	rows, err := q.db.QueryContext(ctx, listCustomerSessions, arg.Limit, arg.Offset)
+func (q *Queries) ListCustomerSessions(ctx context.Context) ([]ListCustomerSessionsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCustomerSessions)
 	if err != nil {
 		return nil, err
 	}

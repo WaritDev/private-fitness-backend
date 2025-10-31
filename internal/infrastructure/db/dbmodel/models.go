@@ -115,6 +115,55 @@ func AllCustomerLogsLogTypeValues() []CustomerLogsLogType {
 	}
 }
 
+type CustomerLogsStatus string
+
+const (
+	CustomerLogsStatusPENDING   CustomerLogsStatus = "PENDING"
+	CustomerLogsStatusCONFIRMED CustomerLogsStatus = "CONFIRMED"
+)
+
+func (e *CustomerLogsStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CustomerLogsStatus(s)
+	case string:
+		*e = CustomerLogsStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CustomerLogsStatus: %T", src)
+	}
+	return nil
+}
+
+type NullCustomerLogsStatus struct {
+	CustomerLogsStatus CustomerLogsStatus `json:"customerLogsStatus"`
+	Valid              bool               `json:"valid"` // Valid is true if CustomerLogsStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCustomerLogsStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.CustomerLogsStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CustomerLogsStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCustomerLogsStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CustomerLogsStatus), nil
+}
+
+func AllCustomerLogsStatusValues() []CustomerLogsStatus {
+	return []CustomerLogsStatus{
+		CustomerLogsStatusPENDING,
+		CustomerLogsStatusCONFIRMED,
+	}
+}
+
 type CustomerSessionsStatus string
 
 const (
@@ -615,10 +664,12 @@ type CustomerDuration struct {
 }
 
 type CustomerLog struct {
-	ID               int32               `json:"id"`
-	CustomerUsername sql.NullString      `json:"customerUsername"`
-	CreatedAt        sql.NullTime        `json:"createdAt"`
-	LogType          CustomerLogsLogType `json:"logType"`
+	ID               int32                  `json:"id"`
+	CustomerUsername sql.NullString         `json:"customerUsername"`
+	CreatedAt        sql.NullTime           `json:"createdAt"`
+	Status           NullCustomerLogsStatus `json:"status"`
+	ScheduleID       sql.NullInt32          `json:"scheduleId"`
+	LogType          CustomerLogsLogType    `json:"logType"`
 }
 
 type CustomerSession struct {

@@ -48,16 +48,9 @@ type Querier interface {
 	CompletedPTInRange(ctx context.Context, arg CompletedPTInRangeParams) (int64, error)
 	// นับจำนวนนัดหมายของเทรนเนอร์ในวันที่กำหนด
 	CountAppointmentsOnDate(ctx context.Context, arg CountAppointmentsOnDateParams) (int64, error)
-	CountCustomerDurations(ctx context.Context) (int64, error)
-	CountCustomerLogs(ctx context.Context) (int64, error)
-	CountCustomerSessions(ctx context.Context) (int64, error)
-	CountCustomers(ctx context.Context) (int64, error)
-	CountPaymentAccounts(ctx context.Context) (int64, error)
 	// Q_VERIFY_6: Count payment verifications by status
 	CountPaymentVerificationsByStatus(ctx context.Context, verificationStatus PaymentVerificationsVerificationStatus) (int64, error)
 	CountProductReferences(ctx context.Context, arg CountProductReferencesParams) (CountProductReferencesRow, error)
-	CountProducts(ctx context.Context) (int64, error)
-	CountStaffs(ctx context.Context) (int64, error)
 	CreateCustomer(ctx context.Context, arg CreateCustomerParams) error
 	CreateCustomerDuration(ctx context.Context, arg CreateCustomerDurationParams) error
 	CreateCustomerLog(ctx context.Context, arg CreateCustomerLogParams) error
@@ -65,6 +58,10 @@ type Querier interface {
 	// Q3P.4: Create day-off
 	CreateDayOff(ctx context.Context, arg CreateDayOffParams) error
 	CreatePaymentAccount(ctx context.Context, arg CreatePaymentAccountParams) error
+	// สร้าง pending check-in log สำหรับลูกค้าที่สแกน QR Code
+	// NOTE: ต้องรัน migration ก่อน (เพิ่ม status และ schedule_id columns)
+	// หากยังไม่ได้รัน migration ให้ใช้ CreateCustomerLog แทน และจัดการใน use case layer
+	CreatePendingCheckInLog(ctx context.Context, arg CreatePendingCheckInLogParams) error
 	CreateStaff(ctx context.Context, arg CreateStaffParams) error
 	// Q1P.3: Create Trainer Availability (Add Working Time)
 	CreateTrainerAvailability(ctx context.Context, arg CreateTrainerAvailabilityParams) error
@@ -119,6 +116,8 @@ type Querier interface {
 	GetCustomerDurationById(ctx context.Context, id int32) (CustomerDuration, error)
 	GetCustomerDurationsByUsername(ctx context.Context, customerUsername sql.NullString) ([]CustomerDuration, error)
 	GetCustomerLogByID(ctx context.Context, id int32) (GetCustomerLogByIDRow, error)
+	// Find customer's schedule for today (for check-in flow)
+	GetCustomerScheduleForToday(ctx context.Context, customerUsername sql.NullString) (GetCustomerScheduleForTodayRow, error)
 	GetCustomerSessionByID(ctx context.Context, id int32) (GetCustomerSessionByIDRow, error)
 	// Q3C.3a - ดึงวันหยุดหรือช่วงเวลาที่ไม่รับนัด (DAY_OFF)
 	GetDayOffSchedules(ctx context.Context, arg GetDayOffSchedulesParams) ([]GetDayOffSchedulesRow, error)
@@ -128,8 +127,13 @@ type Querier interface {
 	GetPaymentInfoByProductId(ctx context.Context, id int32) (GetPaymentInfoByProductIdRow, error)
 	// Q_VERIFY_4: Get payment verification by ID
 	GetPaymentVerificationById(ctx context.Context, id int32) (PaymentVerification, error)
+	// ดึง pending check-ins ของลูกค้าที่มี schedule กับ trainer นี้
+	GetPendingCheckInsByTrainer(ctx context.Context, trainerUsername sql.NullString) ([]GetPendingCheckInsByTrainerRow, error)
 	GetProductById(ctx context.Context, id int32) (Product, error)
 	GetStaffByUsername(ctx context.Context, username string) (GetStaffByUsernameRow, error)
+	// Get trainer's appointments with pending check-ins (for trainer calendar)
+	// Note: Requires customer_logs.status and schedule_id columns (run migration first)
+	GetTrainerAppointmentsWithPendingCheckIns(ctx context.Context, trainerUsername sql.NullString) ([]GetTrainerAppointmentsWithPendingCheckInsRow, error)
 	// Use Case 1P: Manage Working Hours
 	// Q1P.1: Get Trainer Availability with ID (Get Working Hours)
 	GetTrainerAvailability(ctx context.Context, trainerUsername string) ([]TrainingAvailability, error)
@@ -153,17 +157,17 @@ type Querier interface {
 	ListAllProducts(ctx context.Context) ([]Product, error)
 	// ดึงรายชื่อเทรนเนอร์ทั้งหมดที่ active (สำหรับ dropdown)
 	ListAllTrainers(ctx context.Context) ([]ListAllTrainersRow, error)
-	ListCustomerDurations(ctx context.Context, arg ListCustomerDurationsParams) ([]ListCustomerDurationsRow, error)
-	ListCustomerLogs(ctx context.Context, arg ListCustomerLogsParams) ([]ListCustomerLogsRow, error)
-	ListCustomerSessions(ctx context.Context, arg ListCustomerSessionsParams) ([]ListCustomerSessionsRow, error)
-	ListCustomers(ctx context.Context, arg ListCustomersParams) ([]ListCustomersRow, error)
+	ListCustomerDurations(ctx context.Context) ([]ListCustomerDurationsRow, error)
+	ListCustomerLogs(ctx context.Context) ([]ListCustomerLogsRow, error)
+	ListCustomerSessions(ctx context.Context) ([]ListCustomerSessionsRow, error)
+	ListCustomers(ctx context.Context) ([]ListCustomersRow, error)
 	ListDurations(ctx context.Context) ([]ListDurationsRow, error)
-	ListPaymentAccounts(ctx context.Context, arg ListPaymentAccountsParams) ([]ListPaymentAccountsRow, error)
+	ListPaymentAccounts(ctx context.Context) ([]ListPaymentAccountsRow, error)
 	// Q_VERIFY_5: List all payment verifications for a customer
 	ListPaymentVerificationsByCustomer(ctx context.Context, arg ListPaymentVerificationsByCustomerParams) ([]ListPaymentVerificationsByCustomerRow, error)
-	ListProducts(ctx context.Context, arg ListProductsParams) ([]ListProductsRow, error)
+	ListProducts(ctx context.Context) ([]ListProductsRow, error)
 	ListSessions(ctx context.Context) ([]ListSessionsRow, error)
-	ListStaffs(ctx context.Context, arg ListStaffsParams) ([]ListStaffsRow, error)
+	ListStaffs(ctx context.Context) ([]ListStaffsRow, error)
 	ListUsers(ctx context.Context) ([]ListUsersRow, error)
 	NewMembersInRange(ctx context.Context, arg NewMembersInRangeParams) (int64, error)
 	// Customer Self-Purchase: ลูกค้าซื้อแพ็กเกจ Duration เพิ่มเอง
@@ -177,6 +181,8 @@ type Querier interface {
 	RevenueSessions(ctx context.Context, arg RevenueSessionsParams) (int64, error)
 	TopSellingProductsDurations(ctx context.Context, arg TopSellingProductsDurationsParams) ([]TopSellingProductsDurationsRow, error)
 	TopSellingProductsSessions(ctx context.Context, arg TopSellingProductsSessionsParams) ([]TopSellingProductsSessionsRow, error)
+	// อัปเดต status ของ check-in log จาก PENDING เป็น CONFIRMED
+	UpdateCheckInLogStatus(ctx context.Context, id int32) (sql.Result, error)
 	UpdateCustomerDurationEditableFields(ctx context.Context, arg UpdateCustomerDurationEditableFieldsParams) error
 	UpdateCustomerLogByID(ctx context.Context, arg UpdateCustomerLogByIDParams) (sql.Result, error)
 	UpdateCustomerSessionEditableFields(ctx context.Context, arg UpdateCustomerSessionEditableFieldsParams) error

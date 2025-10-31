@@ -291,6 +291,48 @@ func (q *Queries) GetAppointmentSchedules(ctx context.Context, arg GetAppointmen
 	return items, nil
 }
 
+const getCustomerScheduleForToday = `-- name: GetCustomerScheduleForToday :one
+SELECT 
+  id,
+  trainer_username,
+  customer_username,
+  session_id,
+  start_time,
+  end_time
+FROM training_schedules
+WHERE customer_username = ?
+  AND schedule_type = 'APPOINTMENT'
+  AND DATE(start_time) = CURDATE()
+  AND start_time <= NOW()
+  AND end_time >= NOW()
+ORDER BY start_time DESC
+LIMIT 1
+`
+
+type GetCustomerScheduleForTodayRow struct {
+	ID               int32          `json:"id"`
+	TrainerUsername  sql.NullString `json:"trainerUsername"`
+	CustomerUsername sql.NullString `json:"customerUsername"`
+	SessionID        sql.NullInt32  `json:"sessionId"`
+	StartTime        time.Time      `json:"startTime"`
+	EndTime          time.Time      `json:"endTime"`
+}
+
+// Find customer's schedule for today (for check-in flow)
+func (q *Queries) GetCustomerScheduleForToday(ctx context.Context, customerUsername sql.NullString) (GetCustomerScheduleForTodayRow, error) {
+	row := q.db.QueryRowContext(ctx, getCustomerScheduleForToday, customerUsername)
+	var i GetCustomerScheduleForTodayRow
+	err := row.Scan(
+		&i.ID,
+		&i.TrainerUsername,
+		&i.CustomerUsername,
+		&i.SessionID,
+		&i.StartTime,
+		&i.EndTime,
+	)
+	return i, err
+}
+
 const getDayOffSchedules = `-- name: GetDayOffSchedules :many
 SELECT
   start_time,
@@ -324,6 +366,85 @@ func (q *Queries) GetDayOffSchedules(ctx context.Context, arg GetDayOffSchedules
 	for rows.Next() {
 		var i GetDayOffSchedulesRow
 		if err := rows.Scan(&i.StartTime, &i.EndTime); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTrainerAppointmentsWithPendingCheckIns = `-- name: GetTrainerAppointmentsWithPendingCheckIns :many
+SELECT 
+  ts.id AS schedule_id,
+  ts.customer_username,
+  u.first_name AS customer_first_name,
+  u.last_name AS customer_last_name,
+  ts.start_time,
+  ts.end_time,
+  ts.session_id,
+  cs.total_sessions,
+  cs.used_sessions,
+  COALESCE(cl.status, 'NONE') AS checkin_status,
+  cl.id AS checkin_log_id,
+  cl.created_at AS checkin_time
+FROM training_schedules ts
+JOIN users u ON u.username = ts.customer_username
+LEFT JOIN customer_sessions cs ON cs.id = ts.session_id
+LEFT JOIN customer_logs cl ON cl.schedule_id = ts.id 
+  AND cl.log_type = 'CHECK_IN' 
+  AND cl.status = 'PENDING'
+WHERE ts.trainer_username = ?
+  AND ts.schedule_type = 'APPOINTMENT'
+  AND DATE(ts.start_time) >= CURDATE()
+ORDER BY ts.start_time ASC
+`
+
+type GetTrainerAppointmentsWithPendingCheckInsRow struct {
+	ScheduleID        int32              `json:"scheduleId"`
+	CustomerUsername  sql.NullString     `json:"customerUsername"`
+	CustomerFirstName string             `json:"customerFirstName"`
+	CustomerLastName  string             `json:"customerLastName"`
+	StartTime         time.Time          `json:"startTime"`
+	EndTime           time.Time          `json:"endTime"`
+	SessionID         sql.NullInt32      `json:"sessionId"`
+	TotalSessions     sql.NullInt32      `json:"totalSessions"`
+	UsedSessions      sql.NullInt32      `json:"usedSessions"`
+	CheckinStatus     CustomerLogsStatus `json:"checkinStatus"`
+	CheckinLogID      sql.NullInt32      `json:"checkinLogId"`
+	CheckinTime       sql.NullTime       `json:"checkinTime"`
+}
+
+// Get trainer's appointments with pending check-ins (for trainer calendar)
+// Note: Requires customer_logs.status and schedule_id columns (run migration first)
+func (q *Queries) GetTrainerAppointmentsWithPendingCheckIns(ctx context.Context, trainerUsername sql.NullString) ([]GetTrainerAppointmentsWithPendingCheckInsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTrainerAppointmentsWithPendingCheckIns, trainerUsername)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTrainerAppointmentsWithPendingCheckInsRow
+	for rows.Next() {
+		var i GetTrainerAppointmentsWithPendingCheckInsRow
+		if err := rows.Scan(
+			&i.ScheduleID,
+			&i.CustomerUsername,
+			&i.CustomerFirstName,
+			&i.CustomerLastName,
+			&i.StartTime,
+			&i.EndTime,
+			&i.SessionID,
+			&i.TotalSessions,
+			&i.UsedSessions,
+			&i.CheckinStatus,
+			&i.CheckinLogID,
+			&i.CheckinTime,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

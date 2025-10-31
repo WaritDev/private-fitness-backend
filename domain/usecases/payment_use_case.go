@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -15,6 +14,7 @@ import (
 	"github.com/WaritDev/private-fitness-backend/domain/repositories"
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
 	"github.com/WaritDev/private-fitness-backend/domain/responses"
+	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db/dbmodel"
 	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/slip2go"
 	"github.com/WaritDev/private-fitness-backend/utils"
 )
@@ -83,47 +83,8 @@ func (u *PaymentUseCase) GetPaymentInfo(ctx context.Context, productID int32, di
 	return response, nil
 }
 
-func (uc *PaymentUseCase) List(ctx context.Context, req requests.ListPaymentAccountsRequest) (responses.ListPaymentAccountsResponse, error) {
-	limit := req.Limit
-	if limit <= 0 || limit > 100 {
-		limit = 10
-	}
-	page := req.Page
-	if page <= 0 {
-		page = 1
-	}
-	offset := (page - 1) * limit
-
-	rows, err := uc.paymentRepo.List(ctx, limit, offset)
-	if err != nil {
-		return responses.ListPaymentAccountsResponse{}, err
-	}
-	total, err := uc.paymentRepo.Count(ctx)
-	if err != nil {
-		return responses.ListPaymentAccountsResponse{}, err
-	}
-
-	items := make([]responses.PaymentAccountItem, 0, len(rows))
-	for _, r := range rows {
-		items = append(items, responses.PaymentAccountItem{
-			ID:            r.ID,
-			AccountName:   r.AccountName,
-			AccountNumber: r.AccountNumber,
-			BankName:      r.BankName,
-			QRCodeURL:     r.QrCodeImageUrl,
-			IsActive:      r.Column6,
-		})
-	}
-
-	return responses.ListPaymentAccountsResponse{
-		Data: items,
-		Meta: responses.PageMeta{
-			Page:       page,
-			Limit:      limit,
-			TotalItems: total,
-			TotalPages: int32(math.Ceil(float64(total) / float64(limit))),
-		},
-	}, nil
+func (uc *PaymentUseCase) List(ctx context.Context) ([]dbmodel.ListPaymentAccountsRow, error) {
+	return uc.paymentRepo.List(ctx)
 }
 
 var reURL = regexp.MustCompile(`^(https?://)[^\s]+$`)

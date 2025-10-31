@@ -12,8 +12,7 @@ type PaymentAccountRepository interface {
 	// GetPaymentInfoByProductId - ดึงข้อมูลสินค้าและบัญชีชำระเงิน (Q5S.1)
 	GetPaymentInfoByProductId(ctx context.Context, productID int32) (*responses.PaymentInfoForCalculation, error)
 
-	List(ctx context.Context, limit, offset int32) ([]dbmodel.ListPaymentAccountsRow, error)
-	Count(ctx context.Context) (int64, error)
+	List(ctx context.Context) ([]dbmodel.ListPaymentAccountsRow, error)
 
 	Insert(ctx context.Context, p CreatePaymentAccountParams) (int32, error)
 

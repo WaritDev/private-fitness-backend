@@ -13,26 +13,29 @@ import (
 )
 
 type MemberUseCase struct {
-	logRepo     repositories.CustomerLogRepository
-	sessionRepo repositories.CustomerSessionRepository
-	userRepo    repositories.UserRepo
-	authRepo    repositories.AuthRepo
-	db          *sql.DB
+	logRepo            repositories.CustomerLogRepository
+	sessionRepo        repositories.CustomerSessionRepository
+	scheduleRepo       repositories.TrainingScheduleRepository
+	userRepo           repositories.UserRepo
+	authRepo           repositories.AuthRepo
+	db                 *sql.DB
 }
 
 func ProvideMemberUseCase(
 	logRepo repositories.CustomerLogRepository,
 	sessionRepo repositories.CustomerSessionRepository,
+	scheduleRepo repositories.TrainingScheduleRepository,
 	userRepo repositories.UserRepo,
 	authRepo repositories.AuthRepo,
 	db *sql.DB,
 ) *MemberUseCase {
 	return &MemberUseCase{
-		logRepo:     logRepo,
-		sessionRepo: sessionRepo,
-		userRepo:    userRepo,
-		authRepo:    authRepo,
-		db:          db,
+		logRepo:      logRepo,
+		sessionRepo:  sessionRepo,
+		scheduleRepo: scheduleRepo,
+		userRepo:     userRepo,
+		authRepo:     authRepo,
+		db:           db,
 	}
 }
 
@@ -100,7 +103,7 @@ func (u *MemberUseCase) VerifyQRToken(tokenString string) (*QRTokenPayload, erro
 	return nil, fmt.Errorf("invalid token claims")
 }
 
-// CheckIn - Use Case 5C: บันทึกการเข้าใช้งานฟิตเนส (Q5C.1 และ Q5C.2)
+// CheckIn - Use Case 5C: บันทึกการเข้าใช้งานฟิตเนส (Hybrid Flow - สร้าง PENDING log)
 func (u *MemberUseCase) CheckIn(ctx context.Context, username, packageType string) (*responses.CheckInResponse, error) {
 	// ดึงข้อมูลผู้ใช้
 	user, err := u.userRepo.GetByUsername(ctx, username)
@@ -108,40 +111,61 @@ func (u *MemberUseCase) CheckIn(ctx context.Context, username, packageType strin
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
 
-	// Begin transaction
-	tx, err := u.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer tx.Rollback()
-
-	// Q5C.1: สร้าง customer log (CHECK_IN)
-	err = u.logRepo.CreateCustomerLog(ctx, tx, username, "CHECK_IN")
-	if err != nil {
-		return nil, fmt.Errorf("failed to create check-in log: %w", err)
-	}
-
-	// Q5C.2: ถ้าเป็น SESSION package ให้อัปเดต used_sessions
+	// สำหรับ SESSION package: หา schedule ของวันนี้
+	var scheduleID int32
 	if packageType == "SESSION" {
-		err = u.sessionRepo.IncrementUsedSessionsByUsername(ctx, username)
+		schedule, err := u.scheduleRepo.GetCustomerScheduleForToday(ctx, username)
 		if err != nil {
-			// Log warning แต่ไม่ fail การ check-in
-			fmt.Printf("Warning: failed to increment used sessions for %s: %v\n", username, err)
+			return nil, fmt.Errorf("failed to get customer schedule: %w", err)
+		}
+
+		// ถ้ามี schedule ให้บันทึก pending log พร้อม schedule_id
+		if schedule != nil {
+			scheduleID = schedule.ID
+		} else {
+			// ถ้าไม่มี schedule แต่เป็น SESSION → ไม่สามารถ check-in ได้
+			return &responses.CheckInResponse{
+				Status:      "error",
+				Message:     "No appointment scheduled for today",
+				Username:    username,
+				FirstName:   user.FirstName,
+				PackageType: packageType,
+			}, nil
 		}
 	}
 
-	// Commit transaction
-	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	// สร้าง pending check-in log (ไม่หัก session ทันที - รอ Trainer confirm)
+	if scheduleID > 0 {
+		// สำหรับ SESSION: สร้าง pending log พร้อม schedule_id
+		err = u.logRepo.CreatePendingCheckInLog(ctx, username, scheduleID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create pending check-in log: %w", err)
+		}
+	} else {
+		// สำหรับ DURATION: สร้าง log ปกติ (ไม่มี pending)
+		tx, err := u.db.BeginTx(ctx, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to begin transaction: %w", err)
+		}
+		defer tx.Rollback()
+
+		err = u.logRepo.CreateCustomerLog(ctx, tx, username, "CHECK_IN")
+		if err != nil {
+			return nil, fmt.Errorf("failed to create check-in log: %w", err)
+		}
+
+		if err := tx.Commit(); err != nil {
+			return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		}
 	}
 
 	// Build response
 	return &responses.CheckInResponse{
 		Status:      "success",
-		Message:     fmt.Sprintf("Welcome, %s!", user.FirstName),
+		Message:     fmt.Sprintf("Check-in pending. Waiting for trainer confirmation, %s!", user.FirstName),
 		Username:    username,
 		FirstName:   user.FirstName,
 		PackageType: packageType,
-		LogID:       0, // TODO: get actual log ID if needed
+		LogID:       0,
 	}, nil
 }

@@ -223,15 +223,8 @@ func (r *CustomerSessionRepository) GetCustomerActiveSessions(ctx context.Contex
 	return result, nil
 }
 
-func (r *CustomerSessionRepository) List(ctx context.Context, limit, offset int32) ([]dbmodel.ListCustomerSessionsRow, error) {
-	return r.q.ListCustomerSessions(ctx, dbmodel.ListCustomerSessionsParams{
-		Limit:  limit,
-		Offset: offset,
-	})
-}
-
-func (r *CustomerSessionRepository) Count(ctx context.Context) (int64, error) {
-	return r.q.CountCustomerSessions(ctx)
+func (r *CustomerSessionRepository) List(ctx context.Context) ([]dbmodel.ListCustomerSessionsRow, error) {
+	return r.q.ListCustomerSessions(ctx)
 }
 
 func (r *CustomerSessionRepository) CheckTrainerExists(ctx context.Context, username string) (int64, error) {

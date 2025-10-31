@@ -2,6 +2,7 @@ package usecases
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strconv"
 	"strings"
@@ -12,20 +13,39 @@ import (
 	"github.com/WaritDev/private-fitness-backend/domain/responses"
 )
 
+// getThailandLocation returns Asia/Bangkok timezone location
+func getThailandLocation() *time.Location {
+	loc, err := time.LoadLocation("Asia/Bangkok")
+	if err != nil {
+		// Fallback to UTC if Asia/Bangkok is not available
+		return time.UTC
+	}
+	return loc
+}
+
 // TrainerUseCase handles trainer-related business logic
 type TrainerUseCase struct {
 	trainerRepo          repositories.TrainerRepository
 	trainingScheduleRepo repositories.TrainingScheduleRepository
+	customerLogRepo      repositories.CustomerLogRepository
+	customerSessionRepo  repositories.CustomerSessionRepository
+	db                   *sql.DB
 }
 
 // ProvideTrainerUseCase creates a new TrainerUseCase
 func ProvideTrainerUseCase(
 	trainerRepo repositories.TrainerRepository,
 	trainingScheduleRepo repositories.TrainingScheduleRepository,
+	customerLogRepo repositories.CustomerLogRepository,
+	customerSessionRepo repositories.CustomerSessionRepository,
+	db *sql.DB,
 ) *TrainerUseCase {
 	return &TrainerUseCase{
 		trainerRepo:          trainerRepo,
 		trainingScheduleRepo: trainingScheduleRepo,
+		customerLogRepo:      customerLogRepo,
+		customerSessionRepo:  customerSessionRepo,
+		db:                   db,
 	}
 }
 
@@ -40,13 +60,18 @@ func (u *TrainerUseCase) GetWorkingHours(ctx context.Context, trainerUsername st
 	}
 
 	// แปลงข้อมูลเป็น response format
+	// Convert TIMESTAMP to HH:MM format in Thailand timezone
+	thailandLoc := getThailandLocation()
 	workingHours := make([]responses.TrainerAvailabilityResponse, len(availabilities))
 	for i, avail := range availabilities {
+		// Convert UTC to Thailand timezone before formatting
+		startTimeLocal := avail.StartTime.In(thailandLoc)
+		endTimeLocal := avail.EndTime.In(thailandLoc)
 		workingHours[i] = responses.TrainerAvailabilityResponse{
 			AvailabilityID: avail.ID,
 			DayOfWeek:      avail.DayOfWeek,
-			StartTime:      avail.StartTime.Format("15:04"), // HH:MM format
-			EndTime:        avail.EndTime.Format("15:04"),   // HH:MM format
+			StartTime:      startTimeLocal.Format("15:04"), // HH:MM format
+			EndTime:        endTimeLocal.Format("15:04"),   // HH:MM format
 		}
 	}
 
@@ -63,9 +88,10 @@ func (u *TrainerUseCase) AddWorkingTime(ctx context.Context, trainerUsername str
 	// Note: Fiber validator จะตรวจสอบ required fields และ oneof ให้แล้ว
 
 	// Parse time strings (HH:MM) and convert to TIMESTAMP
-	// We'll use today's date + time to create a valid TIMESTAMP
-	today := time.Now()
-	
+	// Use today's date + time to create a valid TIMESTAMP in Thailand timezone
+	thailandLoc := getThailandLocation()
+	today := time.Now().In(thailandLoc)
+
 	// Parse start time (HH:MM format)
 	startTimeParts := strings.Split(req.StartTime, ":")
 	if len(startTimeParts) != 2 {
@@ -88,7 +114,7 @@ func (u *TrainerUseCase) AddWorkingTime(ctx context.Context, trainerUsername str
 			Message: "Invalid start time format. Expected HH:MM",
 		}, nil
 	}
-	startTime := time.Date(today.Year(), today.Month(), today.Day(), startHour, startMin, 0, 0, time.UTC)
+	startTime := time.Date(today.Year(), today.Month(), today.Day(), startHour, startMin, 0, 0, thailandLoc)
 
 	// Parse end time (HH:MM format)
 	endTimeParts := strings.Split(req.EndTime, ":")
@@ -112,7 +138,7 @@ func (u *TrainerUseCase) AddWorkingTime(ctx context.Context, trainerUsername str
 			Message: "Invalid end time format. Expected HH:MM",
 		}, nil
 	}
-	endTime := time.Date(today.Year(), today.Month(), today.Day(), endHour, endMin, 0, 0, time.UTC)
+	endTime := time.Date(today.Year(), today.Month(), today.Day(), endHour, endMin, 0, 0, thailandLoc)
 
 	// Step 7.2: ตรวจสอบว่า End_Time ต้องอยู่หลัง Start_Time
 	if !endTime.After(startTime) {
@@ -175,8 +201,10 @@ func (u *TrainerUseCase) UpdateWorkingTime(ctx context.Context, trainerUsername 
 	}
 
 	// Step 2: Parse time strings (HH:MM) and convert to TIMESTAMP
-	today := time.Now()
-	
+	// Use today's date + time in Thailand timezone
+	thailandLoc := getThailandLocation()
+	today := time.Now().In(thailandLoc)
+
 	// Parse start time
 	startTimeParts := strings.Split(req.StartTime, ":")
 	if len(startTimeParts) != 2 {
@@ -199,7 +227,7 @@ func (u *TrainerUseCase) UpdateWorkingTime(ctx context.Context, trainerUsername 
 			Message: "Invalid start time format. Expected HH:MM",
 		}, nil
 	}
-	startTime := time.Date(today.Year(), today.Month(), today.Day(), startHour, startMin, 0, 0, time.UTC)
+	startTime := time.Date(today.Year(), today.Month(), today.Day(), startHour, startMin, 0, 0, thailandLoc)
 
 	// Parse end time
 	endTimeParts := strings.Split(req.EndTime, ":")
@@ -223,7 +251,7 @@ func (u *TrainerUseCase) UpdateWorkingTime(ctx context.Context, trainerUsername 
 			Message: "Invalid end time format. Expected HH:MM",
 		}, nil
 	}
-	endTime := time.Date(today.Year(), today.Month(), today.Day(), endHour, endMin, 0, 0, time.UTC)
+	endTime := time.Date(today.Year(), today.Month(), today.Day(), endHour, endMin, 0, 0, thailandLoc)
 
 	// Step 3: Validate endTime > startTime
 	if !endTime.After(startTime) {
@@ -297,12 +325,15 @@ func (u *TrainerUseCase) GetDayOffs(ctx context.Context, trainerUsername string)
 	}
 
 	// แปลงข้อมูลเป็น response format
+	// Convert TIMESTAMP to Thailand timezone before returning
+	thailandLoc := getThailandLocation()
 	dayOffsList := make([]responses.DayOffResponse, len(dayOffs))
 	for i, dayOff := range dayOffs {
+		// Keep time.Time format (ISO 8601) for frontend to handle timezone
 		dayOffsList[i] = responses.DayOffResponse{
 			ScheduleID: dayOff.ScheduleID,
-			StartTime:  dayOff.StartTime,
-			EndTime:    dayOff.EndTime,
+			StartTime:  dayOff.StartTime.In(thailandLoc),
+			EndTime:    dayOff.EndTime.In(thailandLoc),
 		}
 	}
 
@@ -324,12 +355,12 @@ func (u *TrainerUseCase) AddDayOff(ctx context.Context, trainerUsername string, 
 		}, nil
 	}
 
-	// Step 2: Convert to full day range
+	// Step 2: Convert to full day range in Thailand timezone
 	// NewStartTime = Day_Off_Date 00:00:00
 	// NewEndTime = Day_Off_Date 23:59:59
-	location := time.UTC // or use appropriate timezone
-	newStartTime := time.Date(dayOffDate.Year(), dayOffDate.Month(), dayOffDate.Day(), 0, 0, 0, 0, location)
-	newEndTime := time.Date(dayOffDate.Year(), dayOffDate.Month(), dayOffDate.Day(), 23, 59, 59, 0, location)
+	thailandLoc := getThailandLocation()
+	newStartTime := time.Date(dayOffDate.Year(), dayOffDate.Month(), dayOffDate.Day(), 0, 0, 0, 0, thailandLoc)
+	newEndTime := time.Date(dayOffDate.Year(), dayOffDate.Month(), dayOffDate.Day(), 23, 59, 59, 0, thailandLoc)
 
 	// Step 3: Validate duplicate - Q3P.2: CheckDayOffDuplicate
 	duplicateCount, err := u.trainingScheduleRepo.CheckDayOffDuplicate(ctx, trainerUsername, dayOffDate)
@@ -403,5 +434,119 @@ func (u *TrainerUseCase) DeleteDayOff(ctx context.Context, trainerUsername strin
 	return &responses.DeleteDayOffResponse{
 		Status:  "success",
 		Message: "Day-off deleted successfully",
+	}, nil
+}
+
+// ========== Use Case: Trainer Calendar & Check-in Confirmation ==========
+
+// GetCalendar - ดึง appointments พร้อม pending check-ins สำหรับ Trainer
+func (u *TrainerUseCase) GetCalendar(ctx context.Context, trainerUsername string) (*responses.TrainerCalendarResponse, error) {
+	// ดึง appointments พร้อม pending check-ins
+	appointments, err := u.trainingScheduleRepo.GetTrainerAppointmentsWithPendingCheckIns(ctx, trainerUsername)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get trainer appointments: %w", err)
+	}
+
+	// Convert to response format
+	appointmentList := make([]responses.CalendarAppointment, len(appointments))
+	for i, apt := range appointments {
+		appointmentList[i] = responses.CalendarAppointment{
+			ScheduleID:        apt.ScheduleID,
+			CustomerUsername:  apt.CustomerUsername,
+			CustomerFirstName: apt.CustomerFirstName,
+			CustomerLastName:  apt.CustomerLastName,
+			StartTime:         apt.StartTime,
+			EndTime:           apt.EndTime,
+			SessionID:         apt.SessionID,
+			TotalSessions:     apt.TotalSessions,
+			UsedSessions:      apt.UsedSessions,
+			CheckinStatus:     apt.CheckinStatus,
+			CheckinLogID:      apt.CheckinLogID,
+			CheckinTime:       apt.CheckinTime,
+		}
+	}
+
+	return &responses.TrainerCalendarResponse{
+		Status:       "success",
+		Message:      "Calendar retrieved successfully",
+		Appointments: appointmentList,
+	}, nil
+}
+
+// ConfirmCheckIn - Trainer confirm check-in และหัก session (Q3P.2 + Q3P.3)
+func (u *TrainerUseCase) ConfirmCheckIn(ctx context.Context, trainerUsername string, req requests.ConfirmCheckInRequest) (*responses.ConfirmCheckInResponse, error) {
+	// Step 1: ตรวจสอบว่า schedule นี้เป็นของ trainer นี้จริงหรือไม่
+	appointments, err := u.trainingScheduleRepo.GetTrainerAppointmentsWithPendingCheckIns(ctx, trainerUsername)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get trainer appointments: %w", err)
+	}
+
+	// หา schedule ที่ตรงกับ scheduleId (req.SessionID) และ customerUsername
+	var targetAppointment *repositories.AppointmentWithCheckInInfo
+	for i := range appointments {
+		if appointments[i].ScheduleID == req.SessionID && appointments[i].CustomerUsername == req.CustomerUsername {
+			targetAppointment = &appointments[i]
+			break
+		}
+	}
+
+	if targetAppointment == nil {
+		return &responses.ConfirmCheckInResponse{
+			Status:  "error",
+			Message: "Appointment not found or does not belong to you",
+		}, nil
+	}
+
+	// Step 2: ตรวจสอบว่า pending check-in log มีจริงหรือไม่
+	if targetAppointment.CheckinStatus != "PENDING" || targetAppointment.CheckinLogID == 0 {
+		return &responses.ConfirmCheckInResponse{
+			Status:  "error",
+			Message: "No pending check-in found for this appointment",
+		}, nil
+	}
+
+	// Step 3: ตรวจสอบว่า session ยังมีเหลืออยู่หรือไม่ (Q3P.2)
+	if targetAppointment.UsedSessions >= targetAppointment.TotalSessions {
+		return &responses.ConfirmCheckInResponse{
+			Status:  "error",
+			Message: "No remaining sessions available",
+		}, nil
+	}
+
+	// Step 4: Begin transaction
+	tx, err := u.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Step 5: อัปเดต check-in log status เป็น CONFIRMED
+	affected, err := u.customerLogRepo.UpdateCheckInLogStatus(ctx, targetAppointment.CheckinLogID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update check-in log status: %w", err)
+	}
+	if affected == 0 {
+		return &responses.ConfirmCheckInResponse{
+			Status:  "error",
+			Message: "Failed to update check-in log",
+		}, nil
+	}
+
+	// Step 6: หัก used_sessions + 1 (Q3P.3)
+	if targetAppointment.SessionID > 0 {
+		err = u.customerSessionRepo.IncrementUsedSessions(ctx, tx, targetAppointment.SessionID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to increment used sessions: %w", err)
+		}
+	}
+
+	// Step 7: Commit transaction
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return &responses.ConfirmCheckInResponse{
+		Status:  "success",
+		Message: "Check-in confirmed and session deducted successfully",
 	}, nil
 }

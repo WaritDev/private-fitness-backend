@@ -44,6 +44,39 @@ type TrainingScheduleRepository interface {
 
 	// DeleteDayOff - Q3P.5: ลบวันหยุด
 	DeleteDayOff(ctx context.Context, scheduleID int32) error
+
+	// Check-in Flow: Trainer Calendar
+	// GetCustomerScheduleForToday - หา schedule ของลูกค้าในวันนี้ (สำหรับ check-in)
+	GetCustomerScheduleForToday(ctx context.Context, customerUsername string) (*CustomerScheduleInfo, error)
+
+	// GetTrainerAppointmentsWithPendingCheckIns - ดึง appointments พร้อม pending check-ins
+	GetTrainerAppointmentsWithPendingCheckIns(ctx context.Context, trainerUsername string) ([]AppointmentWithCheckInInfo, error)
+}
+
+// CustomerScheduleInfo - ข้อมูล schedule ของลูกค้าในวันนี้
+type CustomerScheduleInfo struct {
+	ID              int32
+	TrainerUsername string
+	CustomerUsername string
+	SessionID       int32
+	StartTime       time.Time
+	EndTime         time.Time
+}
+
+// AppointmentWithCheckInInfo - ข้อมูล appointment พร้อม check-in status
+type AppointmentWithCheckInInfo struct {
+	ScheduleID        int32
+	CustomerUsername  string
+	CustomerFirstName string
+	CustomerLastName  string
+	StartTime         time.Time
+	EndTime           time.Time
+	SessionID         int32
+	TotalSessions     int32
+	UsedSessions      int32
+	CheckinStatus     string // "PENDING", "CONFIRMED", "NONE"
+	CheckinLogID      int32
+	CheckinTime       time.Time
 }
 
 // TrainerAvailabilityInfo - ข้อมูลเวลาทำงานประจำสัปดาห์

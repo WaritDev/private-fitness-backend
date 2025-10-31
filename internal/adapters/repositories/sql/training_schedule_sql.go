@@ -221,3 +221,93 @@ func (r *TrainingScheduleRepository) CreateDayOff(ctx context.Context, trainerUs
 func (r *TrainingScheduleRepository) DeleteDayOff(ctx context.Context, scheduleID int32) error {
 	return r.q.DeleteDayOff(ctx, scheduleID)
 }
+
+// GetCustomerScheduleForToday - หา schedule ของลูกค้าในวันนี้
+func (r *TrainingScheduleRepository) GetCustomerScheduleForToday(ctx context.Context, customerUsername string) (*repositories.CustomerScheduleInfo, error) {
+	row, err := r.q.GetCustomerScheduleForToday(ctx, sql.NullString{String: customerUsername, Valid: true})
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil // ไม่พบ schedule
+		}
+		return nil, fmt.Errorf("failed to get customer schedule: %w", err)
+	}
+
+	var trainerUsername string
+	if row.TrainerUsername.Valid {
+		trainerUsername = row.TrainerUsername.String
+	}
+
+	var sessionID int32
+	if row.SessionID.Valid {
+		sessionID = row.SessionID.Int32
+	}
+
+	return &repositories.CustomerScheduleInfo{
+		ID:              row.ID,
+		TrainerUsername: trainerUsername,
+		CustomerUsername: customerUsername,
+		SessionID:       sessionID,
+		StartTime:       row.StartTime,
+		EndTime:         row.EndTime,
+	}, nil
+}
+
+// GetTrainerAppointmentsWithPendingCheckIns - ดึง appointments พร้อม pending check-ins
+func (r *TrainingScheduleRepository) GetTrainerAppointmentsWithPendingCheckIns(ctx context.Context, trainerUsername string) ([]repositories.AppointmentWithCheckInInfo, error) {
+	rows, err := r.q.GetTrainerAppointmentsWithPendingCheckIns(ctx, sql.NullString{String: trainerUsername, Valid: true})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get trainer appointments: %w", err)
+	}
+
+	result := make([]repositories.AppointmentWithCheckInInfo, len(rows))
+	for i, row := range rows {
+		var customerUsername string
+		if row.CustomerUsername.Valid {
+			customerUsername = row.CustomerUsername.String
+		}
+
+		var sessionID int32
+		if row.SessionID.Valid {
+			sessionID = row.SessionID.Int32
+		}
+
+		var totalSessions, usedSessions int32
+		if row.TotalSessions.Valid {
+			totalSessions = row.TotalSessions.Int32
+		}
+		if row.UsedSessions.Valid {
+			usedSessions = row.UsedSessions.Int32
+		}
+
+		checkinStatus := "NONE"
+		if string(row.CheckinStatus) != "NONE" {
+			checkinStatus = string(row.CheckinStatus)
+		}
+
+		var checkinLogID int32
+		var checkinTime time.Time
+		if row.CheckinLogID.Valid {
+			checkinLogID = row.CheckinLogID.Int32
+		}
+		if row.CheckinTime.Valid {
+			checkinTime = row.CheckinTime.Time
+		}
+
+		result[i] = repositories.AppointmentWithCheckInInfo{
+			ScheduleID:        row.ScheduleID,
+			CustomerUsername:  customerUsername,
+			CustomerFirstName: row.CustomerFirstName,
+			CustomerLastName:  row.CustomerLastName,
+			StartTime:         row.StartTime,
+			EndTime:           row.EndTime,
+			SessionID:         sessionID,
+			TotalSessions:     totalSessions,
+			UsedSessions:      usedSessions,
+			CheckinStatus:     checkinStatus,
+			CheckinLogID:      checkinLogID,
+			CheckinTime:       checkinTime,
+		}
+	}
+
+	return result, nil
+}

@@ -207,14 +207,7 @@ func (uc *CustomerSessionUseCase) List(ctx context.Context, req requests.ListCus
 	if page <= 0 {
 		page = 1
 	}
-	offset := (page - 1) * limit
-
-	rows, err := uc.sessionRepo.List(ctx, limit, offset)
-	if err != nil {
-		return responses.ListCustomerSessionsResponse{}, err
-	}
-
-	total, err := uc.sessionRepo.Count(ctx)
+	rows, err := uc.sessionRepo.List(ctx)
 	if err != nil {
 		return responses.ListCustomerSessionsResponse{}, err
 	}
@@ -222,6 +215,9 @@ func (uc *CustomerSessionUseCase) List(ctx context.Context, req requests.ListCus
 	if rows == nil {
 		rows = []dbmodel.ListCustomerSessionsRow{}
 	}
+
+	// Calculate total from rows length since List() returns all records
+	total := int64(len(rows))
 
 	return responses.ListCustomerSessionsResponse{
 		Data: rows,

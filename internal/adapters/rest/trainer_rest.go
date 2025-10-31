@@ -324,12 +324,88 @@ func (h *TrainerHandler) DeleteWorkingTime(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(result)
 }
 
+// ========== Use Case: Trainer Calendar & Check-in Confirmation ==========
+
+// GET /api/trainers/calendar - ดึง appointments พร้อม pending check-ins
+func (h *TrainerHandler) GetCalendar(c *fiber.Ctx) error {
+	// ดึง trainerUsername จาก JWT claims (set by middleware)
+	trainerUsername, ok := c.Locals("username").(string)
+	if !ok || trainerUsername == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Unauthorized - JWT token required",
+		})
+	}
+
+	// เรียก use case
+	result, err := h.trainerUC.GetCalendar(c.Context(), trainerUsername)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(result)
+}
+
+// POST /api/trainers/checkin - Trainer confirm check-in และหัก session
+func (h *TrainerHandler) ConfirmCheckIn(c *fiber.Ctx) error {
+	// ดึง trainerUsername จาก JWT claims (set by middleware)
+	trainerUsername, ok := c.Locals("username").(string)
+	if !ok || trainerUsername == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Unauthorized - JWT token required",
+		})
+	}
+
+	// Parse request body
+	var req requests.ConfirmCheckInRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Invalid request body",
+		})
+	}
+
+	// Validate required fields
+	if req.SessionID == 0 || req.CustomerUsername == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": "sessionId and customerUsername are required",
+		})
+	}
+
+	// เรียก use case
+	result, err := h.trainerUC.ConfirmCheckIn(c.Context(), trainerUsername, req)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":  "error",
+			"message": err.Error(),
+		})
+	}
+
+	// ถ้า result status = error แสดงว่าเกิด validation error
+	if result.Status == "error" {
+		return c.Status(fiber.StatusBadRequest).JSON(result)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(result)
+}
+
 // ========== Use Case 3P: Manage Day-Offs ==========
 
 // GET /api/trainers/day-offs - ดึงรายการวันหยุดของเทรนเนอร์
 func (h *TrainerHandler) GetDayOffs(c *fiber.Ctx) error {
-	// ดึง trainerUsername จาก JWT claims
-	trainerUsername := c.Locals("username").(string)
+	// ดึง trainerUsername จาก JWT claims (set by middleware)
+	trainerUsername, ok := c.Locals("username").(string)
+	if !ok || trainerUsername == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Unauthorized - JWT token required",
+		})
+	}
 
 	// เรียก use case
 	result, err := h.trainerUC.GetDayOffs(c.Context(), trainerUsername)
@@ -345,8 +421,14 @@ func (h *TrainerHandler) GetDayOffs(c *fiber.Ctx) error {
 
 // POST /api/trainers/day-offs - เพิ่มวันหยุดใหม่
 func (h *TrainerHandler) AddDayOff(c *fiber.Ctx) error {
-	// ดึง trainerUsername จาก JWT claims
-	trainerUsername := c.Locals("username").(string)
+	// ดึง trainerUsername จาก JWT claims (set by middleware)
+	trainerUsername, ok := c.Locals("username").(string)
+	if !ok || trainerUsername == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Unauthorized - JWT token required",
+		})
+	}
 
 	// Parse request body
 	var req requests.AddDayOffRequest
@@ -384,8 +466,14 @@ func (h *TrainerHandler) AddDayOff(c *fiber.Ctx) error {
 
 // DELETE /api/trainers/day-offs/:id - ลบวันหยุด
 func (h *TrainerHandler) DeleteDayOff(c *fiber.Ctx) error {
-	// ดึง trainerUsername จาก JWT claims
-	trainerUsername := c.Locals("username").(string)
+	// ดึง trainerUsername จาก JWT claims (set by middleware)
+	trainerUsername, ok := c.Locals("username").(string)
+	if !ok || trainerUsername == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Unauthorized - JWT token required",
+		})
+	}
 
 	// ดึง ID จาก URL parameter
 	id, err := c.ParamsInt("id")

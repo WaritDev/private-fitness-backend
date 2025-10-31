@@ -19,15 +19,8 @@ func ProvideCustomerRepository(db *sql.DB) *CustomerRepository {
 	return &CustomerRepository{q: dbmodel.New(db), db: db}
 }
 
-func (r *CustomerRepository) List(ctx context.Context, limit, offset int32) ([]dbmodel.ListCustomersRow, error) {
-	return r.q.ListCustomers(ctx, dbmodel.ListCustomersParams{
-		Limit:  limit,
-		Offset: offset,
-	})
-}
-
-func (r *CustomerRepository) Count(ctx context.Context) (int64, error) {
-	return r.q.CountCustomers(ctx)
+func (r *CustomerRepository) List(ctx context.Context) ([]dbmodel.ListCustomersRow, error) {
+	return r.q.ListCustomers(ctx)
 }
 
 func (r *CustomerRepository) GetByUsername(ctx context.Context, username string) (dbmodel.GetCustomerByUsernameRow, error) {

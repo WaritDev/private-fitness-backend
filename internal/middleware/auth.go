@@ -50,4 +50,3 @@ func AuthMiddleware(authUC *usecases.AuthUseCase) fiber.Handler {
 		return c.Next()
 	}
 }
-

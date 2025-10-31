@@ -118,15 +118,8 @@ func (r *CustomerDurationRepository) mapToCustomerDurationInfo(row dbmodel.Custo
 	}
 }
 
-func (r *CustomerDurationRepository) List(ctx context.Context, limit, offset int32) ([]dbmodel.ListCustomerDurationsRow, error) {
-	return r.q.ListCustomerDurations(ctx, dbmodel.ListCustomerDurationsParams{
-		Limit:  limit,
-		Offset: offset,
-	})
-}
-
-func (r *CustomerDurationRepository) Count(ctx context.Context) (int64, error) {
-	return r.q.CountCustomerDurations(ctx)
+func (r *CustomerDurationRepository) List(ctx context.Context) ([]dbmodel.ListCustomerDurationsRow, error) {
+	return r.q.ListCustomerDurations(ctx)
 }
 
 func (r *CustomerDurationRepository) GetDurationDaysForDurationID(ctx context.Context, durationID int32) (int32, error) {

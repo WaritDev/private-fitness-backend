@@ -23,11 +23,8 @@ func ProvideStaffRepository(db *sql.DB) *StaffRepository {
 	}
 }
 
-func (r *StaffRepository) List(ctx context.Context, limit, offset int32) ([]dbmodel.ListStaffsRow, error) {
-	return r.q.ListStaffs(ctx, dbmodel.ListStaffsParams{Limit: limit, Offset: offset})
-}
-func (r *StaffRepository) Count(ctx context.Context) (int64, error) {
-	return r.q.CountStaffs(ctx)
+func (r *StaffRepository) List(ctx context.Context) ([]dbmodel.ListStaffsRow, error) {
+	return r.q.ListStaffs(ctx)
 }
 
 func (r *StaffRepository) CheckUsernameExists(ctx context.Context, username string) (int64, error) {
