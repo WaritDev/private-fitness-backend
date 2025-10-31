@@ -8,9 +8,7 @@ import (
 )
 
 type CustomerRepository interface {
-	List(ctx context.Context, limit, offset int32) ([]dbmodel.ListCustomersRow, error)
-	Count(ctx context.Context) (int64, error)
-
+	List(ctx context.Context) ([]dbmodel.ListCustomersRow, error)
 	GetByUsername(ctx context.Context, username string) (dbmodel.GetCustomerByUsernameRow, error)
 	CheckPhoneExistsExcept(ctx context.Context, phone, username string) (int64, error)
 	CheckGmailExistsExcept(ctx context.Context, gmail, username string) (int64, error)

@@ -37,14 +37,7 @@ SELECT
 FROM users u
 JOIN customers c ON c.username = u.username
 WHERE u.role = 'CUSTOMER'
-ORDER BY u.is_active DESC, u.first_name ASC, u.last_name ASC
-LIMIT ? OFFSET ?;
-
--- name: CountCustomers :one
-SELECT COUNT(u.username) AS total_items
-FROM users u
-JOIN customers c ON c.username = u.username
-WHERE u.role = 'CUSTOMER';
+ORDER BY u.is_active DESC, u.first_name ASC, u.last_name ASC;
 
 -- name: GetCustomerByUsername :one
 SELECT

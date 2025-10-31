@@ -4,13 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"math"
 	"strings"
 	"time"
 
 	"github.com/WaritDev/private-fitness-backend/domain/repositories"
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
 	"github.com/WaritDev/private-fitness-backend/domain/responses"
+	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db/dbmodel"
 	"github.com/WaritDev/private-fitness-backend/utils"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -23,26 +23,8 @@ func ProvideStaffUsecase(repo repositories.StaffRepository) *StaffUsecase {
 	return &StaffUsecase{repo: repo}
 }
 
-func (uc *StaffUsecase) ListStaffs(ctx context.Context, req requests.ListStaffsRequest) (responses.ListStaffsResponse, error) {
-	limit := req.Limit
-	if limit <= 0 || limit > 100 { limit = 10 }
-	page := req.Page
-	if page <= 0 { page = 1 }
-	offset := (page - 1) * limit
-
-	data, err := uc.repo.List(ctx, limit, offset)
-	if err != nil { return responses.ListStaffsResponse{}, err }
-	total, err := uc.repo.Count(ctx)
-	if err != nil { return responses.ListStaffsResponse{}, err }
-
-	return responses.ListStaffsResponse{
-		Data: data,
-		Meta: responses.PageMeta{
-			Page: page, Limit: limit,
-			TotalItems: total,
-			TotalPages: int32(math.Ceil(float64(total)/float64(limit))),
-		},
-	}, nil
+func (uc *StaffUsecase) ListStaffs(ctx context.Context) ([]dbmodel.ListStaffsRow, error) {
+	return uc.repo.List(ctx)
 }
 
 func (uc *StaffUsecase) CreateStaff(ctx context.Context, req requests.CreateStaffRequest) (responses.StaffCreatedResponse, error) {

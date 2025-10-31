@@ -13,8 +13,7 @@ type CustomerLogRepository interface {
 	// CreateCustomerLog - สร้าง log สำหรับ customer activity
 	CreateCustomerLog(ctx context.Context, tx *sql.Tx, customerUsername, logType string) error
 
-	List(ctx context.Context, limit, offset int32) ([]dbmodel.ListCustomerLogsRow, error)
-	Count(ctx context.Context) (int64, error)
+	List(ctx context.Context) ([]dbmodel.ListCustomerLogsRow, error)
 
 	UpdateByID(ctx context.Context, id int32, ts time.Time, logType string) (int64, error)
 	DeleteByID(ctx context.Context, id int32) (int64, error)

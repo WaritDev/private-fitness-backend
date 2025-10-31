@@ -45,16 +45,9 @@ type Querier interface {
 	CompletedPTInRange(ctx context.Context, arg CompletedPTInRangeParams) (int64, error)
 	// นับจำนวนนัดหมายของเทรนเนอร์ในวันที่กำหนด
 	CountAppointmentsOnDate(ctx context.Context, arg CountAppointmentsOnDateParams) (int64, error)
-	CountCustomerDurations(ctx context.Context) (int64, error)
-	CountCustomerLogs(ctx context.Context) (int64, error)
-	CountCustomerSessions(ctx context.Context) (int64, error)
-	CountCustomers(ctx context.Context) (int64, error)
-	CountPaymentAccounts(ctx context.Context) (int64, error)
 	// Q_VERIFY_6: Count payment verifications by status
 	CountPaymentVerificationsByStatus(ctx context.Context, verificationStatus PaymentVerificationsVerificationStatus) (int64, error)
 	CountProductReferences(ctx context.Context, arg CountProductReferencesParams) (CountProductReferencesRow, error)
-	CountProducts(ctx context.Context) (int64, error)
-	CountStaffs(ctx context.Context) (int64, error)
 	CreateCustomer(ctx context.Context, arg CreateCustomerParams) error
 	CreateCustomerDuration(ctx context.Context, arg CreateCustomerDurationParams) error
 	CreateCustomerLog(ctx context.Context, arg CreateCustomerLogParams) error
@@ -150,17 +143,17 @@ type Querier interface {
 	ListAllProducts(ctx context.Context) ([]Product, error)
 	// ดึงรายชื่อเทรนเนอร์ทั้งหมดที่ active (สำหรับ dropdown)
 	ListAllTrainers(ctx context.Context) ([]ListAllTrainersRow, error)
-	ListCustomerDurations(ctx context.Context, arg ListCustomerDurationsParams) ([]ListCustomerDurationsRow, error)
-	ListCustomerLogs(ctx context.Context, arg ListCustomerLogsParams) ([]ListCustomerLogsRow, error)
-	ListCustomerSessions(ctx context.Context, arg ListCustomerSessionsParams) ([]ListCustomerSessionsRow, error)
-	ListCustomers(ctx context.Context, arg ListCustomersParams) ([]ListCustomersRow, error)
+	ListCustomerDurations(ctx context.Context) ([]ListCustomerDurationsRow, error)
+	ListCustomerLogs(ctx context.Context) ([]ListCustomerLogsRow, error)
+	ListCustomerSessions(ctx context.Context) ([]ListCustomerSessionsRow, error)
+	ListCustomers(ctx context.Context) ([]ListCustomersRow, error)
 	ListDurations(ctx context.Context) ([]ListDurationsRow, error)
-	ListPaymentAccounts(ctx context.Context, arg ListPaymentAccountsParams) ([]ListPaymentAccountsRow, error)
+	ListPaymentAccounts(ctx context.Context) ([]ListPaymentAccountsRow, error)
 	// Q_VERIFY_5: List all payment verifications for a customer
 	ListPaymentVerificationsByCustomer(ctx context.Context, arg ListPaymentVerificationsByCustomerParams) ([]ListPaymentVerificationsByCustomerRow, error)
-	ListProducts(ctx context.Context, arg ListProductsParams) ([]ListProductsRow, error)
+	ListProducts(ctx context.Context) ([]ListProductsRow, error)
 	ListSessions(ctx context.Context) ([]ListSessionsRow, error)
-	ListStaffs(ctx context.Context, arg ListStaffsParams) ([]ListStaffsRow, error)
+	ListStaffs(ctx context.Context) ([]ListStaffsRow, error)
 	ListUsers(ctx context.Context) ([]ListUsersRow, error)
 	NewMembersInRange(ctx context.Context, arg NewMembersInRangeParams) (int64, error)
 	RevenueDurations(ctx context.Context, arg RevenueDurationsParams) (int64, error)

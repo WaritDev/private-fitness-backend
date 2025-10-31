@@ -31,8 +31,7 @@ type CustomerSessionRepository interface {
 	// GetCustomerActiveSessions - ดึงข้อมูล Session packages ที่ยัง ACTIVE ของลูกค้า
 	GetCustomerActiveSessions(ctx context.Context, customerUsername string) ([]ActiveSessionPackageInfo, error)
 
-	List(ctx context.Context, limit, offset int32) ([]dbmodel.ListCustomerSessionsRow, error)
-	Count(ctx context.Context) (int64, error)
+	List(ctx context.Context) ([]dbmodel.ListCustomerSessionsRow, error)
 
 	UpdateEditableFields(ctx context.Context, p UpdateCustomerSessionEditableFieldsParams) error
 	CheckTrainerExists(ctx context.Context, username string) (int64, error)

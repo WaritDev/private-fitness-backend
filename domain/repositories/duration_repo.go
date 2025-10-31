@@ -13,8 +13,7 @@ type CustomerDurationRepository interface {
 	GetByUsername(ctx context.Context, username string) ([]CustomerDurationInfo, error)
 	GetByID(ctx context.Context, id int32) (CustomerDurationInfo, error)
 
-	List(ctx context.Context, limit, offset int32) ([]dbmodel.ListCustomerDurationsRow, error)
-	Count(ctx context.Context) (int64, error)
+	List(ctx context.Context) ([]dbmodel.ListCustomerDurationsRow, error)
 
 	GetDurationDaysForDurationID(ctx context.Context, durationID int32) (int32, error)
 	UpdateEditableFields(ctx context.Context, p UpdateCustomerDurationEditableFieldsParams) error

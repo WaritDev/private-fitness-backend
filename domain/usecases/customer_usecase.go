@@ -4,13 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"math"
 	"strings"
 	"time"
 
 	"github.com/WaritDev/private-fitness-backend/domain/repositories"
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
 	"github.com/WaritDev/private-fitness-backend/domain/responses"
+	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db/dbmodel"
 	"github.com/WaritDev/private-fitness-backend/utils"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -23,28 +23,8 @@ func ProvideCustomerUsecase(repo repositories.CustomerRepository) *CustomerUseca
 	return &CustomerUsecase{repo: repo}
 }
 
-func (uc *CustomerUsecase) ListCustomers(ctx context.Context, req requests.ListCustomersRequest) (responses.ListCustomersResponse, error) {
-	limit := req.Limit
-	if limit <= 0 || limit > 100 { limit = 10 }
-	page := req.Page
-	if page <= 0 { page = 1 }
-	offset := (page - 1) * limit
-
-	data, err := uc.repo.List(ctx, limit, offset)
-	if err != nil { return responses.ListCustomersResponse{}, err }
-
-	total, err := uc.repo.Count(ctx)
-	if err != nil { return responses.ListCustomersResponse{}, err }
-
-	return responses.ListCustomersResponse{
-		Data: data,
-		Meta: responses.PageMeta{
-			Page:       page,
-			Limit:      limit,
-			TotalItems: total,
-			TotalPages: int32(math.Ceil(float64(total)/float64(limit))),
-		},
-	}, nil
+func (uc *CustomerUsecase) ListCustomers(ctx context.Context) ([]dbmodel.ListCustomersRow, error) {
+	return uc.repo.List(ctx)
 }
 
 func (uc *CustomerUsecase) UpdateCustomer(ctx context.Context, targetUsername string, req requests.UpdateCustomerRequest) (responses.CustomerUpdatedResponse, error) {

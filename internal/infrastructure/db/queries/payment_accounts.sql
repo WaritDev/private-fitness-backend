@@ -44,12 +44,7 @@ SELECT
   pa.qr_code_image_url,
   (pa.is_active = 1)
 FROM payment_accounts pa
-ORDER BY pa.is_active DESC, pa.id DESC
-LIMIT ? OFFSET ?;
-
--- name: CountPaymentAccounts :one
-SELECT COUNT(pa.id) AS total_items
-FROM payment_accounts pa;
+ORDER BY pa.is_active DESC, pa.id DESC;
 
 -- name: InsertPaymentAccount :execresult
 INSERT INTO payment_accounts (

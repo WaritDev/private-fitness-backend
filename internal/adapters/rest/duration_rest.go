@@ -198,11 +198,7 @@ func (h *CustomerDurationHandler) GetActiveDuration(c *fiber.Ctx) error {
 }
 
 func (h *CustomerDurationHandler) ListDurations(c *fiber.Ctx) error {
-	var q requests.ListCustomerDurationsRequest
-	if err := c.QueryParser(&q); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	}
-	resp, err := h.UC.List(c.Context(), q)
+	resp, err := h.UC.List(c.Context())
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}

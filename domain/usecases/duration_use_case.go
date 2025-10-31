@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -160,39 +159,8 @@ func (u *CustomerDurationUseCase) GetCustomerActiveDuration(ctx context.Context,
 	return result, nil
 }
 
-func (uc *CustomerDurationUseCase) List(ctx context.Context, req requests.ListCustomerDurationsRequest) (responses.ListCustomerDurationsResponse, error) {
-	limit := req.Limit
-	if limit <= 0 || limit > 100 {
-		limit = 10
-	}
-	page := req.Page
-	if page <= 0 {
-		page = 1
-	}
-	offset := (page - 1) * limit
-
-	data, err := uc.durationRepo.List(ctx, limit, offset)
-	if err != nil {
-		return responses.ListCustomerDurationsResponse{}, err
-	}
-	total, err := uc.durationRepo.Count(ctx)
-	if err != nil {
-		return responses.ListCustomerDurationsResponse{}, err
-	}
-
-	if len(data) == 0 {
-		data = []dbmodel.ListCustomerDurationsRow{}
-	}
-
-	return responses.ListCustomerDurationsResponse{
-		Data: data,
-		Meta: responses.PageMeta{
-			Page:       page,
-			Limit:      limit,
-			TotalItems: total,
-			TotalPages: int32(math.Ceil(float64(total) / float64(limit))),
-		},
-	}, nil
+func (uc *CustomerDurationUseCase) List(ctx context.Context) ([]dbmodel.ListCustomerDurationsRow, error) {
+	return uc.durationRepo.List(ctx)
 }
 
 var reYMD = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)

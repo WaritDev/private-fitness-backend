@@ -55,18 +55,6 @@ func (q *Queries) CountProductReferences(ctx context.Context, arg CountProductRe
 	return i, err
 }
 
-const countProducts = `-- name: CountProducts :one
-SELECT COUNT(p.id) AS total_items
-FROM products p
-`
-
-func (q *Queries) CountProducts(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countProducts)
-	var total_items int64
-	err := row.Scan(&total_items)
-	return total_items, err
-}
-
 const deleteProductByID = `-- name: DeleteProductByID :execresult
 DELETE FROM products
 WHERE id = ?
@@ -335,13 +323,7 @@ SELECT
   (p.is_active = 1) AS is_active_bool
 FROM products p
 ORDER BY p.is_active DESC, p.type ASC, p.category ASC, p.list_price ASC
-LIMIT ? OFFSET ?
 `
-
-type ListProductsParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
-}
 
 type ListProductsRow struct {
 	ID               int32            `json:"id"`
@@ -358,8 +340,8 @@ type ListProductsRow struct {
 	IsActiveBool     bool             `json:"isActiveBool"`
 }
 
-func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]ListProductsRow, error) {
-	rows, err := q.db.QueryContext(ctx, listProducts, arg.Limit, arg.Offset)
+func (q *Queries) ListProducts(ctx context.Context) ([]ListProductsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listProducts)
 	if err != nil {
 		return nil, err
 	}

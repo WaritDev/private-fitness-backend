@@ -11,21 +11,6 @@ import (
 	"time"
 )
 
-const countCustomerDurations = `-- name: CountCustomerDurations :one
-SELECT COUNT(cd.id) AS total_items
-FROM customer_durations cd
-JOIN customers c ON c.username = cd.customer_username
-JOIN users     u ON u.username = c.username
-JOIN products  p ON p.id = cd.product_id
-`
-
-func (q *Queries) CountCustomerDurations(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countCustomerDurations)
-	var total_items int64
-	err := row.Scan(&total_items)
-	return total_items, err
-}
-
 const createCustomerDuration = `-- name: CreateCustomerDuration :exec
 INSERT INTO customer_durations (
   customer_username,
@@ -348,13 +333,7 @@ JOIN customers c ON c.username = cd.customer_username
 JOIN users     u ON u.username = c.username
 JOIN products  p ON p.id = cd.product_id
 ORDER BY cd.created_at DESC, cd.id DESC
-LIMIT ? OFFSET ?
 `
-
-type ListCustomerDurationsParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
-}
 
 type ListCustomerDurationsRow struct {
 	ID                int32                   `json:"id"`
@@ -375,8 +354,8 @@ type ListCustomerDurationsRow struct {
 	Status            CustomerDurationsStatus `json:"status"`
 }
 
-func (q *Queries) ListCustomerDurations(ctx context.Context, arg ListCustomerDurationsParams) ([]ListCustomerDurationsRow, error) {
-	rows, err := q.db.QueryContext(ctx, listCustomerDurations, arg.Limit, arg.Offset)
+func (q *Queries) ListCustomerDurations(ctx context.Context) ([]ListCustomerDurationsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCustomerDurations)
 	if err != nil {
 		return nil, err
 	}

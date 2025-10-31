@@ -33,15 +33,8 @@ func (r *CustomerLogRepository) CreateCustomerLog(ctx context.Context, tx *sql.T
 	return nil
 }
 
-func (r *CustomerLogRepository) List(ctx context.Context, limit, offset int32) ([]dbmodel.ListCustomerLogsRow, error) {
-	return r.q.ListCustomerLogs(ctx, dbmodel.ListCustomerLogsParams{
-		Limit:  limit,
-		Offset: offset,
-	})
-}
-
-func (r *CustomerLogRepository) Count(ctx context.Context) (int64, error) {
-	return r.q.CountCustomerLogs(ctx)
+func (r *CustomerLogRepository) List(ctx context.Context) ([]dbmodel.ListCustomerLogsRow, error) {
+	return r.q.ListCustomerLogs(ctx)
 }
 
 func (r *CustomerLogRepository) UpdateByID(ctx context.Context, id int32, ts time.Time, logType string) (int64, error) {
