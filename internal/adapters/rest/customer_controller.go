@@ -20,11 +20,7 @@ func ProvideCustomerHandler(uc *usecases.CustomerUsecase) *CustomerHandler {
 }
 
 func (h *CustomerHandler) ListCustomers(c *fiber.Ctx) error {
-	var q requests.ListCustomersRequest
-	if err := c.QueryParser(&q); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	}
-	resp, err := h.uc.ListCustomers(c.Context(), q)
+	resp, err := h.uc.ListCustomers(c.Context())
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
