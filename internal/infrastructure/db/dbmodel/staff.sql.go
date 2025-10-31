@@ -75,19 +75,6 @@ func (q *Queries) CheckPhoneExistsExceptUsername(ctx context.Context, arg CheckP
 	return count, err
 }
 
-const countStaffs = `-- name: CountStaffs :one
-SELECT COUNT(username) AS total_items
-FROM users
-WHERE role IN ('TRAINER','SALES','MANAGER','ADMIN')
-`
-
-func (q *Queries) CountStaffs(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countStaffs)
-	var total_items int64
-	err := row.Scan(&total_items)
-	return total_items, err
-}
-
 const createStaff = `-- name: CreateStaff :exec
 INSERT INTO users (
     username, password, role, first_name, last_name,
@@ -259,13 +246,7 @@ SELECT
 FROM users
 WHERE role IN ('TRAINER','SALES','MANAGER','ADMIN')
 ORDER BY is_active DESC, role ASC, first_name ASC, last_name ASC
-LIMIT ? OFFSET ?
 `
-
-type ListStaffsParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
-}
 
 type ListStaffsRow struct {
 	Username    string         `json:"username"`
@@ -280,8 +261,8 @@ type ListStaffsRow struct {
 	IsActive    sql.NullBool   `json:"isActive"`
 }
 
-func (q *Queries) ListStaffs(ctx context.Context, arg ListStaffsParams) ([]ListStaffsRow, error) {
-	rows, err := q.db.QueryContext(ctx, listStaffs, arg.Limit, arg.Offset)
+func (q *Queries) ListStaffs(ctx context.Context) ([]ListStaffsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listStaffs)
 	if err != nil {
 		return nil, err
 	}

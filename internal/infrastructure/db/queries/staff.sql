@@ -12,13 +12,7 @@ SELECT
     is_active
 FROM users
 WHERE role IN ('TRAINER','SALES','MANAGER','ADMIN')
-ORDER BY is_active DESC, role ASC, first_name ASC, last_name ASC
-LIMIT ? OFFSET ?;
-
--- name: CountStaffs :one
-SELECT COUNT(username) AS total_items
-FROM users
-WHERE role IN ('TRAINER','SALES','MANAGER','ADMIN');
+ORDER BY is_active DESC, role ASC, first_name ASC, last_name ASC;
 
 -- name: CheckPhoneExists :one
 SELECT COUNT(phone_number) AS count

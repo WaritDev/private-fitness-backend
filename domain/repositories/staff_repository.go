@@ -8,8 +8,7 @@ import (
 )
 
 type StaffRepository interface {
-	List(ctx context.Context, limit, offset int32) ([]dbmodel.ListStaffsRow, error)
-	Count(ctx context.Context) (int64, error)
+	List(ctx context.Context) ([]dbmodel.ListStaffsRow, error)
 	CheckUsernameExists(ctx context.Context, username string) (int64, error)
 	CheckPhoneExists(ctx context.Context, phone string) (int64, error)
 	CheckGmailExists(ctx context.Context, gmail string) (int64, error)
