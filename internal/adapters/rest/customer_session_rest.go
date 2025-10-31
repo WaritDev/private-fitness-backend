@@ -162,11 +162,7 @@ func (h *CustomerSessionHandler) GetActiveSessions(c *fiber.Ctx) error {
 }
 
 func (h *CustomerSessionHandler) ListSessions(c *fiber.Ctx) error {
-	var q requests.ListCustomerSessionsRequest
-	if err := c.QueryParser(&q); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	}
-	resp, err := h.useCase.List(c.Context(), q)
+	resp, err := h.useCase.List(c.Context())
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}

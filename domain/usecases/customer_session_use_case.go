@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"math"
 	"regexp"
 	"strings"
 	"time"
@@ -197,32 +196,15 @@ func (u *CustomerSessionUseCase) GetCustomerActiveSessions(ctx context.Context, 
 	return result, nil
 }
 
-func (uc *CustomerSessionUseCase) List(ctx context.Context, req requests.ListCustomerSessionsRequest) (responses.ListCustomerSessionsResponse, error) {
-	limit := req.Limit
-	if limit <= 0 || limit > 100 { limit = 10 }
-	page := req.Page
-	if page <= 0 { page = 1 }
-	offset := (page - 1) * limit
-
-	rows, err := uc.sessionRepo.List(ctx, limit, offset)
-	if err != nil { return responses.ListCustomerSessionsResponse{}, err }
-
-	total, err := uc.sessionRepo.Count(ctx)
-	if err != nil { return responses.ListCustomerSessionsResponse{}, err }
-
+func (uc *CustomerSessionUseCase) List(ctx context.Context) (responses.ListCustomerSessionsResponse, error) {
+	rows, err := uc.sessionRepo.List(ctx)
+	if err != nil {
+		return responses.ListCustomerSessionsResponse{}, err
+	}
 	if rows == nil {
 		rows = []dbmodel.ListCustomerSessionsRow{}
 	}
-
-	return responses.ListCustomerSessionsResponse{
-		Data: rows,
-		Meta: responses.PageMeta{
-			Page:       page,
-			Limit:      limit,
-			TotalItems: total,
-			TotalPages: int32(math.Ceil(float64(total)/float64(limit))),
-		},
-	}, nil
+	return responses.ListCustomerSessionsResponse{Data: rows}, nil
 }
 
 
