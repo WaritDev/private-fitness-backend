@@ -82,12 +82,7 @@ SELECT
   p.updated_at,
   (p.is_active = 1) AS is_active_bool
 FROM products p
-ORDER BY p.is_active DESC, p.type ASC, p.category ASC, p.list_price ASC
-LIMIT ? OFFSET ?;
-
--- name: CountProducts :one
-SELECT COUNT(p.id) AS total_items
-FROM products p;
+ORDER BY p.is_active DESC, p.type ASC, p.category ASC, p.list_price ASC;
 
 -- name: CheckPaymentAccountActive :one
 SELECT COUNT(pa.id) AS account_count

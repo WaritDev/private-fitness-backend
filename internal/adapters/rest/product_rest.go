@@ -108,14 +108,7 @@ func (h *ProductHandler) ListSessions(c *fiber.Ctx) error {
 }
 
 func (h *ProductHandler) List(c *fiber.Ctx) error {
-	page, _  := strconv.Atoi(c.Query("page", "1"))
-	limit, _ := strconv.Atoi(c.Query("limit", "10"))
-
-	req := requests.ListProductsRequest{
-		Page:  int32(page),
-		Limit: int32(limit),
-	}
-	resp, err := h.UC.List(c.Context(), req)
+	resp, err := h.UC.List(c.Context())
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}

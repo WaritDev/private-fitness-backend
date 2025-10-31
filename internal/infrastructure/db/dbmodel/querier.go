@@ -49,7 +49,6 @@ type Querier interface {
 	// Q_VERIFY_6: Count payment verifications by status
 	CountPaymentVerificationsByStatus(ctx context.Context, verificationStatus PaymentVerificationsVerificationStatus) (int64, error)
 	CountProductReferences(ctx context.Context, arg CountProductReferencesParams) (CountProductReferencesRow, error)
-	CountProducts(ctx context.Context) (int64, error)
 	CreateCustomer(ctx context.Context, arg CreateCustomerParams) error
 	CreateCustomerDuration(ctx context.Context, arg CreateCustomerDurationParams) error
 	CreateCustomerLog(ctx context.Context, arg CreateCustomerLogParams) error
@@ -153,7 +152,7 @@ type Querier interface {
 	ListPaymentAccounts(ctx context.Context, arg ListPaymentAccountsParams) ([]ListPaymentAccountsRow, error)
 	// Q_VERIFY_5: List all payment verifications for a customer
 	ListPaymentVerificationsByCustomer(ctx context.Context, arg ListPaymentVerificationsByCustomerParams) ([]ListPaymentVerificationsByCustomerRow, error)
-	ListProducts(ctx context.Context, arg ListProductsParams) ([]ListProductsRow, error)
+	ListProducts(ctx context.Context) ([]ListProductsRow, error)
 	ListSessions(ctx context.Context) ([]ListSessionsRow, error)
 	ListStaffs(ctx context.Context) ([]ListStaffsRow, error)
 	ListUsers(ctx context.Context) ([]ListUsersRow, error)

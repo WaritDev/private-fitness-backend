@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -12,6 +11,7 @@ import (
 	"github.com/WaritDev/private-fitness-backend/domain/repositories"
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
 	"github.com/WaritDev/private-fitness-backend/domain/responses"
+	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db/dbmodel"
 	"github.com/WaritDev/private-fitness-backend/utils"
 )
 
@@ -95,28 +95,8 @@ func (u *ProductUseCase) mapToResponse(p repositories.ProductInfo) responses.Pro
 	}
 }
 
-func (uc *ProductUseCase) List(ctx context.Context, req requests.ListProductsRequest) (responses.ListProductsResponse, error) {
-	limit := req.Limit
-	if limit <= 0 || limit > 100 { limit = 10 }
-	page := req.Page
-	if page <= 0 { page = 1 }
-	offset := (page - 1) * limit
-
-	data, err := uc.repo.List(ctx, limit, offset)
-	if err != nil { return responses.ListProductsResponse{}, err }
-
-	total, err := uc.repo.Count(ctx)
-	if err != nil { return responses.ListProductsResponse{}, err }
-
-	return responses.ListProductsResponse{
-		Data: data,
-		Meta: responses.PageMeta{
-			Page:       page,
-			Limit:      limit,
-			TotalItems: total,
-			TotalPages: int32(math.Ceil(float64(total)/float64(limit))),
-		},
-	}, nil
+func (uc *ProductUseCase) List(ctx context.Context) ([]dbmodel.ListProductsRow, error) {
+	return uc.repo.List(ctx)
 }
 
 func (uc *ProductUseCase) Create(ctx context.Context, req requests.CreateProductRequest) (responses.ProductCreatedResponse, error) {
