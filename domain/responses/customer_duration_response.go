@@ -42,3 +42,21 @@ type CustomerDurationPackageResponse struct {
 	Status           string    `json:"status"`         // ACTIVE, EXPIRED, CANCELLED
 	CreatedAt        time.Time `json:"createdAt"`
 }
+
+// RenewDurationResponse - Response after customer self-purchase duration
+type RenewDurationResponse struct {
+	ID               int32     `json:"id"`
+	CustomerUsername string    `json:"customerUsername"`
+	ProductID        int32     `json:"productId"`
+	ProductName      string    `json:"productName"`
+	DurationDays     int32     `json:"durationDays"`
+	SalesUsername    *string   `json:"salesUsername"` // NULL for self-purchase
+	PurchaseDate     time.Time `json:"purchaseDate"`
+	StartDate        time.Time `json:"startDate"`
+	EndDate          time.Time `json:"endDate"`
+	DaysRemaining    int32     `json:"daysRemaining"`
+	PricePaid        float64   `json:"pricePaid"`
+	DiscountAmount   float64   `json:"discountAmount"`
+	Status           string    `json:"status"`
+	Message          string    `json:"message"`
+}

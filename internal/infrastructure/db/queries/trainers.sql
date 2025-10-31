@@ -18,7 +18,7 @@ ORDER BY u.created_at ASC;
 
 -- name: CountAppointmentsOnDate :one
 -- นับจำนวนนัดหมายของเทรนเนอร์ในวันที่กำหนด
-SELECT COUNT(*) as count
+SELECT COUNT(id) as count
 FROM training_schedules
 WHERE trainer_username = ?
   AND schedule_type = 'APPOINTMENT'
@@ -26,7 +26,7 @@ WHERE trainer_username = ?
 
 -- name: CheckScheduleOverlap :one
 -- ตรวจสอบว่ามีนัดซ้อนทับหรือไม่
-SELECT COUNT(*) as count
+SELECT COUNT(id) as count
 FROM training_schedules
 WHERE trainer_username = ?
   AND schedule_type = 'APPOINTMENT'

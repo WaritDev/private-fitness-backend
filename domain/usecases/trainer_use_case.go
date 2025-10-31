@@ -3,6 +3,8 @@ package usecases
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/WaritDev/private-fitness-backend/domain/repositories"
@@ -60,22 +62,57 @@ func (u *TrainerUseCase) AddWorkingTime(ctx context.Context, trainerUsername str
 	// Step 7.1: ตรวจสอบค่าว่างและรูปแบบ (Model Validation)
 	// Note: Fiber validator จะตรวจสอบ required fields และ oneof ให้แล้ว
 
-	// Parse time strings to time.Time
-	startTime, err := time.Parse("15:04", req.StartTime)
-	if err != nil {
+	// Parse time strings (HH:MM) and convert to TIMESTAMP
+	// We'll use today's date + time to create a valid TIMESTAMP
+	today := time.Now()
+	
+	// Parse start time (HH:MM format)
+	startTimeParts := strings.Split(req.StartTime, ":")
+	if len(startTimeParts) != 2 {
 		return &responses.AddWorkingTimeResponse{
 			Status:  "error",
 			Message: "Invalid start time format. Expected HH:MM",
 		}, nil
 	}
+	startHour, err := strconv.Atoi(startTimeParts[0])
+	if err != nil || startHour < 0 || startHour > 23 {
+		return &responses.AddWorkingTimeResponse{
+			Status:  "error",
+			Message: "Invalid start time format. Expected HH:MM",
+		}, nil
+	}
+	startMin, err := strconv.Atoi(startTimeParts[1])
+	if err != nil || startMin < 0 || startMin > 59 {
+		return &responses.AddWorkingTimeResponse{
+			Status:  "error",
+			Message: "Invalid start time format. Expected HH:MM",
+		}, nil
+	}
+	startTime := time.Date(today.Year(), today.Month(), today.Day(), startHour, startMin, 0, 0, time.UTC)
 
-	endTime, err := time.Parse("15:04", req.EndTime)
-	if err != nil {
+	// Parse end time (HH:MM format)
+	endTimeParts := strings.Split(req.EndTime, ":")
+	if len(endTimeParts) != 2 {
 		return &responses.AddWorkingTimeResponse{
 			Status:  "error",
 			Message: "Invalid end time format. Expected HH:MM",
 		}, nil
 	}
+	endHour, err := strconv.Atoi(endTimeParts[0])
+	if err != nil || endHour < 0 || endHour > 23 {
+		return &responses.AddWorkingTimeResponse{
+			Status:  "error",
+			Message: "Invalid end time format. Expected HH:MM",
+		}, nil
+	}
+	endMin, err := strconv.Atoi(endTimeParts[1])
+	if err != nil || endMin < 0 || endMin > 59 {
+		return &responses.AddWorkingTimeResponse{
+			Status:  "error",
+			Message: "Invalid end time format. Expected HH:MM",
+		}, nil
+	}
+	endTime := time.Date(today.Year(), today.Month(), today.Day(), endHour, endMin, 0, 0, time.UTC)
 
 	// Step 7.2: ตรวจสอบว่า End_Time ต้องอยู่หลัง Start_Time
 	if !endTime.After(startTime) {
@@ -137,22 +174,56 @@ func (u *TrainerUseCase) UpdateWorkingTime(ctx context.Context, trainerUsername 
 		}, nil
 	}
 
-	// Step 2: Parse time strings
-	startTime, err := time.Parse("15:04", req.StartTime)
-	if err != nil {
+	// Step 2: Parse time strings (HH:MM) and convert to TIMESTAMP
+	today := time.Now()
+	
+	// Parse start time
+	startTimeParts := strings.Split(req.StartTime, ":")
+	if len(startTimeParts) != 2 {
 		return &responses.UpdateWorkingTimeResponse{
 			Status:  "error",
 			Message: "Invalid start time format. Expected HH:MM",
 		}, nil
 	}
+	startHour, err := strconv.Atoi(startTimeParts[0])
+	if err != nil || startHour < 0 || startHour > 23 {
+		return &responses.UpdateWorkingTimeResponse{
+			Status:  "error",
+			Message: "Invalid start time format. Expected HH:MM",
+		}, nil
+	}
+	startMin, err := strconv.Atoi(startTimeParts[1])
+	if err != nil || startMin < 0 || startMin > 59 {
+		return &responses.UpdateWorkingTimeResponse{
+			Status:  "error",
+			Message: "Invalid start time format. Expected HH:MM",
+		}, nil
+	}
+	startTime := time.Date(today.Year(), today.Month(), today.Day(), startHour, startMin, 0, 0, time.UTC)
 
-	endTime, err := time.Parse("15:04", req.EndTime)
-	if err != nil {
+	// Parse end time
+	endTimeParts := strings.Split(req.EndTime, ":")
+	if len(endTimeParts) != 2 {
 		return &responses.UpdateWorkingTimeResponse{
 			Status:  "error",
 			Message: "Invalid end time format. Expected HH:MM",
 		}, nil
 	}
+	endHour, err := strconv.Atoi(endTimeParts[0])
+	if err != nil || endHour < 0 || endHour > 23 {
+		return &responses.UpdateWorkingTimeResponse{
+			Status:  "error",
+			Message: "Invalid end time format. Expected HH:MM",
+		}, nil
+	}
+	endMin, err := strconv.Atoi(endTimeParts[1])
+	if err != nil || endMin < 0 || endMin > 59 {
+		return &responses.UpdateWorkingTimeResponse{
+			Status:  "error",
+			Message: "Invalid end time format. Expected HH:MM",
+		}, nil
+	}
+	endTime := time.Date(today.Year(), today.Month(), today.Day(), endHour, endMin, 0, 0, time.UTC)
 
 	// Step 3: Validate endTime > startTime
 	if !endTime.After(startTime) {

@@ -121,8 +121,14 @@ func (h *TrainerHandler) ListAllTrainers(c *fiber.Ctx) error {
 
 // GET /api/trainers/working-hours - ดึงรายการเวลาทำงานของเทรนเนอร์
 func (h *TrainerHandler) GetWorkingHours(c *fiber.Ctx) error {
-	// ดึง trainerUsername จาก JWT claims
-	trainerUsername := c.Locals("username").(string)
+	// ดึง trainerUsername จาก JWT claims (set by middleware)
+	trainerUsername, ok := c.Locals("username").(string)
+	if !ok || trainerUsername == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Unauthorized - JWT token required",
+		})
+	}
 
 	// เรียก use case
 	result, err := h.trainerUC.GetWorkingHours(c.Context(), trainerUsername)
@@ -138,8 +144,14 @@ func (h *TrainerHandler) GetWorkingHours(c *fiber.Ctx) error {
 
 // POST /api/trainers/working-hours - เพิ่มเวลาทำงานใหม่
 func (h *TrainerHandler) AddWorkingTime(c *fiber.Ctx) error {
-	// ดึง trainerUsername จาก JWT claims
-	trainerUsername := c.Locals("username").(string)
+	// ดึง trainerUsername จาก JWT claims (set by middleware)
+	trainerUsername, ok := c.Locals("username").(string)
+	if !ok || trainerUsername == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Unauthorized - JWT token required",
+		})
+	}
 
 	// Parse request body
 	var req requests.AddWorkingTimeRequest
@@ -207,8 +219,14 @@ func (h *TrainerHandler) AddWorkingTime(c *fiber.Ctx) error {
 
 // PUT /api/trainers/working-hours/:id - แก้ไขเวลาทำงาน (Q1P.4)
 func (h *TrainerHandler) UpdateWorkingTime(c *fiber.Ctx) error {
-	// ดึง trainerUsername จาก JWT claims
-	trainerUsername := c.Locals("username").(string)
+	// ดึง trainerUsername จาก JWT claims (set by middleware)
+	trainerUsername, ok := c.Locals("username").(string)
+	if !ok || trainerUsername == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Unauthorized - JWT token required",
+		})
+	}
 
 	// ดึง ID จาก URL parameter
 	id, err := c.ParamsInt("id")
@@ -271,8 +289,14 @@ func (h *TrainerHandler) UpdateWorkingTime(c *fiber.Ctx) error {
 
 // DELETE /api/trainers/working-hours/:id - ลบเวลาทำงาน (Q1P.5)
 func (h *TrainerHandler) DeleteWorkingTime(c *fiber.Ctx) error {
-	// ดึง trainerUsername จาก JWT claims
-	trainerUsername := c.Locals("username").(string)
+	// ดึง trainerUsername จาก JWT claims (set by middleware)
+	trainerUsername, ok := c.Locals("username").(string)
+	if !ok || trainerUsername == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":  "error",
+			"message": "Unauthorized - JWT token required",
+		})
+	}
 
 	// ดึง ID จาก URL parameter
 	id, err := c.ParamsInt("id")

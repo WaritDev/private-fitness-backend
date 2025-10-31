@@ -12,7 +12,7 @@ import (
 )
 
 const checkScheduleOverlap = `-- name: CheckScheduleOverlap :one
-SELECT COUNT(*) as count
+SELECT COUNT(id) as count
 FROM training_schedules
 WHERE trainer_username = ?
   AND schedule_type = 'APPOINTMENT'
@@ -35,7 +35,7 @@ func (q *Queries) CheckScheduleOverlap(ctx context.Context, arg CheckScheduleOve
 }
 
 const countAppointmentsOnDate = `-- name: CountAppointmentsOnDate :one
-SELECT COUNT(*) as count
+SELECT COUNT(id) as count
 FROM training_schedules
 WHERE trainer_username = ?
   AND schedule_type = 'APPOINTMENT'

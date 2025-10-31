@@ -155,3 +155,36 @@ WHERE cd.customer_username = ?
   AND cd.status = 'ACTIVE'
 ORDER BY cd.created_at DESC;
 
+
+-- name: RenewCustomerDuration :exec
+-- Customer Self-Purchase: ลูกค้าซื้อแพ็กเกจ Duration เพิ่มเอง
+-- INSERT แพ็กเกจใหม่ โดย sales_username = NULL, discount_amount = 0
+-- Backend คำนวณ start_date = NOW() และ end_date = NOW() + duration_days (ดึงจาก products)
+INSERT INTO customer_durations (
+  customer_username,
+  product_id,
+  sales_username,      -- NULL สำหรับการซื้อเอง
+  purchase_date,       -- NOW()
+  start_date,          -- NOW() (Backend กำหนดให้)
+  end_date,            -- NOW() + duration_days (ดึงจาก products.duration_days)
+  price_paid,          -- list_price (ราคาเต็ม)
+  discount_amount,     -- 0 (ไม่มีส่วนลด)
+  status               -- 'ACTIVE'
+)
+SELECT 
+  ?,                   -- customer_username
+  ?,                   -- product_id
+  NULL,                -- sales_username (self-purchase)
+  NOW(),               -- purchase_date
+  NOW(),               -- start_date
+  DATE_ADD(NOW(), INTERVAL p.duration_days DAY), -- end_date (NOW + duration_days)
+  ?,                   -- price_paid (list_price)
+  '0.00',              -- discount_amount
+  'ACTIVE'             -- status
+FROM products p
+WHERE p.id = ?         -- product_id (ตรวจสอบและดึง duration_days)
+  AND p.type = 'DURATION'
+  AND p.is_active = 1
+  AND p.duration_days IS NOT NULL
+LIMIT 1;
+

@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/WaritDev/private-fitness-backend/internal/adapters/rest"
+	"github.com/WaritDev/private-fitness-backend/internal/middleware"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -37,6 +38,7 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 
 	// Customer Duration routes
 	durations := apiGroup.Group("/customer-durations")
+	durations.Post("/renew", handler.CustomerDuration.RenewDuration) // ✅ ต่ออายุ Duration (ลูกค้าซื้อเอง)
 	durations.Get("/", handler.CustomerDuration.ListDurations)
 	durations.Post("/:id/update", handler.CustomerDuration.Update)
 	durations.Delete("/:id", handler.CustomerDuration.Delete)
@@ -92,15 +94,19 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	trainers.Get("/", handler.Trainer.ListAllTrainers) // List all active trainers
 
 	// Use Case 1P: Manage Working Hours (Trainer must be logged in)
-	trainers.Get("/working-hours", handler.Trainer.GetWorkingHours)          // Q1P.1: Get trainer's working hours
-	trainers.Post("/working-hours", handler.Trainer.AddWorkingTime)          // Q1P.2 + Q1P.3: Add new working time
-	trainers.Put("/working-hours/:id", handler.Trainer.UpdateWorkingTime)    // Q1P.4: Update working time
-	trainers.Delete("/working-hours/:id", handler.Trainer.DeleteWorkingTime) // Q1P.5: Delete working time
+	// Apply authentication middleware to working hours routes
+	workingHoursGroup := trainers.Group("/working-hours", middleware.AuthMiddleware(handler.Auth.UC))
+	workingHoursGroup.Get("/", handler.Trainer.GetWorkingHours)         // Q1P.1: Get trainer's working hours
+	workingHoursGroup.Post("/", handler.Trainer.AddWorkingTime)         // Q1P.2 + Q1P.3: Add new working time
+	workingHoursGroup.Put("/:id", handler.Trainer.UpdateWorkingTime)    // Q1P.4: Update working time
+	workingHoursGroup.Delete("/:id", handler.Trainer.DeleteWorkingTime) // Q1P.5: Delete working time
 
 	// Use Case 3P: Manage Day-Offs (Trainer must be logged in)
-	trainers.Get("/day-offs", handler.Trainer.GetDayOffs)          // Q3P.1: Get trainer's day-offs
-	trainers.Post("/day-offs", handler.Trainer.AddDayOff)          // Q3P.2 + Q3P.3 + Q3P.4: Add new day-off
-	trainers.Delete("/day-offs/:id", handler.Trainer.DeleteDayOff) // Q3P.5: Delete day-off
+	// Apply authentication middleware to day-offs routes
+	dayOffsGroup := trainers.Group("/day-offs", middleware.AuthMiddleware(handler.Auth.UC))
+	dayOffsGroup.Get("/", handler.Trainer.GetDayOffs)         // Q3P.1: Get trainer's day-offs
+	dayOffsGroup.Post("/", handler.Trainer.AddDayOff)         // Q3P.2 + Q3P.3 + Q3P.4: Add new day-off
+	dayOffsGroup.Delete("/:id", handler.Trainer.DeleteDayOff) // Q3P.5: Delete day-off
 
 	// Payment routes (for Use Case: ยืนยันการชำระเงิน)
 	payments := apiGroup.Group("/payments")

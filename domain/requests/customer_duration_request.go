@@ -6,11 +6,18 @@ type ListCustomerDurationsRequest struct {
 }
 
 type UpdateCustomerDurationRequest struct {
-	StartDate      string  `json:"startDate"`       // YYYY-MM-DD
-	PricePaid      float64 `json:"pricePaid"`       // >= 0
-	DiscountAmount float64 `json:"discountAmount"`  // >= 0
-	Status         string  `json:"status"`          // ACTIVE|EXPIRED|FROZEN|CANCELLED
+	StartDate      string  `json:"startDate"`      // YYYY-MM-DD
+	PricePaid      float64 `json:"pricePaid"`      // >= 0
+	DiscountAmount float64 `json:"discountAmount"` // >= 0
+	Status         string  `json:"status"`         // ACTIVE|EXPIRED|FROZEN|CANCELLED
 }
+
+// RenewDurationRequest - Customer Self-Purchase Duration Package
+// StartDate is auto-calculated as NOW() in SQL
+type RenewDurationRequest struct {
+	ProductID int32 `json:"productId" validate:"required,gt=0"`
+}
+
 // RegisterCustomerDurationRequest - Use Case 2.1C: ลงทะเบียนผู้ใช้งานสำหรับแพ็กเกจ Duration
 // Combines data from Use Case 3S (customer info) and Use Case 2.1C (account creation + duration package)
 type RegisterCustomerDurationRequest struct {

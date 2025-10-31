@@ -49,7 +49,7 @@ func InitializeHandler() *rest.Handler {
 	customerHandler := rest.ProvideCustomerHandler(customerUsecase)
 	customerSessionRepository := sql.ProvideCustomerSessionRepository(queries, sqlDB)
 	customerSessionUseCase := usecases.ProvideCustomerSessionUseCase(customerSessionRepository, userRepository, sqlDB)
-	customerSessionHandler := rest.ProvideCustomerSessionHandler(customerSessionUseCase)
+	customerSessionHandler := rest.ProvideCustomerSessionHandler(customerSessionUseCase, authUseCase)
 	customerDurationRepository := sql.ProvideCustomerDurationRepository(queries, sqlDB)
 	customerDurationUseCase := usecases.ProvideCustomerDurationUseCase(customerDurationRepository, productRepository, userRepository, sqlDB)
 	customerDurationHandler := rest.ProvideCustomerDurationHandler(customerDurationUseCase, authUseCase)

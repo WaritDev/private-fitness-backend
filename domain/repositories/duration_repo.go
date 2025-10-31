@@ -25,6 +25,17 @@ type CustomerDurationRepository interface {
 
 	// GetCustomerActiveDuration - ดึง Duration packages ที่ยัง ACTIVE ของลูกค้า (คล้าย GetCustomerActiveSessions)
 	GetCustomerActiveDuration(ctx context.Context, username string) ([]ActiveDurationPackageInfo, error)
+
+	// RenewDuration - Customer self-purchase duration package (ซื้อเพิ่มเอง)
+	RenewDuration(ctx context.Context, params RenewDurationParams) error
+}
+
+// RenewDurationParams - Parameters for customer self-purchase duration
+// StartDate and DurationDays are auto-calculated in SQL (NOW() and products.duration_days)
+type RenewDurationParams struct {
+	CustomerUsername string
+	ProductID        int32
+	PricePaid        string // list_price as DECIMAL string
 }
 
 type CreateCustomerDurationParams struct {

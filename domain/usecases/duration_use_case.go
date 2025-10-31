@@ -392,9 +392,9 @@ func (uc *CustomerDurationUseCase) GetByID(ctx context.Context, id string) (resp
 	}
 
 	resp := responses.CustomerDuration{
-		ID:               utils.Itoa(row.ID),                // int32 -> string
-		CustomerUsername: row.CustomerUsername,              // string
-		ProductID:        utils.Itoa(row.ProductID),         // int32 -> string
+		ID:               utils.Itoa(row.ID),                   // int32 -> string
+		CustomerUsername: row.CustomerUsername,                 // string
+		ProductID:        utils.Itoa(row.ProductID),            // int32 -> string
 		SalesUsername:    utils.PtrToString(row.SalesUsername), // *string -> string ("" ถ้า nil)
 		PurchaseDate:     utils.ToYMD(row.PurchaseDate),
 		StartDate:        utils.ToYMD(row.StartDate),
@@ -404,4 +404,73 @@ func (uc *CustomerDurationUseCase) GetByID(ctx context.Context, id string) (resp
 		Status:           strings.ToUpper(string(row.Status)), // enum (alias of string) -> string
 	}
 	return resp, nil
+}
+
+// RenewDuration - Customer self-purchase duration package (ลูกค้าซื้อเพิ่มเอง)
+func (u *CustomerDurationUseCase) RenewDuration(ctx context.Context, customerUsername string, req requests.RenewDurationRequest) (*responses.RenewDurationResponse, error) {
+	// Step 1: Validate product exists and is DURATION type
+	product, err := u.productRepo.GetByID(ctx, req.ProductID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("PRODUCT_NOT_FOUND_OR_INACTIVE")
+		}
+		return nil, fmt.Errorf("failed to get product: %w", err)
+	}
+
+	// Step 2: Validate product type
+	if product.Type != "DURATION" {
+		return nil, fmt.Errorf("INVALID_PRODUCT_DURATION_AMOUNT")
+	}
+
+	// Step 3: Validate duration_days
+	if product.DurationDays == nil || *product.DurationDays <= 0 {
+		return nil, fmt.Errorf("INVALID_PRODUCT_DURATION_AMOUNT")
+	}
+
+	// Step 4: Parse list_price (DECIMAL string to float64)
+	listPrice, err := strconv.ParseFloat(product.ListPrice, 64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse list price: %w", err)
+	}
+
+	// Step 5: Calculate start_date and end_date (SQL auto-calculates with NOW() + duration_days)
+	startDate := time.Now()
+	endDate := startDate.AddDate(0, 0, int(*product.DurationDays))
+
+	// Step 6: Calculate days_remaining (from today)
+	daysRemaining := int32(endDate.Sub(time.Now()).Hours() / 24)
+	if daysRemaining < 0 {
+		daysRemaining = 0
+	}
+
+	// Step 7: INSERT new duration package
+	// SQL will auto-calculate start_date = NOW() and end_date = NOW() + duration_days
+	params := repositories.RenewDurationParams{
+		CustomerUsername: customerUsername,
+		ProductID:        req.ProductID,
+		PricePaid:        product.ListPrice, // DECIMAL string
+	}
+
+	err = u.durationRepo.RenewDuration(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to renew duration: %w", err)
+	}
+
+	// Step 8: Return success response
+	return &responses.RenewDurationResponse{
+		ID:               0, // Will be updated after LAST_INSERT_ID() if needed
+		CustomerUsername: customerUsername,
+		ProductID:        req.ProductID,
+		ProductName:      product.Name,
+		DurationDays:     *product.DurationDays,
+		SalesUsername:    nil, // NULL for self-purchase
+		PurchaseDate:     time.Now(),
+		StartDate:        startDate,
+		EndDate:          endDate,
+		DaysRemaining:    daysRemaining,
+		PricePaid:        listPrice,
+		DiscountAmount:   0, // No discount for self-purchase
+		Status:           "ACTIVE",
+		Message:          "Duration package renewed successfully",
+	}, nil
 }

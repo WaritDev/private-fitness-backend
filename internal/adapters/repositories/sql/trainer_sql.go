@@ -112,8 +112,8 @@ func (r *TrainerRepository) CheckTimeOverlap(ctx context.Context, trainerUsernam
 	count, err := r.q.CheckTimeOverlap(ctx, dbmodel.CheckTimeOverlapParams{
 		TrainerUsername: trainerUsername,
 		DayOfWeek:       dbmodel.TrainingAvailabilitiesDayOfWeek(dayOfWeek),
-		EndTime:         endTime,   // ใช้ endTime ของ slot ใหม่
-		StartTime:       startTime, // ใช้ startTime ของ slot ใหม่
+		TIME:            startTime,
+		TIME_2:          endTime,
 	})
 	if err != nil {
 		return 0, err

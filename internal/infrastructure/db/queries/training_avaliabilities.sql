@@ -24,13 +24,15 @@ ORDER BY FIELD(day_of_week, 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDA
          start_time ASC;
 
 -- Q1P.2: Check Time Overlap (Validation before adding)
+-- Note: Since start_time and end_time are TIMESTAMP, we compare TIME portions only
+-- We check if the new time slot overlaps with existing ones on the same day
 -- name: CheckTimeOverlap :one
 SELECT COUNT(id) AS overlapped_count
 FROM training_availabilities
 WHERE trainer_username = ?
   AND day_of_week = ?
   AND (
-    (? < end_time AND ? > start_time)
+    (TIME(?) < TIME(end_time) AND TIME(?) > TIME(start_time))
   );
 
 -- Q1P.3: Create Trainer Availability (Add Working Time)

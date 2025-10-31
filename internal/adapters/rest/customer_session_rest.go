@@ -13,11 +13,16 @@ import (
 
 type CustomerSessionHandler struct {
 	useCase *usecases.CustomerSessionUseCase
+	authUC  *usecases.AuthUseCase
 }
 
-func ProvideCustomerSessionHandler(useCase *usecases.CustomerSessionUseCase) *CustomerSessionHandler {
+func ProvideCustomerSessionHandler(
+	useCase *usecases.CustomerSessionUseCase,
+	authUC *usecases.AuthUseCase,
+) *CustomerSessionHandler {
 	return &CustomerSessionHandler{
 		useCase: useCase,
+		authUC:  authUC,
 	}
 }
 
@@ -232,9 +237,16 @@ func (h *CustomerSessionHandler) GetByID(c *fiber.Ctx) error {
 // RenewSession - POST /api/customer-sessions/renew
 // Use Case: ต่ออายุ/ซื้อเพิ่ม Session Package (ลูกค้าซื้อเอง)
 func (h *CustomerSessionHandler) RenewSession(c *fiber.Ctx) error {
-	// ดึง customer_username จาก JWT token (ต้องมี auth middleware)
-	customerUsername := c.Locals("username")
-	if customerUsername == nil {
+	// Step 1: Extract JWT token from Cookie or Authorization header
+	token := c.Cookies("pf_auth")
+	if token == "" {
+		authHeader := c.Get("Authorization")
+		if authHeader != "" && strings.HasPrefix(authHeader, "Bearer ") {
+			token = strings.TrimPrefix(authHeader, "Bearer ")
+		}
+	}
+
+	if token == "" {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"status":      "error",
 			"status_code": fiber.StatusUnauthorized,
@@ -242,6 +254,19 @@ func (h *CustomerSessionHandler) RenewSession(c *fiber.Ctx) error {
 			"result":      nil,
 		})
 	}
+
+	// Step 2: Verify token and extract username
+	payload, err := h.authUC.VerifyToken(c.Context(), token)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":      "error",
+			"status_code": fiber.StatusUnauthorized,
+			"message":     "Invalid or expired token",
+			"result":      nil,
+		})
+	}
+
+	customerUsername := payload.Sub // username from JWT payload
 
 	var req requests.RenewSessionRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -272,7 +297,8 @@ func (h *CustomerSessionHandler) RenewSession(c *fiber.Ctx) error {
 		})
 	}
 
-	result, err := h.useCase.RenewSession(c.Context(), customerUsername.(string), req)
+	// Step 3: Call use case
+	result, err := h.useCase.RenewSession(c.Context(), customerUsername, req)
 	if err != nil {
 		statusCode := fiber.StatusInternalServerError
 		message := err.Error()

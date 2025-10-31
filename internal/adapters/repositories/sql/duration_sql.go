@@ -299,3 +299,13 @@ func (r *CustomerDurationRepository) GetCustomerActiveDuration(ctx context.Conte
 
 	return result, nil
 }
+
+// RenewDuration - Customer self-purchase duration package (ซื้อเพิ่มเอง)
+func (r *CustomerDurationRepository) RenewDuration(ctx context.Context, params repositories.RenewDurationParams) error {
+	return r.q.RenewCustomerDuration(ctx, dbmodel.RenewCustomerDurationParams{
+		CustomerUsername: sql.NullString{String: params.CustomerUsername, Valid: true},
+		ProductID:        sql.NullInt32{Int32: params.ProductID, Valid: true},
+		PricePaid:        params.PricePaid,
+		ID:               params.ProductID, // WHERE p.id = ? (validate product)
+	})
+}

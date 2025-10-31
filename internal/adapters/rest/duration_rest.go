@@ -328,3 +328,91 @@ func (h *CustomerDurationHandler) GetByID(c *fiber.Ctx) error {
 	}
 	return c.JSON(out)
 }
+
+// POST /api/customer-durations/renew - Customer self-purchase duration package
+func (h *CustomerDurationHandler) RenewDuration(c *fiber.Ctx) error {
+	// Step 1: Extract JWT token from Cookie or Authorization header
+	token := c.Cookies("pf_auth")
+	if token == "" {
+		authHeader := c.Get("Authorization")
+		if authHeader != "" && strings.HasPrefix(authHeader, "Bearer ") {
+			token = strings.TrimPrefix(authHeader, "Bearer ")
+		}
+	}
+
+	if token == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"token":      token,
+			"status":      "error",
+			"status_code": fiber.StatusUnauthorized,
+			"message":     "Unauthorized: Please login first",
+			"result":      nil,
+		})
+	}
+
+	// Step 2: Verify token and extract username
+	payload, err := h.AuthUC.VerifyToken(c.Context(), token)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":      "error",
+			"status_code": fiber.StatusUnauthorized,
+			"message":     "Invalid or expired token",
+			"result":      nil,
+		})
+	}
+
+	customerUsername := payload.Sub // username from JWT payload
+
+	// Step 3: Parse request body
+	var req requests.RenewDurationRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":      "error",
+			"status_code": fiber.StatusBadRequest,
+			"message":     "Invalid request body",
+			"result":      nil,
+		})
+	}
+
+	// Step 4: Validate required fields
+	if req.ProductID <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":      "error",
+			"status_code": fiber.StatusBadRequest,
+			"message":     "productId is required and must be greater than 0",
+			"result":      nil,
+		})
+	}
+
+	// Step 5: Call use case
+	// StartDate is auto-calculated in SQL as NOW()
+	result, err := h.UC.RenewDuration(c.Context(), customerUsername, req)
+	if err != nil {
+		// Handle specific errors
+		statusCode := fiber.StatusInternalServerError
+		message := err.Error()
+
+		if strings.Contains(message, "PRODUCT_NOT_FOUND") {
+			statusCode = fiber.StatusNotFound
+			message = "Product not found or not active"
+		} else if strings.Contains(message, "INVALID_PRODUCT") {
+			statusCode = fiber.StatusBadRequest
+			message = "Product is not a DURATION type or invalid duration_days"
+		}
+
+		return c.Status(statusCode).JSON(fiber.Map{
+			"status":      "error",
+			"status_code": statusCode,
+			"message":     message,
+			"result":      nil,
+		})
+	}
+
+	// Step 6: Return success response (201 Created)
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"status":      "success",
+		"status_code": fiber.StatusCreated,
+		"message":     "Duration package renewed successfully",
+		"result":      result,
+	})
+}

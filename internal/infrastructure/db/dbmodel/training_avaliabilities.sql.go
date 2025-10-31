@@ -16,24 +16,26 @@ FROM training_availabilities
 WHERE trainer_username = ?
   AND day_of_week = ?
   AND (
-    (? < end_time AND ? > start_time)
+    (TIME(?) < TIME(end_time) AND TIME(?) > TIME(start_time))
   )
 `
 
 type CheckTimeOverlapParams struct {
 	TrainerUsername string                          `json:"trainerUsername"`
 	DayOfWeek       TrainingAvailabilitiesDayOfWeek `json:"dayOfWeek"`
-	EndTime         time.Time                       `json:"endTime"`
-	StartTime       time.Time                       `json:"startTime"`
+	TIME            time.Time                       `json:"TIME"`
+	TIME_2          time.Time                       `json:"TIME2"`
 }
 
 // Q1P.2: Check Time Overlap (Validation before adding)
+// Note: Since start_time and end_time are TIMESTAMP, we compare TIME portions only
+// We check if the new time slot overlaps with existing ones on the same day
 func (q *Queries) CheckTimeOverlap(ctx context.Context, arg CheckTimeOverlapParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, checkTimeOverlap,
 		arg.TrainerUsername,
 		arg.DayOfWeek,
-		arg.EndTime,
-		arg.StartTime,
+		arg.TIME,
+		arg.TIME_2,
 	)
 	var overlapped_count int64
 	err := row.Scan(&overlapped_count)

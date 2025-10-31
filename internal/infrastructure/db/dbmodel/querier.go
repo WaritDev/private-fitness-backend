@@ -35,6 +35,8 @@ type Querier interface {
 	// ตรวจสอบว่ามีนัดซ้อนทับหรือไม่
 	CheckScheduleOverlap(ctx context.Context, arg CheckScheduleOverlapParams) (int64, error)
 	// Q1P.2: Check Time Overlap (Validation before adding)
+	// Note: Since start_time and end_time are TIMESTAMP, we compare TIME portions only
+	// We check if the new time slot overlaps with existing ones on the same day
 	CheckTimeOverlap(ctx context.Context, arg CheckTimeOverlapParams) (int64, error)
 	// Q3C.5 - ตรวจสอบว่าช่วงเวลาที่เลือกยังว่างอยู่จริง
 	// คืนค่า overlapped_count ถ้าเป็น 0 แสดงว่ายังว่างอยู่
@@ -164,6 +166,10 @@ type Querier interface {
 	ListStaffs(ctx context.Context, arg ListStaffsParams) ([]ListStaffsRow, error)
 	ListUsers(ctx context.Context) ([]ListUsersRow, error)
 	NewMembersInRange(ctx context.Context, arg NewMembersInRangeParams) (int64, error)
+	// Customer Self-Purchase: ลูกค้าซื้อแพ็กเกจ Duration เพิ่มเอง
+	// INSERT แพ็กเกจใหม่ โดย sales_username = NULL, discount_amount = 0
+	// Backend คำนวณ start_date = NOW() และ end_date = NOW() + duration_days (ดึงจาก products)
+	RenewCustomerDuration(ctx context.Context, arg RenewCustomerDurationParams) error
 	// Use Case: ต่ออายุ/ซื้อเพิ่ม Session Package (ลูกค้าซื้อเอง)
 	// Logic: INSERT session package ใหม่โดย sales_username = NULL (ลูกค้าซื้อเอง)
 	RenewCustomerSession(ctx context.Context, arg RenewCustomerSessionParams) error
