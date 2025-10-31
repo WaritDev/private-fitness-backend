@@ -35,3 +35,16 @@ type UpdateCustomerDurationRequest struct {
 type CustomerDurationDeletedResponse struct {
 	Message string `json:"message"`
 }
+
+type CustomerDuration struct {
+	ID               string `json:"id"`
+	CustomerUsername string `json:"customerUsername"`
+	ProductID        string `json:"productId"`
+	SalesUsername    string `json:"salesUsername"`
+	PurchaseDate     string `json:"purchaseDate"` // YYYY-MM-DD
+	StartDate        string `json:"startDate"`    // YYYY-MM-DD
+	EndDate          string `json:"endDate"`      // YYYY-MM-DD
+	PricePaid        int64  `json:"pricePaid"`
+	DiscountAmount   int64  `json:"discountAmount"`
+	Status           string `json:"status"`       // UPPERCASE (enum → string)
+}

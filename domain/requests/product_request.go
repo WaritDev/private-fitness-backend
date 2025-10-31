@@ -31,3 +31,7 @@ type UpdateProductRequest struct {
     IsActive         *bool    `json:"isActive,omitempty"`
     PaymentAccountID int32    `json:"paymentAccountId"`
 }
+
+type GetProductByIdRequest struct {
+	ID string `json:"id" validate:"required"`
+}

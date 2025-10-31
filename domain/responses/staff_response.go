@@ -25,3 +25,26 @@ type StaffUpdatedResponse struct {
 type StaffDeletedResponse struct {
 	Message string `json:"message"`
 }
+
+type NullString struct {
+    String string `json:"String"`
+    Valid  bool   `json:"Valid"`
+}
+
+type NullBool struct {
+    Bool  bool `json:"Bool"`
+    Valid bool `json:"Valid"`
+}
+
+type Staff struct {
+    Username    string     `json:"username"`
+    Role        string     `json:"role"`
+    FirstName   string     `json:"firstName"`
+    LastName    string     `json:"lastName"`
+    Gender      string     `json:"gender"`      // MALE|FEMALE|OTHER
+    DateOfBirth string     `json:"dateOfBirth"` // YYYY-MM-DD
+    PhoneNumber string     `json:"phoneNumber"`
+    Gmail       string     `json:"gmail"`
+    Specialty   NullString `json:"specialty"`
+    IsActive    NullBool   `json:"isActive"`
+}

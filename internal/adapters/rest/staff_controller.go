@@ -1,6 +1,10 @@
 package rest
 
 import (
+	"database/sql"
+	"errors"
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
@@ -57,4 +61,27 @@ func (h *StaffHandler) DeleteStaff(c *fiber.Ctx) error {
 	resp, err := h.uc.DeleteStaff(c.Context(), target)
 	if err != nil { return fiber.NewError(fiber.StatusBadRequest, err.Error()) }
 	return c.Status(fiber.StatusOK).JSON(resp)
+}
+
+func (h *StaffHandler) GetStaffByUsername(c *fiber.Ctx) error {
+	username := strings.TrimSpace(c.Params("username"))
+	if username == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "username required",
+		})
+	}
+
+	out, err := h.uc.GetStaffByUsername(c.Context(), username)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"message": "not found",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(out)
 }

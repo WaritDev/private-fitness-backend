@@ -120,6 +120,7 @@ type Querier interface {
 	// Q3C.3a - ดึงวันหยุดหรือช่วงเวลาที่ไม่รับนัด (DAY_OFF)
 	GetDayOffSchedules(ctx context.Context, arg GetDayOffSchedulesParams) ([]GetDayOffSchedulesRow, error)
 	GetDurationDaysForDurationID(ctx context.Context, id int32) (sql.NullInt32, error)
+	GetPaymentAccountByID(ctx context.Context, id int32) (GetPaymentAccountByIDRow, error)
 	// Q5S.1: ดึงข้อมูลสินค้าและบัญชีรับชำระเงินเพื่อแสดงหน้าชำระเงิน
 	GetPaymentInfoByProductId(ctx context.Context, id int32) (GetPaymentInfoByProductIdRow, error)
 	// Q_VERIFY_4: Get payment verification by ID

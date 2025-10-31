@@ -38,6 +38,8 @@ type CustomerSessionRepository interface {
 	CheckTrainerExists(ctx context.Context, username string) (int64, error)
 
 	Delete(ctx context.Context, id int32) error
+
+	GetByID(ctx context.Context, id int32) (dbmodel.GetCustomerSessionByIDRow, error)
 }
 
 // ActiveSessionInfo - ข้อมูล Session package ที่ active

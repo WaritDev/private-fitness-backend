@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/WaritDev/private-fitness-backend/domain/repositories"
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
 	"github.com/WaritDev/private-fitness-backend/domain/responses"
 	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db/dbmodel"
+	"github.com/WaritDev/private-fitness-backend/utils"
 )
 
 type CustomerLogUsecase struct {
@@ -106,4 +108,30 @@ func (uc *CustomerLogUsecase) Delete(
 	return responses.CustomerLogDeletedResponse{
 		Message: fmt.Sprintf("Log: %d deleted successfully", id),
 	}, nil
+}
+
+func (uc *CustomerLogUsecase) GetByID(ctx context.Context, id string) (responses.CustomerLog, error) {
+	if strings.TrimSpace(id) == "" {
+		return responses.CustomerLog{}, errors.New("id required")
+	}
+
+	id32, err := utils.Atoi32(id)
+	if err != nil {
+		return responses.CustomerLog{}, errors.New("invalid id")
+	}
+
+	row, err := uc.repo.GetByID(ctx, id32)
+	if err != nil {
+		return responses.CustomerLog{}, err
+	}
+
+	resp := responses.CustomerLog{
+		ID:                utils.Itoa(row.ID),                    // int32 -> string
+		CustomerUsername:  utils.NS(row.CustomerUsername),        // sql.NullString -> string
+		CustomerFirstName: row.CustomerFirstName,
+		CustomerLastName:  row.CustomerLastName, 
+		CreatedAt:         utils.NT(row.CreatedAt),               // sql.NullTime -> RFC3339 string
+		LogType:           string(row.LogType),                   // enum alias -> string
+	}
+	return resp, nil
 }

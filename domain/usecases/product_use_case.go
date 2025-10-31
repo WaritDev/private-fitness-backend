@@ -7,10 +7,12 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/WaritDev/private-fitness-backend/domain/repositories"
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
 	"github.com/WaritDev/private-fitness-backend/domain/responses"
+	"github.com/WaritDev/private-fitness-backend/utils"
 )
 
 type ProductUseCase struct {
@@ -310,4 +312,59 @@ func (uc *ProductUseCase) Delete(
     return responses.ProductDeletedResponse{
         Message: fmt.Sprintf("Product: %d deleted successfully", id),
     }, nil
+}
+
+func (uc *ProductUseCase) GetByID(ctx context.Context, id string) (responses.Product, error) {
+	if strings.TrimSpace(id) == "" {
+		return responses.Product{}, errors.New("id required")
+	}
+
+	id32, err := utils.Atoi32(id)
+	if err != nil {
+		return responses.Product{}, errors.New("invalid id")
+	}
+
+	row, err := uc.repo.GetByID(ctx, id32)
+	if err != nil {
+		return responses.Product{}, err
+	}
+
+	// DECIMAL(x,2) string -> int64 (สตางค์)
+	listPrice, err := utils.ParseDecimalToInt64(row.ListPrice, 2)
+	if err != nil {
+		return responses.Product{}, err
+	}
+
+	// *int32 → int32 (ถ้า nil ให้ default 0)
+	var duration int32
+	if row.DurationDays != nil {
+		duration = *row.DurationDays
+	}
+
+	var sessions int32
+	if row.SessionAmount != nil {
+		sessions = *row.SessionAmount
+	}
+
+	// tinyint(1) → bool
+	isActive := row.IsActive == 1
+
+	// time.Time → RFC3339 string
+	createdAt := row.CreatedAt.Format(time.RFC3339)
+	updatedAt := row.UpdatedAt.Format(time.RFC3339)
+
+	resp := responses.Product{
+		ID:               utils.Itoa(row.ID), // int32 → string
+		Name:             row.Name,
+		Type:             string(row.Type),     // enum → string
+		Category:         string(row.Category), // enum → string
+		ListPrice:        listPrice,
+		DurationDays:     duration,
+		SessionAmount:    sessions,
+		IsActive:         isActive,
+		PaymentAccountID: utils.Itoa(row.PaymentAccountID),
+		CreatedAt:        createdAt,
+		UpdatedAt:        updatedAt,
+	}
+	return resp, nil
 }

@@ -37,3 +37,17 @@ type ProductUpdatedResponse struct {
 type ProductDeletedResponse struct {
     Message string `json:"message"`
 }
+
+type Product struct {
+	ID               string `json:"id"`
+	Name             string `json:"name"`
+	Type             string `json:"type"`
+	Category         string `json:"category"`
+	ListPrice        int64  `json:"listPrice"`
+	DurationDays     int32  `json:"durationDays,omitempty"`
+	SessionAmount    int32  `json:"sessionAmount,omitempty"`
+	IsActive         bool   `json:"isActive"`
+	PaymentAccountID string `json:"paymentAccountId"`
+	CreatedAt        string `json:"createdAt,omitempty"`
+	UpdatedAt        string `json:"updatedAt,omitempty"`
+}

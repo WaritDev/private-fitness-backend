@@ -19,4 +19,5 @@ type CustomerLogRepository interface {
 	UpdateByID(ctx context.Context, id int32, ts time.Time, logType string) (int64, error)
 	DeleteByID(ctx context.Context, id int32) (int64, error)
 
+	GetByID(ctx context.Context, id int32) (dbmodel.GetCustomerLogByIDRow, error)
 }

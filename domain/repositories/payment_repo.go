@@ -26,6 +26,7 @@ type PaymentAccountRepository interface {
 	CheckDuplicatePayment(ctx context.Context, username string, productID int32, amount float64) (int64, error)
 	UpdatePaymentVerificationStatus(ctx context.Context, params UpdatePaymentVerificationParams) error
 	GetPaymentVerificationById(ctx context.Context, id int64) (*PaymentVerificationInfo, error)
+	GetByID(ctx context.Context, id int32) (dbmodel.GetPaymentAccountByIDRow, error)
 }
 
 type CreatePaymentAccountParams struct {

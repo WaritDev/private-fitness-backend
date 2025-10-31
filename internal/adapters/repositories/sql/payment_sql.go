@@ -182,3 +182,8 @@ func (r *PaymentAccountRepository) GetPaymentVerificationById(ctx context.Contex
 		CreatedAt:          createdAt,
 	}, nil
 }
+
+
+func (r *PaymentAccountRepository) GetByID(ctx context.Context, id int32) (dbmodel.GetPaymentAccountByIDRow, error) {
+	return r.q.GetPaymentAccountByID(ctx, id)
+}

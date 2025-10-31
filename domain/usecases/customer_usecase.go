@@ -2,6 +2,7 @@ package usecases
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"math"
 	"strings"
@@ -154,4 +155,62 @@ func (uc *CustomerUsecase) DeleteCustomer(ctx context.Context, targetUsername st
 	return responses.CustomerDeletedResponse{
 		Message: "Customer: " + targetUsername + " deleted successfully",
 	}, nil
+}
+
+func (uc *CustomerUsecase) GetCustomerByUsername(ctx context.Context, username string) (responses.Customer, error) {
+	if strings.TrimSpace(username) == "" {
+		return responses.Customer{}, errors.New("username required")
+	}
+
+	row, err := uc.repo.GetByUsername(ctx, username)
+	if err != nil {
+		return responses.Customer{}, err
+	}
+
+	var dob string
+	switch v := any(row.DateOfBirth).(type) {
+	case time.Time:
+		dob = v.Format("2006-01-02")
+	case *time.Time:
+		if v != nil {
+			dob = v.Format("2006-01-02")
+		}
+	case sql.NullTime:
+		if v.Valid {
+			dob = v.Time.Format("2006-01-02")
+		}
+	case *sql.NullTime:
+		if v != nil && v.Valid {
+			dob = v.Time.Format("2006-01-02")
+		}
+	}
+
+	resp := responses.Customer{
+		Username:    row.Username,
+		FirstName:   row.FirstName,
+		LastName:    row.LastName,
+		Gender:      strings.ToUpper(string(row.Gender)),
+		DateOfBirth: dob,
+		PhoneNumber: row.PhoneNumber,
+		Gmail:       row.Gmail,
+		IsActive: responses.NullBool{
+			Bool:  row.IsActive.Bool,
+			Valid: row.IsActive.Valid,
+		},
+		HealthInfo:                  ns(row.HealthInfo),
+		Address:                     ns(row.Address),
+		CompanyName:                 ns(row.CompanyName),
+		CompanyPosition:             ns(row.CompanyPosition),
+		MaritalStatus:               ns(string(row.MaritalStatus)),
+		EmergencyContactName:        ns(row.EmergencyContactName),
+		EmergencyContactRelationship: ns(row.EmergencyContactRelationship),
+		EmergencyContactPhone:       ns(row.EmergencyContactPhone),
+		MarketingSource:             ns(row.MarketingSource),
+	}
+
+	return resp, nil
+}
+
+func ns(s string) responses.NullString {
+	return responses.NullString{String: s, Valid: s != ""}
 }
