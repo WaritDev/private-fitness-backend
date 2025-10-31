@@ -13,8 +13,9 @@ type Querier interface {
 	ActiveMembersToday(ctx context.Context) (int64, error)
 	// Q3C.6 - บันทึกการจองนัด (APPOINTMENT)
 	BookAppointment(ctx context.Context, arg BookAppointmentParams) error
-	// ตรวจสอบสิทธิ์การจองของ Customer
-	// ต้องมี Session package แบบ ACTIVE และยังมีสิทธิ์คงเหลือ (used_sessions < total_sessions)
+	// Q2C.1: ตรวจสอบสิทธิ์การเข้าถึงฟังก์ชันการจองก่อนโหลดปฏิทิน
+	// ตรวจสอบว่า Customer มีแพ็กเกจ Sessions แบบ ACTIVE หรือไม่
+	// หมายเหตุ: ถ้าทำครบแล้วจะเปลี่ยน status เป็น 'COMPLETED' โดยอัตโนมัติ
 	CheckBookingPermission(ctx context.Context, customerUsername sql.NullString) (int64, error)
 	CheckCustomerGmailExistsExcept(ctx context.Context, arg CheckCustomerGmailExistsExceptParams) (int64, error)
 	CheckCustomerPhoneExistsExcept(ctx context.Context, arg CheckCustomerPhoneExistsExceptParams) (int64, error)
@@ -163,6 +164,9 @@ type Querier interface {
 	ListStaffs(ctx context.Context, arg ListStaffsParams) ([]ListStaffsRow, error)
 	ListUsers(ctx context.Context) ([]ListUsersRow, error)
 	NewMembersInRange(ctx context.Context, arg NewMembersInRangeParams) (int64, error)
+	// Use Case: ต่ออายุ/ซื้อเพิ่ม Session Package (ลูกค้าซื้อเอง)
+	// Logic: INSERT session package ใหม่โดย sales_username = NULL (ลูกค้าซื้อเอง)
+	RenewCustomerSession(ctx context.Context, arg RenewCustomerSessionParams) error
 	RevenueDurations(ctx context.Context, arg RevenueDurationsParams) (int64, error)
 	RevenueSessions(ctx context.Context, arg RevenueSessionsParams) (int64, error)
 	TopSellingProductsDurations(ctx context.Context, arg TopSellingProductsDurationsParams) ([]TopSellingProductsDurationsRow, error)

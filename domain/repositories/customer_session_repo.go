@@ -13,7 +13,9 @@ type CustomerSessionRepository interface {
 	// RegisterCustomerSession - สร้าง User, Customer, CustomerSession, TrainingSchedules, CustomerLog ในครั้งเดียว (Transaction)
 	RegisterCustomerSession(ctx context.Context, tx *sql.Tx, params RegisterSessionParams) (int32, error)
 
-	// CheckBookingPermission - ตรวจสอบว่า Customer มีสิทธิ์จองหรือไม่ (มี Session package ACTIVE และยังมีสิทธิ์คงเหลือ)
+	// CheckBookingPermission - Q2C.1: ตรวจสอบสิทธิ์การเข้าถึงฟังก์ชันการจองก่อนโหลดปฏิทิน
+	// ตรวจสอบว่า Customer มีแพ็กเกจ Sessions แบบ ACTIVE หรือไม่
+	// หมายเหตุ: ถ้าทำครบแล้วจะเปลี่ยน status เป็น 'COMPLETED' โดยอัตโนมัติ
 	CheckBookingPermission(ctx context.Context, customerUsername string) (bool, error)
 
 	// IncrementUsedSessions - Q3C.6: อัปเดตจำนวนครั้งที่ใช้ไป (used_sessions + 1)
@@ -40,6 +42,9 @@ type CustomerSessionRepository interface {
 	Delete(ctx context.Context, id int32) error
 
 	GetByID(ctx context.Context, id int32) (dbmodel.GetCustomerSessionByIDRow, error)
+
+	// RenewSession - ต่ออายุ/ซื้อเพิ่ม Session Package (ลูกค้าซื้อเอง)
+	RenewSession(ctx context.Context, params RenewSessionParams) error
 }
 
 // ActiveSessionInfo - ข้อมูล Session package ที่ active
@@ -121,4 +126,13 @@ type UpdateCustomerSessionEditableFieldsParams struct {
 	PricePaid       string
 	DiscountAmount  sql.NullString
 	Status          string
+}
+
+// RenewCustomerSession - ต่ออายุ/ซื้อเพิ่ม Session Package (ลูกค้าซื้อเอง)
+type RenewSessionParams struct {
+	CustomerUsername string
+	TrainerUsername  string
+	ProductID        int32
+	TotalSessions    int32
+	PricePaid        string // DECIMAL as string
 }

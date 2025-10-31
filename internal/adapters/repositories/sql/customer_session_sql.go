@@ -114,14 +114,16 @@ func (r *CustomerSessionRepository) RegisterCustomerSession(ctx context.Context,
 	return sessionID, nil
 }
 
-// CheckBookingPermission - ตรวจสอบว่า Customer มีสิทธิ์จองหรือไม่
+// CheckBookingPermission - Q2C.1: ตรวจสอบสิทธิ์การเข้าถึงฟังก์ชันการจองก่อนโหลดปฏิทิน
+// ตรวจสอบว่า Customer มีแพ็กเกจ Sessions แบบ ACTIVE หรือไม่
+// หมายเหตุ: ถ้าทำครบแล้วจะเปลี่ยน status เป็น 'COMPLETED' โดยอัตโนมัติ
 func (r *CustomerSessionRepository) CheckBookingPermission(ctx context.Context, customerUsername string) (bool, error) {
 	count, err := r.q.CheckBookingPermission(ctx, sql.NullString{String: customerUsername, Valid: true})
 	if err != nil {
 		return false, fmt.Errorf("failed to check booking permission: %w", err)
 	}
 
-	// ถ้า count > 0 แสดงว่ามีสิทธิ์
+	// ถ้า count > 0 แสดงว่ามีแพ็กเกจ ACTIVE
 	return count > 0, nil
 }
 
@@ -266,4 +268,15 @@ func (r *CustomerSessionRepository) Delete(ctx context.Context, id int32) error 
 
 func (r *CustomerSessionRepository) GetByID(ctx context.Context, id int32) (dbmodel.GetCustomerSessionByIDRow, error) {
 	return r.q.GetCustomerSessionByID(ctx, id)
+}
+
+// RenewSession - ต่ออายุ/ซื้อเพิ่ม Session Package (ลูกค้าซื้อเอง)
+func (r *CustomerSessionRepository) RenewSession(ctx context.Context, params repositories.RenewSessionParams) error {
+	return r.q.RenewCustomerSession(ctx, dbmodel.RenewCustomerSessionParams{
+		CustomerUsername: sql.NullString{String: params.CustomerUsername, Valid: true},
+		TrainerUsername:  sql.NullString{String: params.TrainerUsername, Valid: true},
+		ProductID:        sql.NullInt32{Int32: params.ProductID, Valid: true},
+		TotalSessions:    params.TotalSessions,
+		PricePaid:        params.PricePaid,
+	})
 }

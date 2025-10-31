@@ -44,6 +44,7 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 
 	// Customer Session routes
 	sessions := apiGroup.Group("/customer-sessions")
+	sessions.Post("/renew", handler.CustomerSession.RenewSession) // ✅ ต่ออายุ Session (ลูกค้าซื้อเอง)
 	sessions.Get("/", handler.CustomerSession.ListSessions)
 	sessions.Post("/:id/update", handler.CustomerSession.Update)
 	sessions.Delete("/:id", handler.CustomerSession.Delete)

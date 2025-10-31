@@ -238,6 +238,7 @@ func (q *Queries) GetAppointmentById(ctx context.Context, id int32) (GetAppointm
 
 const getAppointmentSchedules = `-- name: GetAppointmentSchedules :many
 SELECT
+  id,
   start_time,
   end_time,
   customer_username
@@ -255,6 +256,7 @@ type GetAppointmentSchedulesParams struct {
 }
 
 type GetAppointmentSchedulesRow struct {
+	ID               int32          `json:"id"`
 	StartTime        time.Time      `json:"startTime"`
 	EndTime          time.Time      `json:"endTime"`
 	CustomerUsername sql.NullString `json:"customerUsername"`
@@ -270,7 +272,12 @@ func (q *Queries) GetAppointmentSchedules(ctx context.Context, arg GetAppointmen
 	var items []GetAppointmentSchedulesRow
 	for rows.Next() {
 		var i GetAppointmentSchedulesRow
-		if err := rows.Scan(&i.StartTime, &i.EndTime, &i.CustomerUsername); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.StartTime,
+			&i.EndTime,
+			&i.CustomerUsername,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

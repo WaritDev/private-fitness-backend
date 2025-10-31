@@ -54,3 +54,9 @@ type UpdateCustomerSessionRequest struct {
 	DiscountAmount  float64 `json:"discountAmount"`
 	Status          string  `json:"status"` // ACTIVE|EXPIRED|COMPLETED|CANCELLED
 }
+
+// RenewSessionRequest - Use Case: ต่ออายุ/ซื้อเพิ่ม Session Package (ลูกค้าซื้อเอง)
+type RenewSessionRequest struct {
+	ProductID       int32  `json:"productId" validate:"required,gt=0"`
+	TrainerUsername string `json:"trainerUsername" validate:"required"`
+}

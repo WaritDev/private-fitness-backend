@@ -1584,6 +1584,214 @@ if (data.result.success) {
 
 ---
 
+### 6.4 Match Trainer (Smart Trainer Matching)
+
+**Endpoint:** `POST /api/trainers/match`
+
+**Description:** จับคู่เทรนเนอร์ที่เหมาะสมตามวันและเวลาที่ต้องการ (Use Case 4S: กรอกข้อมูลสมัครคอร์ส Sessions)
+
+**Authentication:** None (Public endpoint for registration)
+
+**Business Logic:**
+API นี้ใช้อัลกอริทึมอัจฉริยะในการจับคู่เทรนเนอร์ที่เหมาะสมที่สุด โดยพิจารณาจาก:
+1. **ความว่าง:** หาเทรนเนอร์ที่มีเวลาทำงาน (working hours) ตรงกับวันและช่วงเวลาที่ระบุ
+2. **จำนวนนัดหมาย:** เรียงลำดับตามจำนวนนัดหมายในวันนั้น (น้อย → มาก) เพื่อกระจายภาระงานอย่างเท่าเทียม
+3. **อาวุโส:** หากจำนวนนัดเท่ากัน จะเลือกเทรนเนอร์ที่เข้าระบบก่อน (created_at เก่ากว่า)
+4. **ไม่มีนัดซ้อนทับ:** ตรวจสอบว่าเทรนเนอร์ไม่มีนัดอื่นซ้อนทับในช่วงเวลาที่ระบุ
+5. **คืนค่าเทรนเนอร์คนแรก:** ที่ผ่านเงื่อนไขทั้งหมด
+
+**Algorithm Steps:**
+```
+Step 1: Query trainers with working hours matching dayOfWeek and time range
+        (วันตรงกัน และ working hours คลุมช่วงเวลาที่ต้องการ)
+
+Step 2: For each available trainer:
+        - Count appointments on the same date (startTime.Date())
+        
+Step 3: Sort trainers by:
+        - Appointment count ASC (น้อย → มาก)
+        - Created_at ASC (เก่า → ใหม่)
+        
+Step 4: For each sorted trainer:
+        - Check if trainer has any overlapping appointments in the time range
+        
+Step 5: Return first trainer without overlap
+        - If no trainer found → Return "NO_TRAINER_AVAILABLE" error
+```
+
+**Request Body:**
+```json
+{
+  "dayOfWeek": "TUESDAY",
+  "startTime": "2025-11-05T10:00:00Z",
+  "endTime": "2025-11-05T11:00:00Z"
+}
+```
+
+**Field Descriptions:**
+- `dayOfWeek` (string, required): วันในสัปดาห์ - `"MONDAY"`, `"TUESDAY"`, `"WEDNESDAY"`, `"THURSDAY"`, `"FRIDAY"`, `"SATURDAY"`, `"SUNDAY"`
+- `startTime` (string, required): วันเวลาเริ่มต้นที่ต้องการ (RFC3339/ISO 8601 format: `2025-11-05T10:00:00Z`)
+- `endTime` (string, required): วันเวลาสิ้นสุดที่ต้องการ (RFC3339/ISO 8601 format: `2025-11-05T11:00:00Z`)
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "OK",
+  "status_code": 200,
+  "message": "Trainer matched successfully",
+  "result": {
+    "trainerUsername": "trainer1",
+    "trainerName": "John Smith",
+    "dayOfWeek": "TUESDAY",
+    "startTime": "2025-11-05T10:00:00Z",
+    "endTime": "2025-11-05T11:00:00Z",
+    "appointments": 2
+  }
+}
+```
+
+**Response Fields:**
+- `trainerUsername` (string): Username ของเทรนเนอร์ที่จับคู่ได้
+- `trainerName` (string): ชื่อเต็มของเทรนเนอร์
+- `dayOfWeek` (string): วันในสัปดาห์ที่จับคู่
+- `startTime` (string): วันเวลาเริ่มต้นที่จับคู่
+- `endTime` (string): วันเวลาสิ้นสุดที่จับคู่
+- `appointments` (number): จำนวนนัดหมายที่เทรนเนอร์มีในวันนั้นแล้ว
+
+**Error Response (404 Not Found - No Available Trainer):**
+```json
+{
+  "status": "Not Found",
+  "status_code": 404,
+  "message": "No available trainer found for the selected day and time",
+  "result": null
+}
+```
+
+**Error Response (400 Bad Request - Invalid Day):**
+```json
+{
+  "status": "Bad Request",
+  "status_code": 400,
+  "message": "Invalid dayOfWeek. Must be one of: MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY",
+  "result": null
+}
+```
+
+**Error Response (400 Bad Request - Invalid Time):**
+```json
+{
+  "status": "Bad Request",
+  "status_code": 400,
+  "message": "endTime must be after startTime",
+  "result": null
+}
+```
+
+**Use Case:** ใช้ในหน้าสมัครคอร์ส Sessions (Use Case 4S) เมื่อลูกค้าเลือกวันและเวลาที่ต้องการเทรน ระบบจะหาเทรนเนอร์ที่เหมาะสมให้อัตโนมัติ
+
+**Usage Example (React + TypeScript):**
+```typescript
+interface MatchTrainerRequest {
+  dayOfWeek: 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+  startTime: string; // ISO 8601 format: "2025-11-05T10:00:00Z"
+  endTime: string;   // ISO 8601 format: "2025-11-05T11:00:00Z"
+}
+
+interface TrainerMatchResult {
+  trainerUsername: string;
+  trainerName: string;
+  dayOfWeek: string;
+  startTime: string;
+  endTime: string;
+  appointments: number;
+}
+
+// Function to match trainer
+const matchTrainer = async (data: MatchTrainerRequest): Promise<TrainerMatchResult | null> => {
+  const response = await fetch('http://localhost:8000/api/trainers/match', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data)
+  });
+
+  const result = await response.json();
+  
+  if (result.status === 'OK') {
+    return result.result as TrainerMatchResult;
+  } else if (result.status_code === 404) {
+    alert('⚠️ No available trainer found for this time slot. Please select another time.');
+    return null;
+  } else {
+    alert('Error: ' + result.message);
+    return null;
+  }
+};
+
+// Example usage in registration form
+const handleTimeSelection = async () => {
+  const selectedDay = 'TUESDAY';
+  const selectedDate = '2025-11-05';
+  const selectedStartTime = '10:00'; // HH:MM from time picker
+  const selectedEndTime = '11:00';   // HH:MM from time picker
+  
+  // Convert to ISO 8601 format
+  const startTimeISO = `${selectedDate}T${selectedStartTime}:00Z`;
+  const endTimeISO = `${selectedDate}T${selectedEndTime}:00Z`;
+  
+  const matchResult = await matchTrainer({
+    dayOfWeek: selectedDay,
+    startTime: startTimeISO,
+    endTime: endTimeISO
+  });
+  
+  if (matchResult) {
+    console.log('✅ Trainer matched:', matchResult.trainerName);
+    console.log('Username:', matchResult.trainerUsername);
+    console.log('Current appointments:', matchResult.appointments);
+    
+    // Store trainer username for registration
+    setSelectedTrainer(matchResult.trainerUsername);
+    
+    // Show success message
+    alert(`Trainer matched: ${matchResult.trainerName}\n(Currently has ${matchResult.appointments} appointments on this day)`);
+  }
+};
+```
+
+**Frontend Integration (Session Registration Flow):**
+```
+Use Case 4S: กรอกข้อมูลสมัครคอร์ส Sessions
+├─ Step 1: เลือก Product (Session Package)
+├─ Step 2: กรอกข้อมูลส่วนตัว (Customer Info)
+├─ Step 3: เลือกวันและเวลาเทรนแต่ละครั้ง
+│   ├─ Loop for each session in package:
+│   │   ├─ เลือก Day of Week (dropdown)
+│   │   ├─ เลือก Start Time (time picker)
+│   │   ├─ เลือก End Time (time picker)
+│   │   ├─ 🔥 Call POST /api/trainers/match
+│   │   ├─ แสดงชื่อเทรนเนอร์ที่จับคู่ได้
+│   │   └─ เก็บ trainerUsername สำหรับบันทึก
+│   └─ Repeat for all sessions
+├─ Step 4: ยืนยันข้อมูลและชำระเงิน
+└─ Step 5: Call POST /api/customers/sessions/register
+```
+
+**Why This Algorithm?**
+1. **Load Balancing:** กระจายภาระงานให้เทรนเนอร์แต่ละคนอย่างเท่าเทียม (ไม่ให้คนเดียวรับงานเยอะ)
+2. **Seniority First:** เทรนเนอร์เก่าได้รับโอกาสก่อน (created_at ASC) เมื่อจำนวนนัดเท่ากัน
+3. **Prevent Conflicts:** ตรวจสอบนัดซ้อนทับอย่างเข้มงวด เพื่อไม่ให้เกิดปัญหา double booking
+4. **Automatic:** ลูกค้าไม่ต้องเลือกเทรนเนอร์เอง ระบบจัดการให้อัตโนมัติ
+
+**Database Queries Used:**
+- `Q4S.1`: FindAvailableTrainers - หาเทรนเนอร์ที่มี working hours ตรงกับวันและเวลา
+- `Q4S.2`: CountAppointmentsOnDate - นับจำนวนนัดในวันนั้น
+- `Q4S.3`: CheckScheduleOverlap - ตรวจสอบนัดซ้อนทับ
+
+---
+
 ## 7. Response Format
 
 ### Standard Response Structure

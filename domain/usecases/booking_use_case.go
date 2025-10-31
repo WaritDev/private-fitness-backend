@@ -82,39 +82,199 @@ func (u *BookingUseCase) calculateAvailableSlots(
 ) []responses.BookingSlot {
 	slots := []responses.BookingSlot{}
 
-	// TODO: Implement slot calculation logic
-	// 1. นำเวลาทำงานจาก availability มาสร้าง slots ทุก 30 นาที
-	// 2. ลบ slots ที่ตรงกับ dayOffs
-	// 3. ทำเครื่องหมาย slots ที่ถูกจองแล้วใน appointments
-	// 4. แสดงเฉพาะ slots ของ customer นี้เอง (ถ้ามี customerUsername)
+	const (
+		sessionDuration = 2 * 60 // 2 hours in minutes
+		slotInterval    = 30     // 30 minutes interval
+	)
+
+	// สร้าง map เพื่อเช็ควันหยุดเร็วขึ้น
+	dayOffMap := make(map[string]bool)
+	for _, dayOff := range dayOffs {
+		// สร้าง key จาก start-end timestamp
+		current := dayOff.StartTime
+		for current.Before(dayOff.EndTime) {
+			key := current.Format("2006-01-02 15:04")
+			dayOffMap[key] = true
+			current = current.Add(time.Minute)
+		}
+	}
+
+	// สร้าง map เพื่อเช็คนัดที่จองแล้ว
+	appointmentMap := make(map[string]*repositories.AppointmentInfo)
+	for i := range appointments {
+		appt := &appointments[i]
+		// แต่ละนัดจะครอบคลุม 2 ชั่วโมง
+		current := appt.StartTime
+		for current.Before(appt.EndTime) {
+			key := current.Format("2006-01-02 15:04")
+			appointmentMap[key] = appt
+			current = current.Add(time.Minute)
+		}
+	}
+
+	// สร้าง map สำหรับ availability แยกตามวัน
+	availabilityByDay := make(map[string][]repositories.TrainerAvailabilityInfo)
+	for _, avail := range availability {
+		availabilityByDay[avail.DayOfWeek] = append(availabilityByDay[avail.DayOfWeek], avail)
+	}
+
+	slotID := int32(1)
+
+	// วนลูปทุกวันในช่วง calendar
+	for currentDate := calendarStart; currentDate.Before(calendarEnd) || currentDate.Equal(calendarEnd); currentDate = currentDate.AddDate(0, 0, 1) {
+		// หาว่าวันนี้เป็นวันอะไร (MONDAY, TUESDAY, ...)
+		dayOfWeek := u.getDayOfWeekString(currentDate.Weekday())
+
+		// เช็คว่าวันนี้มีเวลาทำงานหรือไม่
+		dayAvailabilities, hasAvailability := availabilityByDay[dayOfWeek]
+		if !hasAvailability {
+			continue // ไม่มีเวลาทำงานในวันนี้
+		}
+
+		// วนลูปแต่ละช่วงเวลาทำงานในวัน
+		for _, avail := range dayAvailabilities {
+			// แปลงเวลาทำงาน (มาจาก availability) ให้ตรงกับวันที่ปัจจุบัน
+			// ใช้ timezone เดียวกับ calendarStart เพื่อความสอดคล้อง
+			workStartTime := time.Date(
+				currentDate.Year(), currentDate.Month(), currentDate.Day(),
+				avail.StartTime.Hour(), avail.StartTime.Minute(), 0, 0,
+				avail.StartTime.Location(), // ใช้ timezone ของ availability
+			)
+			workEndTime := time.Date(
+				currentDate.Year(), currentDate.Month(), currentDate.Day(),
+				avail.EndTime.Hour(), avail.EndTime.Minute(), 0, 0,
+				avail.EndTime.Location(), // ใช้ timezone ของ availability
+			)
+
+			// สร้าง slots ทุก 30 นาที
+			for slotStart := workStartTime; slotStart.Before(workEndTime); slotStart = slotStart.Add(slotInterval * time.Minute) {
+				// คำนวณเวลาสิ้นสุดของ session (2 ชั่วโมง)
+				sessionEnd := slotStart.Add(sessionDuration * time.Minute)
+
+				// ถ้า session จะเกินเวลาทำงาน ให้ข้าม
+				if sessionEnd.After(workEndTime) {
+					continue
+				}
+
+				// 2. ตรวจสอบว่า slot นี้ตรงกับวันหยุดหรือไม่
+				isDayOff := false
+				checkTime := slotStart
+				for checkTime.Before(sessionEnd) {
+					key := checkTime.Format("2006-01-02 15:04")
+					if dayOffMap[key] {
+						isDayOff = true
+						break
+					}
+					checkTime = checkTime.Add(time.Minute)
+				}
+
+				if isDayOff {
+					continue // ข้าม slot ที่ตรงกับวันหยุด
+				}
+
+				// 3. ตรวจสอบว่า slot นี้ถูกจองแล้วหรือไม่
+				isBooked := false
+				bookedBy := ""
+
+				checkTime = slotStart
+				for checkTime.Before(sessionEnd) {
+					key := checkTime.Format("2006-01-02 15:04")
+					if appt, exists := appointmentMap[key]; exists {
+						isBooked = true
+						bookedBy = appt.CustomerUsername
+						break
+					}
+					checkTime = checkTime.Add(time.Minute)
+				}
+
+				// 4. กำหนด slot type และ available status
+				slotType := "available"
+				available := true
+
+				if isBooked {
+					available = false
+					// แสดงเฉพาะ slot ที่ตัวเองจอง
+					if customerUsername != "" && bookedBy == customerUsername {
+						slotType = "booked"
+					} else {
+						slotType = "unavailable" // จองโดยคนอื่น - ไม่แสดงรายละเอียด
+						bookedBy = ""            // ซ่อนชื่อคนอื่น
+					}
+				}
+
+				// สร้าง slot
+				slot := responses.BookingSlot{
+					ID:        slotID,
+					StartTime: slotStart,
+					EndTime:   sessionEnd,
+					Available: available,
+					IsBooked:  isBooked && bookedBy == customerUsername, // true ถ้าตัวเองจอง
+					BookedBy:  bookedBy,
+					SlotType:  slotType,
+				}
+
+				slots = append(slots, slot)
+				slotID++
+			}
+		}
+	}
 
 	return slots
 }
 
+// getDayOfWeekString - แปลง time.Weekday เป็น string (MONDAY, TUESDAY, ...)
+func (u *BookingUseCase) getDayOfWeekString(weekday time.Weekday) string {
+	switch weekday {
+	case time.Sunday:
+		return "SUNDAY"
+	case time.Monday:
+		return "MONDAY"
+	case time.Tuesday:
+		return "TUESDAY"
+	case time.Wednesday:
+		return "WEDNESDAY"
+	case time.Thursday:
+		return "THURSDAY"
+	case time.Friday:
+		return "FRIDAY"
+	case time.Saturday:
+		return "SATURDAY"
+	default:
+		return ""
+	}
+}
+
 // filterCustomerBookings - กรองเฉพาะการจองของ customer นี้
+// ใช้สำหรับแสดงรายการนัดหมายของ customer ในรูปแบบ BookingSlot
 func (u *BookingUseCase) filterCustomerBookings(
 	appointments []repositories.AppointmentInfo,
 	customerUsername string,
 ) []responses.BookingSlot {
+	slots := []responses.BookingSlot{}
+
+	// ถ้าไม่ระบุ customerUsername ให้ return empty
 	if customerUsername == "" {
-		return []responses.BookingSlot{}
+		return slots
 	}
 
-	bookings := []responses.BookingSlot{}
-	for _, apt := range appointments {
-		if apt.CustomerUsername == customerUsername {
-			bookings = append(bookings, responses.BookingSlot{
-				StartTime: apt.StartTime,
-				EndTime:   apt.EndTime,
-				Available: false,
-				IsBooked:  true,
-				BookedBy:  customerUsername,
-				SlotType:  "booked",
+	// กรองเฉพาะนัดของ customer นี้
+	for _, appt := range appointments {
+		if appt.CustomerUsername == customerUsername {
+			scheduleID := appt.ID // Store schedule ID for cancellation
+			slots = append(slots, responses.BookingSlot{
+				ID:         appt.ID,
+				ScheduleID: &scheduleID, // เพิ่ม schedule ID สำหรับการยกเลิกนัด
+				StartTime:  appt.StartTime,
+				EndTime:    appt.EndTime,
+				Available:  false, // ถูกจองแล้ว
+				IsBooked:   true,  // จองโดยตัวเอง
+				BookedBy:   customerUsername,
+				SlotType:   "booked", // แสดงเป็นสีเทาใน UI
 			})
 		}
 	}
 
-	return bookings
+	return slots
 }
 
 // mapToWeeklyAvailability - แปลงข้อมูล availability เป็น response format
@@ -147,6 +307,7 @@ func (u *BookingUseCase) mapToAppointmentSlots(appointments []repositories.Appoi
 	result := make([]responses.AppointmentSlot, len(appointments))
 	for i, a := range appointments {
 		result[i] = responses.AppointmentSlot{
+			ID:               a.ID,
 			StartTime:        a.StartTime,
 			EndTime:          a.EndTime,
 			CustomerUsername: a.CustomerUsername,

@@ -89,7 +89,8 @@ func (h *CustomerSessionHandler) Register(c *fiber.Ctx) error {
 }
 
 // CheckPermission - GET /api/customers/sessions/check-permission
-// ตรวจสอบสิทธิ์การเข้าถึงฟังก์ชันการจอง
+// Q2C.1: ตรวจสอบสิทธิ์การเข้าถึงฟังก์ชันการจองก่อนโหลดปฏิทิน
+// ตรวจสอบว่า Customer มีแพ็กเกจ Sessions แบบ ACTIVE หรือไม่
 func (h *CustomerSessionHandler) CheckPermission(c *fiber.Ctx) error {
 	// Get customer username from query parameter
 	customerUsername := c.Query("username")
@@ -193,22 +194,22 @@ func (h *CustomerSessionHandler) Update(c *fiber.Ctx) error {
 }
 
 func (h *CustomerSessionHandler) Delete(c *fiber.Ctx) error {
-    idStr := c.Params("id")
-    id, err := strconv.Atoi(idStr)
-    if err != nil {
-        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-            "error": "invalid id",
-        })
-    }
+	idStr := c.Params("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid id",
+		})
+	}
 
-    res, err := h.useCase.Delete(c.Context(), int32(id))
-    if err != nil {
-        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-            "error": err.Error(),
-        })
-    }
+	res, err := h.useCase.Delete(c.Context(), int32(id))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
 
-    return c.Status(fiber.StatusOK).JSON(res)
+	return c.Status(fiber.StatusOK).JSON(res)
 }
 
 func (h *CustomerSessionHandler) GetByID(c *fiber.Ctx) error {
@@ -226,4 +227,75 @@ func (h *CustomerSessionHandler) GetByID(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(resp)
+}
+
+// RenewSession - POST /api/customer-sessions/renew
+// Use Case: ต่ออายุ/ซื้อเพิ่ม Session Package (ลูกค้าซื้อเอง)
+func (h *CustomerSessionHandler) RenewSession(c *fiber.Ctx) error {
+	// ดึง customer_username จาก JWT token (ต้องมี auth middleware)
+	customerUsername := c.Locals("username")
+	if customerUsername == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":      "error",
+			"status_code": fiber.StatusUnauthorized,
+			"message":     "Unauthorized: Please login first",
+			"result":      nil,
+		})
+	}
+
+	var req requests.RenewSessionRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":      "error",
+			"status_code": fiber.StatusBadRequest,
+			"message":     "Invalid request body",
+			"result":      nil,
+		})
+	}
+
+	// Validate required fields
+	if req.ProductID <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":      "error",
+			"status_code": fiber.StatusBadRequest,
+			"message":     "Product ID is required and must be greater than 0",
+			"result":      nil,
+		})
+	}
+
+	if req.TrainerUsername == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":      "error",
+			"status_code": fiber.StatusBadRequest,
+			"message":     "Trainer username is required",
+			"result":      nil,
+		})
+	}
+
+	result, err := h.useCase.RenewSession(c.Context(), customerUsername.(string), req)
+	if err != nil {
+		statusCode := fiber.StatusInternalServerError
+		message := err.Error()
+
+		// Handle specific errors
+		if strings.Contains(message, "PRODUCT_NOT_FOUND") || strings.Contains(message, "TRAINER_NOT_FOUND") {
+			statusCode = fiber.StatusNotFound
+		} else if strings.Contains(message, "INVALID_PRODUCT") {
+			statusCode = fiber.StatusBadRequest
+		}
+
+		return c.Status(statusCode).JSON(fiber.Map{
+			"status":      "error",
+			"status_code": statusCode,
+			"message":     message,
+			"result":      nil,
+		})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"status":      "success",
+		"status_code": fiber.StatusCreated,
+		"message":     "Session package renewed successfully",
+		"result":      result,
+	})
 }

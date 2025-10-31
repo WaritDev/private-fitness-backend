@@ -24,6 +24,7 @@ WHERE trainer_username = ?
 -- name: GetAppointmentSchedules :many
 -- Q3C.3b - ดึงนัดที่ถูกจองแล้ว (APPOINTMENT)
 SELECT
+  id,
   start_time,
   end_time,
   customer_username

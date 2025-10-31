@@ -51,7 +51,7 @@ type CustomerSessionPackageResponse struct {
 
 type ListCustomerSessionsResponse struct {
 	Data []dbmodel.ListCustomerSessionsRow `json:"data"`
-	Meta PageMeta                           `json:"meta"`
+	Meta PageMeta                          `json:"meta"`
 }
 
 type CustomerSessionUpdatedResponse struct {
@@ -59,7 +59,7 @@ type CustomerSessionUpdatedResponse struct {
 }
 
 type CustomerSessionDeletedResponse struct {
-    Message string `json:"message"`
+	Message string `json:"message"`
 }
 
 type CustomerSession struct {
@@ -74,4 +74,20 @@ type CustomerSession struct {
 	PricePaid        int64  `json:"pricePaid"`
 	DiscountAmount   int64  `json:"discountAmount"`
 	Status           string `json:"status"`
+}
+
+// RenewSessionResponse - Response สำหรับการต่ออายุ/ซื้อเพิ่ม Session Package
+type RenewSessionResponse struct {
+	ID               int32     `json:"id"`
+	CustomerUsername string    `json:"customerUsername"`
+	TrainerUsername  string    `json:"trainerUsername"`
+	ProductID        int32     `json:"productId"`
+	ProductName      string    `json:"productName"`
+	TotalSessions    int32     `json:"totalSessions"`
+	UsedSessions     int32     `json:"usedSessions"`
+	PurchaseDate     time.Time `json:"purchaseDate"`
+	PricePaid        float64   `json:"pricePaid"`
+	DiscountAmount   float64   `json:"discountAmount"`
+	Status           string    `json:"status"`
+	Message          string    `json:"message"`
 }

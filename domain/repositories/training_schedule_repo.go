@@ -62,6 +62,7 @@ type ScheduleTimeSlot struct {
 
 // AppointmentInfo - ข้อมูลนัดหมาย
 type AppointmentInfo struct {
+	ID               int32
 	StartTime        time.Time
 	EndTime          time.Time
 	CustomerUsername string

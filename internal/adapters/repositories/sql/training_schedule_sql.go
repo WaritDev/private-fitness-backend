@@ -81,6 +81,7 @@ func (r *TrainingScheduleRepository) GetAppointmentSchedules(ctx context.Context
 		}
 
 		result[i] = repositories.AppointmentInfo{
+			ID:               row.ID, // เพิ่ม ID สำหรับการยกเลิกนัดและแสดงใน response
 			StartTime:        row.StartTime,
 			EndTime:          row.EndTime,
 			CustomerUsername: customerUser,

@@ -152,8 +152,9 @@ func (u *CustomerSessionUseCase) RegisterCustomerSession(ctx context.Context, re
 	}, nil
 }
 
-// CheckBookingPermission - ตรวจสอบสิทธิ์การเข้าถึงฟังก์ชันการจอง
-// ตรวจว่า Customer มีแพ็กเกจ Sessions แบบ ACTIVE และยังมีสิทธิ์คงเหลือ
+// CheckBookingPermission - Q2C.1: ตรวจสอบสิทธิ์การเข้าถึงฟังก์ชันการจองก่อนโหลดปฏิทิน
+// ตรวจสอบว่า Customer มีแพ็กเกจ Sessions แบบ ACTIVE หรือไม่
+// หมายเหตุ: ถ้าทำครบแล้วจะเปลี่ยน status เป็น 'COMPLETED' โดยอัตโนมัติ
 func (u *CustomerSessionUseCase) CheckBookingPermission(ctx context.Context, customerUsername string) (bool, error) {
 	hasPermission, err := u.sessionRepo.CheckBookingPermission(ctx, customerUsername)
 	if err != nil {
@@ -199,16 +200,24 @@ func (u *CustomerSessionUseCase) GetCustomerActiveSessions(ctx context.Context, 
 
 func (uc *CustomerSessionUseCase) List(ctx context.Context, req requests.ListCustomerSessionsRequest) (responses.ListCustomerSessionsResponse, error) {
 	limit := req.Limit
-	if limit <= 0 || limit > 100 { limit = 10 }
+	if limit <= 0 || limit > 100 {
+		limit = 10
+	}
 	page := req.Page
-	if page <= 0 { page = 1 }
+	if page <= 0 {
+		page = 1
+	}
 	offset := (page - 1) * limit
 
 	rows, err := uc.sessionRepo.List(ctx, limit, offset)
-	if err != nil { return responses.ListCustomerSessionsResponse{}, err }
+	if err != nil {
+		return responses.ListCustomerSessionsResponse{}, err
+	}
 
 	total, err := uc.sessionRepo.Count(ctx)
-	if err != nil { return responses.ListCustomerSessionsResponse{}, err }
+	if err != nil {
+		return responses.ListCustomerSessionsResponse{}, err
+	}
 
 	if rows == nil {
 		rows = []dbmodel.ListCustomerSessionsRow{}
@@ -220,13 +229,13 @@ func (uc *CustomerSessionUseCase) List(ctx context.Context, req requests.ListCus
 			Page:       page,
 			Limit:      limit,
 			TotalItems: total,
-			TotalPages: int32(math.Ceil(float64(total)/float64(limit))),
+			TotalPages: int32(math.Ceil(float64(total) / float64(limit))),
 		},
 	}, nil
 }
 
-
 var reUsername = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]{2,29}$`)
+
 func (uc *CustomerSessionUseCase) Update(
 	ctx context.Context,
 	id int32,
@@ -278,20 +287,20 @@ func (uc *CustomerSessionUseCase) Update(
 }
 
 func (uc *CustomerSessionUseCase) Delete(
-    ctx context.Context,
-    id int32,
+	ctx context.Context,
+	id int32,
 ) (responses.CustomerSessionDeletedResponse, error) {
 
-    if err := uc.sessionRepo.Delete(ctx, id); err != nil {
-        if errors.Is(err, sql.ErrNoRows) {
-            return responses.CustomerSessionDeletedResponse{}, fmt.Errorf("session course not found")
-        }
-        return responses.CustomerSessionDeletedResponse{}, err
-    }
+	if err := uc.sessionRepo.Delete(ctx, id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return responses.CustomerSessionDeletedResponse{}, fmt.Errorf("session course not found")
+		}
+		return responses.CustomerSessionDeletedResponse{}, err
+	}
 
-    return responses.CustomerSessionDeletedResponse{
-        Message: fmt.Sprintf("Sessions Course ID: %d deleted successfully", id),
-    }, nil
+	return responses.CustomerSessionDeletedResponse{
+		Message: fmt.Sprintf("Sessions Course ID: %d deleted successfully", id),
+	}, nil
 }
 
 func (uc *CustomerSessionUseCase) GetByID(ctx context.Context, id string) (responses.CustomerSession, error) {
@@ -321,16 +330,95 @@ func (uc *CustomerSessionUseCase) GetByID(ctx context.Context, id string) (respo
 
 	resp := responses.CustomerSession{
 		ID:               utils.Itoa(row.ID),
-		CustomerUsername: utils.NS(row.CustomerUsername),   // NullString -> string
-		TrainerUsername:  utils.NS(row.TrainerUsername),    // NullString -> string
-		SalesUsername:    utils.NS(row.SalesUsername),      // NullString -> string
+		CustomerUsername: utils.NS(row.CustomerUsername),        // NullString -> string
+		TrainerUsername:  utils.NS(row.TrainerUsername),         // NullString -> string
+		SalesUsername:    utils.NS(row.SalesUsername),           // NullString -> string
 		ProductID:        utils.Itoa(utils.NI32(row.ProductID)), // NullInt32 -> int32 -> string
-		PurchaseDate:     utils.ToYMD(row.PurchaseDate),    // time.Time -> YYYY-MM-DD
-		TotalSessions:    row.TotalSessions,                // int32
-		UsedSessions:     utils.NI32(row.UsedSessions),     // NullInt32 -> int32
-		PricePaid:        pricePaid,                        // int64
-		DiscountAmount:   discount,                         // int64
+		PurchaseDate:     utils.ToYMD(row.PurchaseDate),         // time.Time -> YYYY-MM-DD
+		TotalSessions:    row.TotalSessions,                     // int32
+		UsedSessions:     utils.NI32(row.UsedSessions),          // NullInt32 -> int32
+		PricePaid:        pricePaid,                             // int64
+		DiscountAmount:   discount,                              // int64
 		Status:           strings.ToUpper(string(row.Status)),
 	}
 	return resp, nil
+}
+
+// RenewSession - Use Case: ต่ออายุ/ซื้อเพิ่ม Session Package (ลูกค้าซื้อเอง)
+func (u *CustomerSessionUseCase) RenewSession(ctx context.Context, customerUsername string, req requests.RenewSessionRequest) (*responses.RenewSessionResponse, error) {
+	// 1. ตรวจสอบว่า product มีอยู่และเป็น SESSION type
+	var (
+		productID     int32
+		productName   string
+		productType   string
+		sessionAmount sql.NullInt32
+		listPrice     string
+		isActive      int8
+	)
+
+	err := u.db.QueryRowContext(ctx, `
+		SELECT id, name, type, session_amount, list_price, is_active
+		FROM products
+		WHERE id = ? AND type = 'SESSION' AND is_active = 1
+	`, req.ProductID).Scan(&productID, &productName, &productType, &sessionAmount, &listPrice, &isActive)
+
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("PRODUCT_NOT_FOUND_OR_INACTIVE")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get product: %w", err)
+	}
+
+	if !sessionAmount.Valid || sessionAmount.Int32 <= 0 {
+		return nil, fmt.Errorf("INVALID_PRODUCT_SESSION_AMOUNT")
+	}
+
+	// 2. ตรวจสอบว่า trainer มีอยู่จริง
+	var trainerExists int64
+	err = u.db.QueryRowContext(ctx, `
+		SELECT COUNT(username)
+		FROM users
+		WHERE username = ? AND role = 'TRAINER'
+	`, req.TrainerUsername).Scan(&trainerExists)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to check trainer: %w", err)
+	}
+
+	if trainerExists == 0 {
+		return nil, fmt.Errorf("TRAINER_NOT_FOUND")
+	}
+
+	// 3. Parse price_paid จาก product list_price
+	var pricePaid float64
+	fmt.Sscanf(listPrice, "%f", &pricePaid)
+
+	// 4. INSERT session package ใหม่
+	params := repositories.RenewSessionParams{
+		CustomerUsername: customerUsername,
+		TrainerUsername:  req.TrainerUsername,
+		ProductID:        req.ProductID,
+		TotalSessions:    sessionAmount.Int32,
+		PricePaid:        fmt.Sprintf("%.2f", pricePaid),
+	}
+
+	err = u.sessionRepo.RenewSession(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to renew session: %w", err)
+	}
+
+	// 5. Return response
+	return &responses.RenewSessionResponse{
+		CustomerUsername: customerUsername,
+		TrainerUsername:  req.TrainerUsername,
+		ProductID:        req.ProductID,
+		ProductName:      productName,
+		TotalSessions:    sessionAmount.Int32,
+		UsedSessions:     0,
+		PurchaseDate:     time.Now(),
+		PricePaid:        pricePaid,
+		DiscountAmount:   0,
+		Status:           "ACTIVE",
+		Message:          "Session package renewed successfully",
+	}, nil
 }

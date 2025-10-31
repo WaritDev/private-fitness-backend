@@ -15,13 +15,13 @@ INSERT INTO customer_sessions (
 );
 
 -- name: CheckBookingPermission :one
--- ตรวจสอบสิทธิ์การจองของ Customer
--- ต้องมี Session package แบบ ACTIVE และยังมีสิทธิ์คงเหลือ (used_sessions < total_sessions)
-SELECT COUNT(*) as has_permission
+-- Q2C.1: ตรวจสอบสิทธิ์การเข้าถึงฟังก์ชันการจองก่อนโหลดปฏิทิน
+-- ตรวจสอบว่า Customer มีแพ็กเกจ Sessions แบบ ACTIVE หรือไม่
+-- หมายเหตุ: ถ้าทำครบแล้วจะเปลี่ยน status เป็น 'COMPLETED' โดยอัตโนมัติ
+SELECT COUNT(id) as has_permission
 FROM customer_sessions
 WHERE customer_username = ?
-  AND status = 'ACTIVE'
-  AND used_sessions < total_sessions;
+  AND status = 'ACTIVE';
 
 -- name: IncrementUsedSessions :exec
 -- Q3C.6 - อัปเดตจำนวนครั้งที่ใช้ไปแล้ว
@@ -158,3 +158,30 @@ WHERE id = ?;
 -- name: DeleteCustomerSessionByID :execresult
 DELETE FROM customer_sessions
 WHERE id = ?;
+
+-- name: RenewCustomerSession :exec
+-- Use Case: ต่ออายุ/ซื้อเพิ่ม Session Package (ลูกค้าซื้อเอง)
+-- Logic: INSERT session package ใหม่โดย sales_username = NULL (ลูกค้าซื้อเอง)
+INSERT INTO customer_sessions (
+  customer_username,
+  trainer_username,
+  product_id,
+  sales_username,
+  purchase_date,
+  total_sessions,
+  used_sessions,
+  price_paid,
+  discount_amount,
+  status
+) VALUES (
+  ?,    -- customer_username (from JWT token)
+  ?,    -- trainer_username (selected trainer)
+  ?,    -- product_id (selected product)
+  NULL, -- sales_username = NULL (customer self-purchase)
+  NOW(),-- purchase_date (today)
+  ?,    -- total_sessions (from product.session_amount)
+  0,    -- used_sessions = 0 (new package)
+  ?,    -- price_paid (product list_price, no discount for self-purchase)
+  0,    -- discount_amount = 0 (no discount for self-purchase)
+  'ACTIVE' -- status (always ACTIVE when purchased)
+);
