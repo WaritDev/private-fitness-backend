@@ -7,7 +7,6 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
-	"os"
 	"path/filepath"
 	"time"
 )
@@ -46,9 +45,7 @@ type Slip2GoResponse struct {
 }
 
 // NewSlip2GoClient creates a new Slip2Go API client
-func NewSlip2GoClient() *Slip2GoClient {
-	apiKey := os.Getenv("SLIP2GO_SECRET_KEY")
-	mockMode := os.Getenv("MOCK_SLIP2GO") == "true"
+func NewSlip2GoClient(apiKey string, mockMode bool) *Slip2GoClient {
 
 	return &Slip2GoClient{
 		APIKey:  apiKey,

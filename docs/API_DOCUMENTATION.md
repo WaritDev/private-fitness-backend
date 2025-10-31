@@ -508,7 +508,7 @@ console.log('QR Code:', data.result.qrCodeUrl);
 
 **Endpoint:** `POST /api/payments/verify-slip`
 
-**Description:** ตรวจสอบความถูกต้องของสลิปการโอนเงินผ่าน Slip2Go API  
+**Description:** ตรวจสอบความถูกต้องของสลิปการโอนเงินผ่าน Slip2Go API แบบ realtime (ไม่เก็บข้อมูลใน database)  
 **Use Case:** ยืนยันการชำระเงิน (Payment Verification)
 
 **Request Format:** `multipart/form-data`
@@ -520,8 +520,6 @@ console.log('QR Code:', data.result.qrCodeUrl);
 **Payload Structure:**
 ```json
 {
-  "username": "cust01",
-  "productId": 11,
   "amount": 2599.50,
   "accountName": "Private Fitness - Main Account",
   "accountNumber": "123-4-56789-0",
@@ -531,9 +529,7 @@ console.log('QR Code:', data.result.qrCodeUrl);
 ```
 
 **Payload Fields:**
-- `username` (string, required): Username ของลูกค้าที่ทำการโอนเงิน
-- `productId` (integer, required): Product ID ที่ซื้อ
-- `amount` (float, required): จำนวนเงินที่โอน
+- `amount` (float, required): จำนวนเงินที่ต้องการตรวจสอบ
 - `accountName` (string, required): ชื่อบัญชีปลายทาง
 - `accountNumber` (string, required): เลขบัญชีปลายทาง
 - `accountType` (string, required): รหัสธนาคาร (e.g., "01004" for SCB)
@@ -543,20 +539,11 @@ console.log('QR Code:', data.result.qrCodeUrl);
 ```json
 {
   "status": "success",
-  "message": "Payment verified successfully. Your membership will be activated shortly.",
+  "message": "Payment verified successfully.",
   "data": {
-    "verificationId": 123,
     "slipId": "SLIP_ABC123XYZ",
     "verified": true
   }
-}
-```
-
-**Error Response - Duplicate Payment (400 Bad Request):**
-```json
-{
-  "status": "error",
-  "message": "Duplicate payment detected. This payment slip has already been verified within the last 24 hours."
 }
 ```
 
@@ -564,9 +551,8 @@ console.log('QR Code:', data.result.qrCodeUrl);
 ```json
 {
   "status": "error",
-  "message": "Payment slip verification failed. Please upload a valid payment slip.",
+  "message": "Payment slip verification failed. Please check slip details and try again.",
   "data": {
-    "verificationId": 124,
     "slipId": "SLIP_DEF456GHI",
     "verified": false
   }
@@ -584,8 +570,6 @@ formData.append('file', fileInput.files[0]);
 
 // Add JSON payload
 const payload = {
-  username: 'cust01',
-  productId: 11,
   amount: 2599.50,
   accountName: 'Private Fitness - Main Account',
   accountNumber: '123-4-56789-0',
@@ -604,28 +588,23 @@ const response = await fetch('http://localhost:8000/api/payments/verify-slip', {
 const result = await response.json();
 
 // Step 3: Handle response
-if (result.status === 'success') {
+if (result.status === 'success' && result.data.verified) {
   alert('✅ Payment verified successfully!');
-  console.log('Verification ID:', result.data.verificationId);
   console.log('Slip ID:', result.data.slipId);
-  // Redirect to success page or activate membership
+  // Proceed with membership activation or next step
 } else {
   alert('❌ Verification failed: ' + result.message);
+  // Show error to user, allow retry
 }
 ```
 
 **Business Logic:**
-1. ตรวจสอบการโอนเงินซ้ำ (Duplicate Check):
-   - เช็คภายใน 24 ชั่วโมง
-   - ลูกค้าคนเดียวกัน + สินค้าเดียวกัน + จำนวนเงินเท่ากัน
-   - สถานะเป็น VERIFIED แล้ว
-2. บันทึกข้อมูลการตรวจสอบ (สถานะ PENDING)
-3. เรียก Slip2Go API เพื่อตรวจสอบสลิป:
+1. รับไฟล์สลิปและข้อมูลการชำระเงิน
+2. เรียก Slip2Go API เพื่อตรวจสอบสลิป:
    - ตรวจสอบจำนวนเงิน
    - ตรวจสอบบัญชีปลายทาง
    - ตรวจสอบวันที่โอนเงิน (ถ้ามี)
-4. อัปเดตสถานะเป็น VERIFIED หรือ REJECTED ตามผลจาก Slip2Go
-5. ส่งผลลัพธ์กลับไปยัง Frontend
+3. ส่งผลลัพธ์กลับไปยัง Frontend ทันที (ไม่เก็บข้อมูล)
 
 **Mock Mode for Development:**
 ตั้งค่า environment variable `MOCK_SLIP2GO=true` เพื่อใช้โหมดทดสอบ (ไม่ใช้ API จริง):
@@ -641,10 +620,12 @@ MOCK_SLIP2GO=true
 - เหมาะสำหรับ development และ testing
 
 **ข้อควรระวัง:**
+- API นี้เป็น **stateless** (ไม่เก็บข้อมูลใน database)
+- ผลลัพธ์ได้จาก Slip2Go API แบบ realtime
 - ไฟล์รูปสลิปต้องเป็น image format (JPEG, PNG)
 - ต้องระบุ `accountType` ให้ถูกต้องตามรหัสธนาคาร (เช่น SCB = "01004")
-- การตรวจสอบซ้ำทำงานภายใน 24 ชั่วโมง ถ้าต้องการทดสอบซ้ำให้เปลี่ยนจำนวนเงินเล็กน้อย
 - ควรแสดง loading indicator ระหว่างรอผลตรวจสอบ (อาจใช้เวลา 3-5 วินาที)
+- หากต้องการเก็บประวัติการชำระเงิน ให้ Frontend เก็บไว้หลังได้รับ verified=true
 
 ---
 

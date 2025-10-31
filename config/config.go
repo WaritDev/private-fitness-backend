@@ -18,6 +18,10 @@ type Config struct {
 	DBParams   string `mapstructure:"DB_PARAMS"`
 	UseDocker  bool   `mapstructure:"USE_DOCKER"`
 	TZ         string `mapstructure:"TZ"`
+
+	// Slip2Go API Configuration
+	Slip2GoSecretKey string `mapstructure:"SLIP2GO_SECRET_KEY"`
+	MockSlip2Go      bool   `mapstructure:"MOCK_SLIP2GO"`
 }
 
 func ProvideConfig() *Config {

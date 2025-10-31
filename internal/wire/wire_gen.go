@@ -39,7 +39,7 @@ func InitializeHandler() *rest.Handler {
 	trainerUseCase := usecases.ProvideTrainerUseCase(trainerRepository, trainingScheduleRepository)
 	trainerHandler := rest.ProvideTrainerHandler(sessionUseCase, trainerUseCase)
 	paymentAccountRepository := sql.ProvidePaymentAccountRepository(queries)
-	paymentUseCase := usecases.ProvidePaymentUseCase(paymentAccountRepository)
+	paymentUseCase := usecases.ProvidePaymentUseCase(paymentAccountRepository, configConfig)
 	paymentHandler := rest.ProvidePaymentHandler(paymentUseCase)
 	staffRepository := sql.ProvideStaffRepository(sqlDB)
 	staffUsecase := usecases.ProvideStaffUsecase(staffRepository)
