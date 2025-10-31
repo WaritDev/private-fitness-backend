@@ -10,18 +10,6 @@ import (
 	"database/sql"
 )
 
-const countCustomerLogs = `-- name: CountCustomerLogs :one
-SELECT COUNT(cl.id) AS total_items
-FROM customer_logs cl
-`
-
-func (q *Queries) CountCustomerLogs(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countCustomerLogs)
-	var total_items int64
-	err := row.Scan(&total_items)
-	return total_items, err
-}
-
 const createCustomerLog = `-- name: CreateCustomerLog :exec
 INSERT INTO customer_logs (
   customer_username,
@@ -99,13 +87,7 @@ FROM customer_logs cl
 JOIN customers c ON c.username = cl.customer_username
 JOIN users     u ON u.username = c.username
 ORDER BY cl.created_at DESC, cl.id DESC
-LIMIT ? OFFSET ?
 `
-
-type ListCustomerLogsParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
-}
 
 type ListCustomerLogsRow struct {
 	LogID             int32               `json:"logId"`
@@ -116,8 +98,8 @@ type ListCustomerLogsRow struct {
 	LogType           CustomerLogsLogType `json:"logType"`
 }
 
-func (q *Queries) ListCustomerLogs(ctx context.Context, arg ListCustomerLogsParams) ([]ListCustomerLogsRow, error) {
-	rows, err := q.db.QueryContext(ctx, listCustomerLogs, arg.Limit, arg.Offset)
+func (q *Queries) ListCustomerLogs(ctx context.Context) ([]ListCustomerLogsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCustomerLogs)
 	if err != nil {
 		return nil, err
 	}

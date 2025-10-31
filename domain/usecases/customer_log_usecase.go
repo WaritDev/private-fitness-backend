@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"strings"
 	"time"
 
@@ -23,40 +22,8 @@ func ProvideCustomerLogUsecase(repo repositories.CustomerLogRepository) *Custome
 	return &CustomerLogUsecase{repo: repo}
 }
 
-func (uc *CustomerLogUsecase) List(ctx context.Context, req requests.ListCustomerLogsRequest) (responses.ListCustomerLogsResponse, error) {
-	limit := req.Limit
-	if limit <= 0 || limit > 100 {
-		limit = 10
-	}
-	page := req.Page
-	if page <= 0 {
-		page = 1
-	}
-	offset := (page - 1) * limit
-
-	data, err := uc.repo.List(ctx, limit, offset)
-	if err != nil {
-		return responses.ListCustomerLogsResponse{}, err
-	}
-
-	if len(data) == 0 {
-		data = []dbmodel.ListCustomerLogsRow{}
-	}
-
-	total, err := uc.repo.Count(ctx)
-	if err != nil {
-		return responses.ListCustomerLogsResponse{}, err
-	}
-
-	return responses.ListCustomerLogsResponse{
-		Data: data,
-		Meta: responses.PageMeta{
-			Page:       page,
-			Limit:      limit,
-			TotalItems: total,
-			TotalPages: int32(math.Ceil(float64(total) / float64(limit))),
-		},
-	}, nil
+func (uc *CustomerLogUsecase) List(ctx context.Context) ([]dbmodel.ListCustomerLogsRow, error) {
+	return uc.repo.List(ctx)
 }
 
 func (uc *CustomerLogUsecase) Update(

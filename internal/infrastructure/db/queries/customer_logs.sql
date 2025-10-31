@@ -17,12 +17,7 @@ SELECT
 FROM customer_logs cl
 JOIN customers c ON c.username = cl.customer_username
 JOIN users     u ON u.username = c.username
-ORDER BY cl.created_at DESC, cl.id DESC
-LIMIT ? OFFSET ?;
-
--- name: CountCustomerLogs :one
-SELECT COUNT(cl.id) AS total_items
-FROM customer_logs cl;
+ORDER BY cl.created_at DESC, cl.id DESC;
 
 -- name: GetCustomerLogByID :one
 SELECT
