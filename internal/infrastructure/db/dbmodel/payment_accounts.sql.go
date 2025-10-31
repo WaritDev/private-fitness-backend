@@ -10,18 +10,6 @@ import (
 	"database/sql"
 )
 
-const countPaymentAccounts = `-- name: CountPaymentAccounts :one
-SELECT COUNT(pa.id) AS total_items
-FROM payment_accounts pa
-`
-
-func (q *Queries) CountPaymentAccounts(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countPaymentAccounts)
-	var total_items int64
-	err := row.Scan(&total_items)
-	return total_items, err
-}
-
 const createPaymentAccount = `-- name: CreatePaymentAccount :exec
 INSERT INTO payment_accounts (
   account_name,
@@ -200,13 +188,7 @@ SELECT
   (pa.is_active = 1)
 FROM payment_accounts pa
 ORDER BY pa.is_active DESC, pa.id DESC
-LIMIT ? OFFSET ?
 `
-
-type ListPaymentAccountsParams struct {
-	Limit  int32 `json:"limit"`
-	Offset int32 `json:"offset"`
-}
 
 type ListPaymentAccountsRow struct {
 	ID             int32  `json:"id"`
@@ -217,8 +199,8 @@ type ListPaymentAccountsRow struct {
 	Column6        bool   `json:"column6"`
 }
 
-func (q *Queries) ListPaymentAccounts(ctx context.Context, arg ListPaymentAccountsParams) ([]ListPaymentAccountsRow, error) {
-	rows, err := q.db.QueryContext(ctx, listPaymentAccounts, arg.Limit, arg.Offset)
+func (q *Queries) ListPaymentAccounts(ctx context.Context) ([]ListPaymentAccountsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listPaymentAccounts)
 	if err != nil {
 		return nil, err
 	}

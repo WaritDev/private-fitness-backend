@@ -48,15 +48,8 @@ func (r *PaymentAccountRepository) GetPaymentInfoByProductId(ctx context.Context
 	}, nil
 }
 
-func (r *PaymentAccountRepository) List(ctx context.Context, limit, offset int32) ([]dbmodel.ListPaymentAccountsRow, error) {
-	return r.q.ListPaymentAccounts(ctx, dbmodel.ListPaymentAccountsParams{
-		Limit:  limit,
-		Offset: offset,
-	})
-}
-
-func (r *PaymentAccountRepository) Count(ctx context.Context) (int64, error) {
-	return r.q.CountPaymentAccounts(ctx)
+func (r *PaymentAccountRepository) List(ctx context.Context) ([]dbmodel.ListPaymentAccountsRow, error) {
+	return r.q.ListPaymentAccounts(ctx)
 }
 
 func (r *PaymentAccountRepository) Insert(ctx context.Context, p repositories.CreatePaymentAccountParams) (int32, error) {

@@ -70,14 +70,7 @@ func (h *PaymentHandler) GetPaymentInfo(c *fiber.Ctx) error {
 }
 
 func (h *PaymentHandler) List(c *fiber.Ctx) error {
-	var req requests.ListPaymentAccountsRequest
-	if v := c.Query("page"); v != "" {
-		_ = c.QueryParser(&req)
-	} else {
-		_ = c.BodyParser(&req)
-	}
-
-	res, err := h.paymentUC.List(c.Context(), req)
+	res, err := h.paymentUC.List(c.Context())
 	if err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
