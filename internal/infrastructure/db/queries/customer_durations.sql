@@ -79,15 +79,7 @@ FROM customer_durations cd
 JOIN customers c ON c.username = cd.customer_username
 JOIN users     u ON u.username = c.username
 JOIN products  p ON p.id = cd.product_id
-ORDER BY cd.created_at DESC, cd.id DESC
-LIMIT ? OFFSET ?;
-
--- name: CountCustomerDurations :one
-SELECT COUNT(cd.id) AS total_items
-FROM customer_durations cd
-JOIN customers c ON c.username = cd.customer_username
-JOIN users     u ON u.username = c.username
-JOIN products  p ON p.id = cd.product_id;
+ORDER BY cd.created_at DESC, cd.id DESC;
 
 -- name: GetCustomerDurationByID :one
 SELECT

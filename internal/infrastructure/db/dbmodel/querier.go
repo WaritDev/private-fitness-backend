@@ -45,7 +45,6 @@ type Querier interface {
 	CompletedPTInRange(ctx context.Context, arg CompletedPTInRangeParams) (int64, error)
 	// นับจำนวนนัดหมายของเทรนเนอร์ในวันที่กำหนด
 	CountAppointmentsOnDate(ctx context.Context, arg CountAppointmentsOnDateParams) (int64, error)
-	CountCustomerDurations(ctx context.Context) (int64, error)
 	CountCustomerSessions(ctx context.Context) (int64, error)
 	CountPaymentAccounts(ctx context.Context) (int64, error)
 	// Q_VERIFY_6: Count payment verifications by status
@@ -147,7 +146,7 @@ type Querier interface {
 	ListAllProducts(ctx context.Context) ([]Product, error)
 	// ดึงรายชื่อเทรนเนอร์ทั้งหมดที่ active (สำหรับ dropdown)
 	ListAllTrainers(ctx context.Context) ([]ListAllTrainersRow, error)
-	ListCustomerDurations(ctx context.Context, arg ListCustomerDurationsParams) ([]ListCustomerDurationsRow, error)
+	ListCustomerDurations(ctx context.Context) ([]ListCustomerDurationsRow, error)
 	ListCustomerLogs(ctx context.Context) ([]ListCustomerLogsRow, error)
 	ListCustomerSessions(ctx context.Context, arg ListCustomerSessionsParams) ([]ListCustomerSessionsRow, error)
 	ListCustomers(ctx context.Context) ([]ListCustomersRow, error)
