@@ -22,7 +22,7 @@ func main() {
 
 	// Cors config
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3000", // 👈 ต้องระบุ origin ชัดเจน
+		AllowOrigins:     "http://localhost:3000, https://private-fitness-frontend.vercel.app", // 👈 ต้องระบุ origin ชัดเจน
 		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
 		AllowCredentials: true, // 👈 ต้องเปิดเพื่อให้ส่ง cookie ได้
