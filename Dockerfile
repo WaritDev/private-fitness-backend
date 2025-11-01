@@ -10,4 +10,4 @@ RUN go mod download
 
 COPY . .
 
-EXPOSE 8000
+EXPOSE 8001
