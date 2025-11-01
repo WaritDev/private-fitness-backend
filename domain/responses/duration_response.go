@@ -44,7 +44,7 @@ type CustomerDuration struct {
 	PurchaseDate     string `json:"purchaseDate"` // YYYY-MM-DD
 	StartDate        string `json:"startDate"`    // YYYY-MM-DD
 	EndDate          string `json:"endDate"`      // YYYY-MM-DD
-	PricePaid        int64  `json:"pricePaid"`
-	DiscountAmount   int64  `json:"discountAmount"`
+	PricePaid        float64  `json:"pricePaid"`
+	DiscountAmount   float64  `json:"discountAmount"`
 	Status           string `json:"status"`       // UPPERCASE (enum → string)
 }

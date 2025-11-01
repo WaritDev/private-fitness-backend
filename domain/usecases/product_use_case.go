@@ -212,18 +212,6 @@ func (uc *ProductUseCase) Update(
     id int32,
     req requests.UpdateProductRequest,
 ) (responses.ProductUpdatedResponse, error) {
-
-    if req.Name == "" {
-        return responses.ProductUpdatedResponse{}, errors.New("name cannot be empty")
-    }
-    if req.ListPrice < 0 {
-        return responses.ProductUpdatedResponse{}, errors.New("listPrice must be >= 0")
-    }
-    if req.Category == "" {
-        return responses.ProductUpdatedResponse{}, errors.New("category is required")
-    }
-
-    // ตรวจสอบเงื่อนไขตามประเภท
     switch req.Type {
     case "DURATION":
         if req.DurationDays == nil || *req.DurationDays <= 0 {

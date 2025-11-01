@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"regexp"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -163,32 +163,17 @@ func (uc *CustomerDurationUseCase) List(ctx context.Context) ([]dbmodel.ListCust
 	return uc.durationRepo.List(ctx)
 }
 
-var reYMD = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
-
 func (uc *CustomerDurationUseCase) UpdateDuration(
 	ctx context.Context,
 	id int32,
 	req requests.UpdateCustomerDurationRequest,
 ) (responses.CustomerDurationUpdatedResponse, error) {
-
-	// 1) Validate input
-	if !reYMD.MatchString(req.StartDate) {
-		return responses.CustomerDurationUpdatedResponse{}, errors.New("invalid startDate (YYYY-MM-DD)")
-	}
-	if req.PricePaid < 0 {
-		return responses.CustomerDurationUpdatedResponse{}, errors.New("pricePaid must be >= 0")
-	}
-	// DiscountAmount เป็น float64 (ไม่ใช่ *float64) => เช็คค่าตรง ๆ
-	if req.DiscountAmount < 0 {
-		return responses.CustomerDurationUpdatedResponse{}, errors.New("discountAmount must be >= 0")
-	}
-	switch req.Status {
+	switch strings.ToUpper(req.Status) {
 	case "ACTIVE", "EXPIRED", "FROZEN", "CANCELLED":
 	default:
 		return responses.CustomerDurationUpdatedResponse{}, errors.New("invalid status")
 	}
 
-	// 2) ตรวจสอบว่า product ที่อ้างอิงเป็น DURATION และมี duration_days > 0
 	days, err := uc.durationRepo.GetDurationDaysForDurationID(ctx, id)
 	if err != nil {
 		return responses.CustomerDurationUpdatedResponse{}, fmt.Errorf("duration not found or product invalid: %w", err)
@@ -197,16 +182,14 @@ func (uc *CustomerDurationUseCase) UpdateDuration(
 		return responses.CustomerDurationUpdatedResponse{}, errors.New("invalid product duration_days")
 	}
 
-	// 3) แปลงราคาเป็น string ตามที่ repo/db ต้องการ
-	pricePaidStr := fmt.Sprintf("%.2f", req.PricePaid)
-	discountStr := fmt.Sprintf("%.2f", req.DiscountAmount)
+	pricePaid := round2(req.PricePaid)
+	discount := round2(req.DiscountAmount)
 
-	// 4) Persist (SQL จะคำนวณ end_date = start + duration_days - 1)
 	err = uc.durationRepo.UpdateEditableFields(ctx, repositories.UpdateCustomerDurationEditableFieldsParams{
 		ID:             id,
-		StartDateYMD:   req.StartDate, // ← ใช้ D ใหญ่ ให้ตรง struct
-		PricePaid:      pricePaidStr,
-		DiscountAmount: &discountStr, // ← domain param เป็น *string
+		StartDateYMD:   req.StartDate,
+		PricePaid:      pricePaid,
+		DiscountAmount: &discount,
 		Status:         req.Status,
 	})
 	if err != nil {
@@ -216,6 +199,10 @@ func (uc *CustomerDurationUseCase) UpdateDuration(
 	return responses.CustomerDurationUpdatedResponse{
 		Message: fmt.Sprintf("Duration Package ID: %d updated successfully", id),
 	}, nil
+}
+
+func round2(f float64) float64 {
+	return math.Round(f*100) / 100
 }
 
 func (uc *CustomerDurationUseCase) Delete(
@@ -350,28 +337,30 @@ func (uc *CustomerDurationUseCase) GetByID(ctx context.Context, id string) (resp
 		return responses.CustomerDuration{}, err
 	}
 
-	pricePaid, err := utils.ParseDecimalToInt64(row.PricePaid, 2)
-	if err != nil {
-		return responses.CustomerDuration{}, err
-	}
-	discount, err := utils.ParseDecimalToInt64(row.DiscountAmount, 2)
-	if err != nil {
-		return responses.CustomerDuration{}, err
-	}
+	pricePaid := parseToFloat2(row.PricePaid)
+	discount := parseToFloat2(row.DiscountAmount)
 
 	resp := responses.CustomerDuration{
-		ID:               utils.Itoa(row.ID),                   // int32 -> string
-		CustomerUsername: row.CustomerUsername,                 // string
-		ProductID:        utils.Itoa(row.ProductID),            // int32 -> string
-		SalesUsername:    utils.PtrToString(row.SalesUsername), // *string -> string ("" ถ้า nil)
+		ID:               utils.Itoa(row.ID),
+		CustomerUsername: row.CustomerUsername,
+		ProductID:        utils.Itoa(row.ProductID),
+		SalesUsername:    utils.PtrToString(row.SalesUsername),
 		PurchaseDate:     utils.ToYMD(row.PurchaseDate),
 		StartDate:        utils.ToYMD(row.StartDate),
 		EndDate:          utils.ToYMD(row.EndDate),
 		PricePaid:        pricePaid,
 		DiscountAmount:   discount,
-		Status:           strings.ToUpper(string(row.Status)), // enum (alias of string) -> string
+		Status:           strings.ToUpper(string(row.Status)),
 	}
 	return resp, nil
+}
+
+func parseToFloat2(s string) float64 {
+	f, err := strconv.ParseFloat(strings.TrimSpace(s), 64)
+	if err != nil {
+		return 0
+	}
+	return math.Round(f*100) / 100
 }
 
 // RenewDuration - Customer self-purchase duration package (ลูกค้าซื้อเพิ่มเอง)
