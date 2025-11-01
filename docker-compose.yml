@@ -35,7 +35,7 @@ services:
       mariadb:
         condition: service_healthy
     ports:
-      - "8001:8000"
+      - "8000:8000"
     working_dir: /app
     volumes:
       - .:/app
