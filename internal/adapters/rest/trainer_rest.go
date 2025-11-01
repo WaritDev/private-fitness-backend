@@ -2,6 +2,7 @@ package rest
 
 import (
 	"strings"
+	"time"
 
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
 	"github.com/WaritDev/private-fitness-backend/domain/usecases"
@@ -22,12 +23,83 @@ func ProvideTrainerHandler(sessionUC *usecases.SessionUseCase, trainerUC *usecas
 
 // POST /api/trainers/match - จับคู่เทรนเนอร์ตาม Use Case 4S
 func (h *TrainerHandler) MatchTrainer(c *fiber.Ctx) error {
-	var req requests.MatchTrainerRequest
-	if err := c.BodyParser(&req); err != nil {
+	// Parse raw JSON first to handle time parsing manually if needed
+	var rawReq map[string]interface{}
+	if err := c.BodyParser(&rawReq); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":      "Bad Request",
 			"status_code": fiber.StatusBadRequest,
-			"message":     "Invalid request body",
+			"message":     "Invalid request body: " + err.Error(),
+			"result":      nil,
+		})
+	}
+
+	var req requests.MatchTrainerRequest
+
+	// Parse dayOfWeek
+	if dayOfWeek, ok := rawReq["dayOfWeek"].(string); ok {
+		req.DayOfWeek = dayOfWeek
+	} else {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":      "Bad Request",
+			"status_code": fiber.StatusBadRequest,
+			"message":     "dayOfWeek is required and must be a string",
+			"result":      nil,
+		})
+	}
+
+	// Parse startTime from string
+	if startTimeStr, ok := rawReq["startTime"].(string); ok {
+		startTime, err := time.Parse(time.RFC3339, startTimeStr)
+		if err != nil {
+			// Try alternative ISO 8601 format
+			startTime, err = time.Parse("2006-01-02T15:04:05Z07:00", startTimeStr)
+			if err != nil {
+				startTime, err = time.Parse("2006-01-02T15:04:05.000Z", startTimeStr)
+				if err != nil {
+					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+						"status":      "Bad Request",
+						"status_code": fiber.StatusBadRequest,
+						"message":     "Invalid startTime format. Expected ISO 8601 format. Error: " + err.Error(),
+						"result":      nil,
+					})
+				}
+			}
+		}
+		req.StartTime = startTime
+	} else {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":      "Bad Request",
+			"status_code": fiber.StatusBadRequest,
+			"message":     "startTime is required and must be a string (ISO 8601 format)",
+			"result":      nil,
+		})
+	}
+
+	// Parse endTime from string
+	if endTimeStr, ok := rawReq["endTime"].(string); ok {
+		endTime, err := time.Parse(time.RFC3339, endTimeStr)
+		if err != nil {
+			// Try alternative ISO 8601 format
+			endTime, err = time.Parse("2006-01-02T15:04:05Z07:00", endTimeStr)
+			if err != nil {
+				endTime, err = time.Parse("2006-01-02T15:04:05.000Z", endTimeStr)
+				if err != nil {
+					return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+						"status":      "Bad Request",
+						"status_code": fiber.StatusBadRequest,
+						"message":     "Invalid endTime format. Expected ISO 8601 format. Error: " + err.Error(),
+						"result":      nil,
+					})
+				}
+			}
+		}
+		req.EndTime = endTime
+	} else {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status":      "Bad Request",
+			"status_code": fiber.StatusBadRequest,
+			"message":     "endTime is required and must be a string (ISO 8601 format)",
 			"result":      nil,
 		})
 	}
@@ -55,7 +127,7 @@ func (h *TrainerHandler) MatchTrainer(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":      "Bad Request",
 			"status_code": fiber.StatusBadRequest,
-			"message":     "startTime and endTime are required",
+			"message":     "startTime and endTime are required and must be valid",
 			"result":      nil,
 		})
 	}

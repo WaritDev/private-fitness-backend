@@ -82,7 +82,7 @@ WHERE id = ?
 
 -- Use Case 3P: Manage Day-Offs
 
--- Q3P.1: Get all day-offs for a trainer
+-- Q2P.1: Get all day-offs for a trainer
 -- name: GetTrainerDayOffs :many
 SELECT
   id,
@@ -94,7 +94,7 @@ WHERE trainer_username = ?
   AND schedule_type = 'DAY_OFF'
 ORDER BY start_time DESC;
 
--- Q3P.2: Check if day-off already exists for the same date
+-- Q2P.2: Check if day-off already exists for the same date
 -- name: CheckDayOffDuplicate :one
 SELECT COUNT(id) AS duplicate_count
 FROM training_schedules
@@ -148,7 +148,6 @@ LIMIT 1;
 
 -- Get trainer's appointments with pending check-ins (for trainer calendar)
 -- name: GetTrainerAppointmentsWithPendingCheckIns :many
--- Note: Requires customer_logs.status and schedule_id columns (run migration first)
 SELECT 
   ts.id AS schedule_id,
   ts.customer_username,
