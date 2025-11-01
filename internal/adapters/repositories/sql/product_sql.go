@@ -13,6 +13,7 @@ import (
 // ProductRepository implements domain/repositories.ProductRepository using sqlc
 type ProductRepository struct {
 	q *dbmodel.Queries
+	db *sql.DB
 }
 
 // ProvideProductRepository creates a new ProductRepository
@@ -191,27 +192,55 @@ func (r *ProductRepository) InsertSession(ctx context.Context, p repositories.Cr
 }
 
 func (r *ProductRepository) UpdateDuration(ctx context.Context, p repositories.UpdateProductDurationParams) error {
-    return r.q.UpdateProductDuration(ctx, dbmodel.UpdateProductDurationParams{
-        Name:             p.Name,
-        Category:         dbmodel.ProductsCategory(p.Category),
-        ListPrice:        p.ListPrice,
-        DurationDays:     sql.NullInt32{Int32: p.DurationDays, Valid: true},
-        IsActive:         utils.CoalesceTrueBool(p.IsActive),
-        PaymentAccountID: p.PaymentAccountID,
-        ID:               p.ID,
-    })
+	query := `
+		UPDATE products
+		SET 
+			name = ?,
+			category = ?,
+			list_price = ?,
+			duration_days = ?,
+			is_active = ?,
+			payment_account_id = ?,
+			updated_at = NOW()
+		WHERE id = ?;
+	`
+
+	_, err := r.db.ExecContext(ctx, query,
+		p.Name,
+		p.Category,
+		p.ListPrice,
+		p.DurationDays,
+		utils.CoalesceTrueBool(p.IsActive),
+		p.PaymentAccountID,
+		p.ID,
+	)
+	return err
 }
 
 func (r *ProductRepository) UpdateSession(ctx context.Context, p repositories.UpdateProductSessionParams) error {
-    return r.q.UpdateProductSession(ctx, dbmodel.UpdateProductSessionParams{
-        Name:             p.Name,
-        Category:         dbmodel.ProductsCategory(p.Category),
-        ListPrice:        p.ListPrice,
-        SessionAmount:    sql.NullInt32{Int32: p.SessionAmount, Valid: true},
-        IsActive:         utils.CoalesceTrueBool(p.IsActive),
-        PaymentAccountID: p.PaymentAccountID,
-        ID:               p.ID,
-    })
+	query := `
+		UPDATE products
+		SET 
+			name = ?,
+			category = ?,
+			list_price = ?,
+			session_amount = ?,
+			is_active = ?,
+			payment_account_id = ?,
+			updated_at = NOW()
+		WHERE id = ?;
+	`
+
+	_, err := r.db.ExecContext(ctx, query,
+		p.Name,
+		p.Category,
+		p.ListPrice,
+		p.SessionAmount,
+		utils.CoalesceTrueBool(p.IsActive),
+		p.PaymentAccountID,
+		p.ID,
+	)
+	return err
 }
 
 func (r *ProductRepository) CountReferences(ctx context.Context, id int32) (int64, error) {

@@ -58,7 +58,7 @@ type UpdateProductDurationParams struct {
 	ID               int32
 	Name             string
 	Category         string
-	ListPrice        string
+	ListPrice        float64
 	DurationDays     int32
 	IsActive         *bool
 	PaymentAccountID int32
@@ -68,7 +68,7 @@ type UpdateProductSessionParams struct {
 	ID               int32
 	Name             string
 	Category         string
-	ListPrice        string
+	ListPrice        float64
 	SessionAmount    int32
 	IsActive         *bool
 	PaymentAccountID int32

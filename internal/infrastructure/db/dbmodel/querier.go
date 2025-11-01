@@ -11,7 +11,7 @@ import (
 
 type Querier interface {
 	ActiveMembersToday(ctx context.Context) (int64, error)
-	// Q3C.6 - บันทึกการจองนัด (APPOINTMENT)
+	// Q2C.7 - บันทึกการจองนัด (APPOINTMENT)
 	BookAppointment(ctx context.Context, arg BookAppointmentParams) error
 	// Q2C.1: ตรวจสอบสิทธิ์การเข้าถึงฟังก์ชันการจองก่อนโหลดปฏิทิน
 	// ตรวจสอบว่า Customer มีแพ็กเกจ Sessions แบบ ACTIVE หรือไม่
@@ -19,9 +19,9 @@ type Querier interface {
 	CheckBookingPermission(ctx context.Context, customerUsername sql.NullString) (int64, error)
 	CheckCustomerGmailExistsExcept(ctx context.Context, arg CheckCustomerGmailExistsExceptParams) (int64, error)
 	CheckCustomerPhoneExistsExcept(ctx context.Context, arg CheckCustomerPhoneExistsExceptParams) (int64, error)
-	// Q3P.3: Check if day-off overlaps with existing appointments
+	// Q6C.5: Check if day-off overlaps with existing appointments
 	CheckDayOffAppointmentOverlap(ctx context.Context, arg CheckDayOffAppointmentOverlapParams) (int64, error)
-	// Q3P.2: Check if day-off already exists for the same date
+	// Q2P.2: Check if day-off already exists for the same date
 	CheckDayOffDuplicate(ctx context.Context, arg CheckDayOffDuplicateParams) (int64, error)
 	// Q_VERIFY_2: Check duplicate payment slip (by customer + product + amount within 24 hours)
 	CheckDuplicatePayment(ctx context.Context, arg CheckDuplicatePaymentParams) (int64, error)
@@ -38,7 +38,7 @@ type Querier interface {
 	// Note: Since start_time and end_time are TIMESTAMP, we compare TIME portions only
 	// We check if the new time slot overlaps with existing ones on the same day
 	CheckTimeOverlap(ctx context.Context, arg CheckTimeOverlapParams) (int64, error)
-	// Q3C.5 - ตรวจสอบว่าช่วงเวลาที่เลือกยังว่างอยู่จริง
+	// Q2C.6 - ตรวจสอบว่าช่วงเวลาที่เลือกยังว่างอยู่จริง
 	// คืนค่า overlapped_count ถ้าเป็น 0 แสดงว่ายังว่างอยู่
 	// Logic: ช่วงเวลาซ้อนทับกันเมื่อ start_time < endTime AND end_time > startTime
 	CheckTimeSlotAvailability(ctx context.Context, arg CheckTimeSlotAvailabilityParams) (int64, error)
@@ -132,13 +132,12 @@ type Querier interface {
 	GetProductById(ctx context.Context, id int32) (Product, error)
 	GetStaffByUsername(ctx context.Context, username string) (GetStaffByUsernameRow, error)
 	// Get trainer's appointments with pending check-ins (for trainer calendar)
-	// Note: Requires customer_logs.status and schedule_id columns (run migration first)
 	GetTrainerAppointmentsWithPendingCheckIns(ctx context.Context, trainerUsername sql.NullString) ([]GetTrainerAppointmentsWithPendingCheckInsRow, error)
 	// Use Case 1P: Manage Working Hours
 	// Q1P.1: Get Trainer Availability with ID (Get Working Hours)
 	GetTrainerAvailability(ctx context.Context, trainerUsername string) ([]TrainingAvailability, error)
 	// Use Case 3P: Manage Day-Offs
-	// Q3P.1: Get all day-offs for a trainer
+	// Q2P.1: Get all day-offs for a trainer
 	GetTrainerDayOffs(ctx context.Context, trainerUsername sql.NullString) ([]GetTrainerDayOffsRow, error)
 	GetTrainingAvaliabilitiesByTrainerUsername(ctx context.Context, trainerUsername string) ([]GetTrainingAvaliabilitiesByTrainerUsernameRow, error)
 	GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error)

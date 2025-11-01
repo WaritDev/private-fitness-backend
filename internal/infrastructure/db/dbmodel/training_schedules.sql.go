@@ -32,7 +32,7 @@ type BookAppointmentParams struct {
 	EndTime          time.Time      `json:"endTime"`
 }
 
-// Q3C.6 - บันทึกการจองนัด (APPOINTMENT)
+// Q2C.7 - บันทึกการจองนัด (APPOINTMENT)
 func (q *Queries) BookAppointment(ctx context.Context, arg BookAppointmentParams) error {
 	_, err := q.db.ExecContext(ctx, bookAppointment,
 		arg.TrainerUsername,
@@ -59,7 +59,7 @@ type CheckDayOffAppointmentOverlapParams struct {
 	EndTime         time.Time      `json:"endTime"`
 }
 
-// Q3P.3: Check if day-off overlaps with existing appointments
+// Q6C.5: Check if day-off overlaps with existing appointments
 func (q *Queries) CheckDayOffAppointmentOverlap(ctx context.Context, arg CheckDayOffAppointmentOverlapParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, checkDayOffAppointmentOverlap, arg.TrainerUsername, arg.StartTime, arg.EndTime)
 	var overlapped_count int64
@@ -80,7 +80,7 @@ type CheckDayOffDuplicateParams struct {
 	StartTime       time.Time      `json:"startTime"`
 }
 
-// Q3P.2: Check if day-off already exists for the same date
+// Q2P.2: Check if day-off already exists for the same date
 func (q *Queries) CheckDayOffDuplicate(ctx context.Context, arg CheckDayOffDuplicateParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, checkDayOffDuplicate, arg.TrainerUsername, arg.StartTime)
 	var duplicate_count int64
@@ -102,7 +102,7 @@ type CheckTimeSlotAvailabilityParams struct {
 	EndTime         time.Time      `json:"endTime"`
 }
 
-// Q3C.5 - ตรวจสอบว่าช่วงเวลาที่เลือกยังว่างอยู่จริง
+// Q2C.6 - ตรวจสอบว่าช่วงเวลาที่เลือกยังว่างอยู่จริง
 // คืนค่า overlapped_count ถ้าเป็น 0 แสดงว่ายังว่างอยู่
 // Logic: ช่วงเวลาซ้อนทับกันเมื่อ start_time < endTime AND end_time > startTime
 func (q *Queries) CheckTimeSlotAvailability(ctx context.Context, arg CheckTimeSlotAvailabilityParams) (int64, error) {
@@ -421,7 +421,6 @@ type GetTrainerAppointmentsWithPendingCheckInsRow struct {
 }
 
 // Get trainer's appointments with pending check-ins (for trainer calendar)
-// Note: Requires customer_logs.status and schedule_id columns (run migration first)
 func (q *Queries) GetTrainerAppointmentsWithPendingCheckIns(ctx context.Context, trainerUsername sql.NullString) ([]GetTrainerAppointmentsWithPendingCheckInsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getTrainerAppointmentsWithPendingCheckIns, trainerUsername)
 	if err != nil {
@@ -479,7 +478,7 @@ type GetTrainerDayOffsRow struct {
 }
 
 // Use Case 3P: Manage Day-Offs
-// Q3P.1: Get all day-offs for a trainer
+// Q2P.1: Get all day-offs for a trainer
 func (q *Queries) GetTrainerDayOffs(ctx context.Context, trainerUsername sql.NullString) ([]GetTrainerDayOffsRow, error) {
 	rows, err := q.db.QueryContext(ctx, getTrainerDayOffs, trainerUsername)
 	if err != nil {

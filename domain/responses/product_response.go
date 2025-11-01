@@ -43,7 +43,7 @@ type Product struct {
 	Name             string `json:"name"`
 	Type             string `json:"type"`
 	Category         string `json:"category"`
-	ListPrice        int64  `json:"listPrice"`
+	ListPrice        float64  `json:"listPrice"`
 	DurationDays     int32  `json:"durationDays,omitempty"`
 	SessionAmount    int32  `json:"sessionAmount,omitempty"`
 	IsActive         bool   `json:"isActive"`
