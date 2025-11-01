@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"regexp"
 	"strings"
 	"time"
 
@@ -230,30 +229,11 @@ func (uc *CustomerSessionUseCase) List(ctx context.Context, req requests.ListCus
 	}, nil
 }
 
-var reUsername = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]{2,29}$`)
-
 func (uc *CustomerSessionUseCase) Update(
 	ctx context.Context,
 	id int32,
 	req requests.UpdateCustomerSessionRequest,
 ) (responses.CustomerSessionUpdatedResponse, error) {
-
-	if !reUsername.MatchString(req.TrainerUsername) {
-		return responses.CustomerSessionUpdatedResponse{}, errors.New("invalid trainerUsername")
-	}
-	if req.PricePaid < 0 {
-		return responses.CustomerSessionUpdatedResponse{}, errors.New("pricePaid must be >= 0")
-	}
-	if req.DiscountAmount < 0 {
-		return responses.CustomerSessionUpdatedResponse{}, errors.New("discountAmount must be >= 0")
-	}
-	switch req.Status {
-	case "ACTIVE", "EXPIRED", "COMPLETED", "CANCELLED":
-	default:
-		return responses.CustomerSessionUpdatedResponse{}, errors.New("invalid status")
-	}
-
-	// 2) trainer must exist & role=TRAINER
 	n, err := uc.sessionRepo.CheckTrainerExists(ctx, req.TrainerUsername)
 	if err != nil {
 		return responses.CustomerSessionUpdatedResponse{}, err
@@ -262,15 +242,11 @@ func (uc *CustomerSessionUseCase) Update(
 		return responses.CustomerSessionUpdatedResponse{}, errors.New("trainer not found or not a TRAINER")
 	}
 
-	// 3) build params (decimal -> string)
-	priceStr := fmt.Sprintf("%.2f", req.PricePaid)
-	discStr := fmt.Sprintf("%.2f", req.DiscountAmount)
-
 	params := repositories.UpdateCustomerSessionEditableFieldsParams{
 		ID:              id,
 		TrainerUsername: req.TrainerUsername,
-		PricePaid:       priceStr,
-		DiscountAmount:  sql.NullString{String: discStr, Valid: true},
+		PricePaid:       sql.NullFloat64{Float64: req.PricePaid, Valid: true},
+		DiscountAmount:  sql.NullFloat64{Float64: req.DiscountAmount, Valid: true},
 		Status:          req.Status,
 	}
 	if err := uc.sessionRepo.UpdateEditableFields(ctx, params); err != nil {
@@ -314,29 +290,30 @@ func (uc *CustomerSessionUseCase) GetByID(ctx context.Context, id string) (respo
 		return responses.CustomerSession{}, err
 	}
 
-	// --- แปลง DECIMAL(x,2) -> int64 ---
-	pricePaid, err := utils.ParseDecimalToInt64(row.PricePaid, 2)
-	if err != nil {
-		return responses.CustomerSession{}, err
+	var pricePaid float64
+	if row.PricePaid != "" {
+		fmt.Sscanf(row.PricePaid, "%f", &pricePaid)
 	}
-	discount, err := utils.ParseDecimalToInt64(row.DiscountAmount.String, 2)
-	if err != nil {
-		return responses.CustomerSession{}, err
+
+	var discountAmount float64
+	if row.DiscountAmount.Valid && row.DiscountAmount.String != "" {
+		fmt.Sscanf(row.DiscountAmount.String, "%f", &discountAmount)
 	}
 
 	resp := responses.CustomerSession{
 		ID:               utils.Itoa(row.ID),
-		CustomerUsername: utils.NS(row.CustomerUsername),        // NullString -> string
-		TrainerUsername:  utils.NS(row.TrainerUsername),         // NullString -> string
-		SalesUsername:    utils.NS(row.SalesUsername),           // NullString -> string
-		ProductID:        utils.Itoa(utils.NI32(row.ProductID)), // NullInt32 -> int32 -> string
-		PurchaseDate:     utils.ToYMD(row.PurchaseDate),         // time.Time -> YYYY-MM-DD
-		TotalSessions:    row.TotalSessions,                     // int32
-		UsedSessions:     utils.NI32(row.UsedSessions),          // NullInt32 -> int32
-		PricePaid:        pricePaid,                             // int64
-		DiscountAmount:   discount,                              // int64
+		CustomerUsername: utils.NS(row.CustomerUsername),
+		TrainerUsername:  utils.NS(row.TrainerUsername),
+		SalesUsername:    utils.NS(row.SalesUsername),
+		ProductID:        utils.Itoa(utils.NI32(row.ProductID)),
+		PurchaseDate:     utils.ToYMD(row.PurchaseDate),
+		TotalSessions:    row.TotalSessions,
+		UsedSessions:     utils.NI32(row.UsedSessions),
+		PricePaid:        pricePaid,
+		DiscountAmount:   discountAmount,
 		Status:           strings.ToUpper(string(row.Status)),
 	}
+
 	return resp, nil
 }
 

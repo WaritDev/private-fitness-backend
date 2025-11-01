@@ -63,17 +63,17 @@ type CustomerSessionDeletedResponse struct {
 }
 
 type CustomerSession struct {
-	ID               string `json:"id"`
-	CustomerUsername string `json:"customerUsername"`
-	TrainerUsername  string `json:"trainerUsername"`
-	ProductID        string `json:"productId"`
-	SalesUsername    string `json:"salesUsername"`
-	PurchaseDate     string `json:"purchaseDate"`
-	TotalSessions    int32  `json:"totalSessions"`
-	UsedSessions     int32  `json:"usedSessions"`
-	PricePaid        int64  `json:"pricePaid"`
-	DiscountAmount   int64  `json:"discountAmount"`
-	Status           string `json:"status"`
+	ID               string  `json:"id"`
+	CustomerUsername string  `json:"customerUsername"`
+	TrainerUsername  string  `json:"trainerUsername"`
+	SalesUsername    string  `json:"salesUsername"`
+	ProductID        string  `json:"productId"`
+	PurchaseDate     string  `json:"purchaseDate"`
+	TotalSessions    int32   `json:"totalSessions"`
+	UsedSessions     int32   `json:"usedSessions"`
+	PricePaid        float64 `json:"pricePaid"`
+	DiscountAmount   float64 `json:"discountAmount"`
+	Status           string  `json:"status"`
 }
 
 // RenewSessionResponse - Response สำหรับการต่ออายุ/ซื้อเพิ่ม Session Package

@@ -235,13 +235,21 @@ func (r *CustomerSessionRepository) UpdateEditableFields(
 	ctx context.Context,
 	p repositories.UpdateCustomerSessionEditableFieldsParams,
 ) error {
-	return r.q.UpdateCustomerSessionEditableFields(ctx, dbmodel.UpdateCustomerSessionEditableFieldsParams{
-		TrainerUsername: sql.NullString{String: p.TrainerUsername, Valid: true},
-		PricePaid:       p.PricePaid,
-		DiscountAmount:  p.DiscountAmount,
-		Status:          dbmodel.CustomerSessionsStatus(p.Status),
-		ID:              p.ID,
-	})
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE customer_sessions
+		SET trainer_username = ?, 
+		price_paid = ?, 
+		discount_amount = ?, 
+		status = ?, 
+		updated_at = NOW()
+		WHERE id = ?`,
+		sql.NullString{String: p.TrainerUsername, Valid: p.TrainerUsername != ""},
+		p.PricePaid,
+		p.DiscountAmount,
+		p.Status,
+		p.ID,
+	)
+	return err
 }
 
 func (r *CustomerSessionRepository) Delete(ctx context.Context, id int32) error {

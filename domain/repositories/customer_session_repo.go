@@ -118,12 +118,11 @@ type TrainingScheduleParams struct {
 	EndTime          time.Time // StartTime + 2 hours
 	ScheduleType     string    // 'APPOINTMENT'
 }
-
 type UpdateCustomerSessionEditableFieldsParams struct {
 	ID              int32
 	TrainerUsername string
-	PricePaid       string
-	DiscountAmount  sql.NullString
+	PricePaid       sql.NullFloat64
+	DiscountAmount  sql.NullFloat64
 	Status          string
 }
 
