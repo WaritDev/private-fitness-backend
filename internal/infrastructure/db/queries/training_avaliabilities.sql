@@ -58,3 +58,11 @@ WHERE id = ?;
 -- name: DeleteTrainerAvailability :exec
 DELETE FROM training_availabilities
 WHERE id = ?;
+
+-- Check if working hours overlap with day-off date
+-- name: CheckAvailabilityDayOffOverlap :one
+-- Checks if there are working hours on the same day of week as the day-off date
+SELECT COUNT(id) AS overlapped_count
+FROM training_availabilities
+WHERE trainer_username = ?
+  AND day_of_week = ?;

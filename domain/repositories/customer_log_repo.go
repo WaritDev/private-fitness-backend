@@ -28,7 +28,7 @@ type CustomerLogRepository interface {
 	GetPendingCheckInsByTrainer(ctx context.Context, trainerUsername string) ([]PendingCheckInInfo, error)
 
 	// UpdateCheckInLogStatus - อัปเดต status จาก PENDING เป็น CONFIRMED
-	UpdateCheckInLogStatus(ctx context.Context, logID int32) (int64, error)
+	UpdateCheckInLogStatus(ctx context.Context, tx *sql.Tx, logID int32) (int64, error)
 }
 
 // PendingCheckInInfo - ข้อมูล pending check-in

@@ -8,7 +8,7 @@ INSERT INTO users (username, password, role, first_name, last_name, gender, date
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: GetUserByUsername :one
-SELECT username, password, role, first_name, last_name
+SELECT username, password, role, first_name, last_name, is_active
 FROM users
 WHERE username = ?
 LIMIT 1;

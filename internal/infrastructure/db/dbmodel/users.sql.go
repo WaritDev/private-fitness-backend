@@ -87,18 +87,19 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT username, password, role, first_name, last_name
+SELECT username, password, role, first_name, last_name, is_active
 FROM users
 WHERE username = ?
 LIMIT 1
 `
 
 type GetUserByUsernameRow struct {
-	Username  string    `json:"username"`
-	Password  string    `json:"password"`
-	Role      UsersRole `json:"role"`
-	FirstName string    `json:"firstName"`
-	LastName  string    `json:"lastName"`
+	Username  string       `json:"username"`
+	Password  string       `json:"password"`
+	Role      UsersRole    `json:"role"`
+	FirstName string       `json:"firstName"`
+	LastName  string       `json:"lastName"`
+	IsActive  sql.NullBool `json:"isActive"`
 }
 
 func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error) {
@@ -110,6 +111,7 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUs
 		&i.Role,
 		&i.FirstName,
 		&i.LastName,
+		&i.IsActive,
 	)
 	return i, err
 }

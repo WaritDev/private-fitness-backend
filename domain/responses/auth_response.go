@@ -10,6 +10,7 @@ type UserInfo struct {
 	Role      string `json:"role"`
 	FirstName string `json:"firstName"`
 	LastName  string `json:"lastName"`
+	IsActive  bool   `json:"isActive"`
 }
 
 type MeResponse struct {

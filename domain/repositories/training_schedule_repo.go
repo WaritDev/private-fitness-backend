@@ -55,12 +55,12 @@ type TrainingScheduleRepository interface {
 
 // CustomerScheduleInfo - ข้อมูล schedule ของลูกค้าในวันนี้
 type CustomerScheduleInfo struct {
-	ID              int32
-	TrainerUsername string
+	ID               int32
+	TrainerUsername  string
 	CustomerUsername string
-	SessionID       int32
-	StartTime       time.Time
-	EndTime         time.Time
+	SessionID        int32
+	StartTime        time.Time
+	EndTime          time.Time
 }
 
 // AppointmentWithCheckInInfo - ข้อมูล appointment พร้อม check-in status
@@ -99,6 +99,7 @@ type AppointmentInfo struct {
 	StartTime        time.Time
 	EndTime          time.Time
 	CustomerUsername string
+	CheckinStatus    string // "PENDING", "CONFIRMED", "NONE"
 }
 
 // BookAppointmentParams - พารามิเตอร์สำหรับการจองนัด

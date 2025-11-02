@@ -162,6 +162,24 @@ func (u *TrainerUseCase) AddWorkingTime(ctx context.Context, trainerUsername str
 		}, nil
 	}
 
+	// Step 7.4: Check if this day of week has any day-offs in the future
+	dayOffList, err := u.trainingScheduleRepo.GetTrainerDayOffs(ctx, trainerUsername)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get day-offs: %w", err)
+	}
+	
+	// Check if there's a day-off on this day of week that's in the future
+	// Since working hours are weekly, we need to check if any future instance of this day has a day-off
+	for _, dayOff := range dayOffList {
+		dayOffDayOfWeek := strings.ToUpper(dayOff.StartTime.Weekday().String())
+		if dayOffDayOfWeek == req.DayOfWeek && dayOff.StartTime.After(time.Now().In(getThailandLocation())) {
+			return &responses.AddWorkingTimeResponse{
+				Status:  "error",
+				Message: fmt.Sprintf("Cannot add working hours: You have a day-off scheduled for %s. Please manage your day-offs from the Day Off page.", req.DayOfWeek),
+			}, nil
+		}
+	}
+
 	// Step 8: บันทึกข้อมูลใหม่
 	// Q1P.3: เพิ่มเวลาทำงานใหม่
 	err = u.trainerRepo.CreateTrainerAvailability(ctx, trainerUsername, req.DayOfWeek, startTime, endTime)
@@ -261,10 +279,21 @@ func (u *TrainerUseCase) UpdateWorkingTime(ctx context.Context, trainerUsername 
 		}, nil
 	}
 
-	// Step 4: Check time overlap (excluding current record)
-	// Note: We need to check overlap with other records, not including this ID
-	// For simplicity, we'll skip overlap check during update
-	// In production, you'd want a more sophisticated overlap check
+	// Step 4: Check if this day of week has any day-offs in the future
+	dayOffList, err := u.trainingScheduleRepo.GetTrainerDayOffs(ctx, trainerUsername)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get day-offs: %w", err)
+	}
+	
+	for _, dayOff := range dayOffList {
+		dayOffDayOfWeek := strings.ToUpper(dayOff.StartTime.Weekday().String())
+		if dayOffDayOfWeek == req.DayOfWeek && dayOff.StartTime.After(time.Now().In(getThailandLocation())) {
+			return &responses.UpdateWorkingTimeResponse{
+				Status:  "error",
+				Message: fmt.Sprintf("Cannot update working hours: You have a day-off scheduled for %s. Please manage your day-offs from the Day Off page.", req.DayOfWeek),
+			}, nil
+		}
+	}
 
 	// Step 5: Update the record (Q1P.4)
 	err = u.trainerRepo.UpdateTrainerAvailability(ctx, id, req.DayOfWeek, startTime, endTime)
@@ -372,6 +401,20 @@ func (u *TrainerUseCase) AddDayOff(ctx context.Context, trainerUsername string, 
 		return &responses.AddDayOffResponse{
 			Status:  "error",
 			Message: "Day-off already exists for this date",
+		}, nil
+	}
+
+	// Step 3.5: Check if there are working hours on this day of week
+	dayOfWeek := strings.ToUpper(dayOffDate.Weekday().String())
+	availabilityCount, err := u.trainerRepo.CheckAvailabilityDayOffOverlap(ctx, trainerUsername, dayOfWeek)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check availability overlap: %w", err)
+	}
+
+	if availabilityCount > 0 {
+		return &responses.AddDayOffResponse{
+			Status:  "error",
+			Message: fmt.Sprintf("Cannot create day-off: You have working hours scheduled on %s. Please remove them from Working Hours page first.", dayOfWeek),
 		}, nil
 	}
 
@@ -521,7 +564,7 @@ func (u *TrainerUseCase) ConfirmCheckIn(ctx context.Context, trainerUsername str
 	defer tx.Rollback()
 
 	// Step 5: อัปเดต check-in log status เป็น CONFIRMED
-	affected, err := u.customerLogRepo.UpdateCheckInLogStatus(ctx, targetAppointment.CheckinLogID)
+	affected, err := u.customerLogRepo.UpdateCheckInLogStatus(ctx, tx, targetAppointment.CheckinLogID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update check-in log status: %w", err)
 	}

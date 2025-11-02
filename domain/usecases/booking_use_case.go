@@ -175,6 +175,7 @@ func (u *BookingUseCase) calculateAvailableSlots(
 				// 3. ตรวจสอบว่า slot นี้ถูกจองแล้วหรือไม่
 				isBooked := false
 				bookedBy := ""
+				isOwn := false
 
 				checkTime = slotStart
 				for checkTime.Before(sessionEnd) {
@@ -182,6 +183,7 @@ func (u *BookingUseCase) calculateAvailableSlots(
 					if appt, exists := appointmentMap[key]; exists {
 						isBooked = true
 						bookedBy = appt.CustomerUsername
+						isOwn = customerUsername != "" && bookedBy == customerUsername
 						break
 					}
 					checkTime = checkTime.Add(time.Minute)
@@ -194,7 +196,7 @@ func (u *BookingUseCase) calculateAvailableSlots(
 				if isBooked {
 					available = false
 					// แสดงเฉพาะ slot ที่ตัวเองจอง
-					if customerUsername != "" && bookedBy == customerUsername {
+					if isOwn {
 						slotType = "booked"
 					} else {
 						slotType = "unavailable" // จองโดยคนอื่น - ไม่แสดงรายละเอียด
@@ -202,19 +204,22 @@ func (u *BookingUseCase) calculateAvailableSlots(
 					}
 				}
 
-				// สร้าง slot
-				slot := responses.BookingSlot{
-					ID:        slotID,
-					StartTime: slotStart,
-					EndTime:   sessionEnd,
-					Available: available,
-					IsBooked:  isBooked && bookedBy == customerUsername, // true ถ้าตัวเองจอง
-					BookedBy:  bookedBy,
-					SlotType:  slotType,
-				}
+				// สร้าง slot (เฉพาะ slot ที่ตัวเองจอง หรือ slot ที่ว่าง)
+				// ไม่แสดง slot ที่คนอื่นจองใน availableSlots
+				if !isBooked || isOwn {
+					slot := responses.BookingSlot{
+						ID:        slotID,
+						StartTime: slotStart,
+						EndTime:   sessionEnd,
+						Available: available,
+						IsBooked:  isOwn, // true ถ้าตัวเองจอง
+						BookedBy:  bookedBy,
+						SlotType:  slotType,
+					}
 
-				slots = append(slots, slot)
-				slotID++
+					slots = append(slots, slot)
+					slotID++
+				}
 			}
 		}
 	}
@@ -261,15 +266,23 @@ func (u *BookingUseCase) filterCustomerBookings(
 	for _, appt := range appointments {
 		if appt.CustomerUsername == customerUsername {
 			scheduleID := appt.ID // Store schedule ID for cancellation
+			
+			// ใช้ checkinStatus จาก appointment หากไม่มีให้เป็น "NONE"
+			checkinStatus := appt.CheckinStatus
+			if checkinStatus == "" {
+				checkinStatus = "NONE"
+			}
+			
 			slots = append(slots, responses.BookingSlot{
-				ID:         appt.ID,
-				ScheduleID: &scheduleID, // เพิ่ม schedule ID สำหรับการยกเลิกนัด
-				StartTime:  appt.StartTime,
-				EndTime:    appt.EndTime,
-				Available:  false, // ถูกจองแล้ว
-				IsBooked:   true,  // จองโดยตัวเอง
-				BookedBy:   customerUsername,
-				SlotType:   "booked", // แสดงเป็นสีเทาใน UI
+				ID:            appt.ID,
+				ScheduleID:    &scheduleID, // เพิ่ม schedule ID สำหรับการยกเลิกนัด
+				StartTime:     appt.StartTime,
+				EndTime:       appt.EndTime,
+				Available:     false, // ถูกจองแล้ว
+				IsBooked:      true,  // จองโดยตัวเอง
+				BookedBy:      customerUsername,
+				SlotType:      "booked", // แสดงเป็นสีเทาใน UI
+				CheckinStatus: checkinStatus,
 			})
 		}
 	}

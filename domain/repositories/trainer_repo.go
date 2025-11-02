@@ -55,4 +55,7 @@ type TrainerRepository interface {
 
 	// GetTrainerAvailabilityByID gets a single working hour by ID (for validation)
 	GetTrainerAvailabilityByID(ctx context.Context, id int32) (*TrainerAvailability, error)
+
+	// CheckAvailabilityDayOffOverlap checks if there are working hours on a specific day of week
+	CheckAvailabilityDayOffOverlap(ctx context.Context, trainerUsername string, dayOfWeek string) (int64, error)
 }

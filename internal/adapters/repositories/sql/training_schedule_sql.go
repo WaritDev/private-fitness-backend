@@ -80,11 +80,17 @@ func (r *TrainingScheduleRepository) GetAppointmentSchedules(ctx context.Context
 			customerUser = row.CustomerUsername.String
 		}
 
+		checkinStatus := "NONE"
+		if string(row.CheckinStatus) != "" {
+			checkinStatus = string(row.CheckinStatus)
+		}
+
 		result[i] = repositories.AppointmentInfo{
 			ID:               row.ID, // เพิ่ม ID สำหรับการยกเลิกนัดและแสดงใน response
 			StartTime:        row.StartTime,
 			EndTime:          row.EndTime,
 			CustomerUsername: customerUser,
+			CheckinStatus:    checkinStatus,
 		}
 	}
 

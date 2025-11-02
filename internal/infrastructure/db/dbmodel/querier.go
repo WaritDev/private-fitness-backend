@@ -13,6 +13,9 @@ type Querier interface {
 	ActiveMembersToday(ctx context.Context) (int64, error)
 	// Q2C.7 - บันทึกการจองนัด (APPOINTMENT)
 	BookAppointment(ctx context.Context, arg BookAppointmentParams) error
+	// Check if working hours overlap with day-off date
+	// Checks if there are working hours on the same day of week as the day-off date
+	CheckAvailabilityDayOffOverlap(ctx context.Context, arg CheckAvailabilityDayOffOverlapParams) (int64, error)
 	// Q2C.1: ตรวจสอบสิทธิ์การเข้าถึงฟังก์ชันการจองก่อนโหลดปฏิทิน
 	// ตรวจสอบว่า Customer มีแพ็กเกจ Sessions แบบ ACTIVE หรือไม่
 	// หมายเหตุ: ถ้าทำครบแล้วจะเปลี่ยน status เป็น 'COMPLETED' โดยอัตโนมัติ

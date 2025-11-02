@@ -10,6 +10,27 @@ import (
 	"time"
 )
 
+const checkAvailabilityDayOffOverlap = `-- name: CheckAvailabilityDayOffOverlap :one
+SELECT COUNT(id) AS overlapped_count
+FROM training_availabilities
+WHERE trainer_username = ?
+  AND day_of_week = ?
+`
+
+type CheckAvailabilityDayOffOverlapParams struct {
+	TrainerUsername string                          `json:"trainerUsername"`
+	DayOfWeek       TrainingAvailabilitiesDayOfWeek `json:"dayOfWeek"`
+}
+
+// Check if working hours overlap with day-off date
+// Checks if there are working hours on the same day of week as the day-off date
+func (q *Queries) CheckAvailabilityDayOffOverlap(ctx context.Context, arg CheckAvailabilityDayOffOverlapParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, checkAvailabilityDayOffOverlap, arg.TrainerUsername, arg.DayOfWeek)
+	var overlapped_count int64
+	err := row.Scan(&overlapped_count)
+	return overlapped_count, err
+}
+
 const checkTimeOverlap = `-- name: CheckTimeOverlap :one
 SELECT COUNT(id) AS overlapped_count
 FROM training_availabilities

@@ -24,15 +24,18 @@ WHERE trainer_username = ?
 -- name: GetAppointmentSchedules :many
 -- Q3C.3b - ดึงนัดที่ถูกจองแล้ว (APPOINTMENT)
 SELECT
-  id,
-  start_time,
-  end_time,
-  customer_username
-FROM training_schedules
-WHERE trainer_username = ?
-  AND schedule_type = 'APPOINTMENT'
-  AND start_time < ?
-  AND end_time > ?;
+  ts.id,
+  ts.start_time,
+  ts.end_time,
+  ts.customer_username,
+  COALESCE(cl.status, 'NONE') AS checkin_status
+FROM training_schedules ts
+LEFT JOIN customer_logs cl ON cl.schedule_id = ts.id 
+  AND cl.log_type = 'CHECK_IN'
+WHERE ts.trainer_username = ?
+  AND ts.schedule_type = 'APPOINTMENT'
+  AND ts.start_time < ?
+  AND ts.end_time > ?;
 
 -- name: CheckTimeSlotAvailability :one
 -- Q2C.6 - ตรวจสอบว่าช่วงเวลาที่เลือกยังว่างอยู่จริง
@@ -141,9 +144,8 @@ FROM training_schedules
 WHERE customer_username = ?
   AND schedule_type = 'APPOINTMENT'
   AND DATE(start_time) = CURDATE()
-  AND start_time <= NOW()
   AND end_time >= NOW()
-ORDER BY start_time DESC
+ORDER BY start_time ASC
 LIMIT 1;
 
 -- Get trainer's appointments with pending check-ins (for trainer calendar)
@@ -165,9 +167,9 @@ FROM training_schedules ts
 JOIN users u ON u.username = ts.customer_username
 LEFT JOIN customer_sessions cs ON cs.id = ts.session_id
 LEFT JOIN customer_logs cl ON cl.schedule_id = ts.id 
-  AND cl.log_type = 'CHECK_IN' 
-  AND cl.status = 'PENDING'
+  AND cl.log_type = 'CHECK_IN'
 WHERE ts.trainer_username = ?
   AND ts.schedule_type = 'APPOINTMENT'
   AND DATE(ts.start_time) >= CURDATE()
 ORDER BY ts.start_time ASC;
+

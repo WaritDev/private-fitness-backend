@@ -4,14 +4,15 @@ import "time"
 
 // BookingSlot - Individual booking slot (30-minute interval)
 type BookingSlot struct {
-	ID         int32     `json:"id"`
-	ScheduleID *int32    `json:"scheduleId,omitempty"` // Training schedule ID (for customer's bookings only)
-	StartTime  time.Time `json:"startTime"`
-	EndTime    time.Time `json:"endTime"`
-	Available  bool      `json:"available"`
-	IsBooked   bool      `json:"isBooked"` // true if this customer booked this slot
-	BookedBy   string    `json:"bookedBy"` // Customer username (only show if it's this customer)
-	SlotType   string    `json:"slotType"` // "available", "booked", "day_off", "unavailable"
+	ID            int32     `json:"id"`
+	ScheduleID    *int32    `json:"scheduleId,omitempty"` // Training schedule ID (for customer's bookings only)
+	StartTime     time.Time `json:"startTime"`
+	EndTime       time.Time `json:"endTime"`
+	Available     bool      `json:"available"`
+	IsBooked      bool      `json:"isBooked"` // true if this customer booked this slot
+	BookedBy      string    `json:"bookedBy"` // Customer username (only show if it's this customer)
+	SlotType      string    `json:"slotType"` // "available", "booked", "day_off", "unavailable"
+	CheckinStatus string    `json:"checkinStatus,omitempty"` // "PENDING", "CONFIRMED", "NONE"
 }
 
 // DayOffSlot - Day off or unavailable time slot

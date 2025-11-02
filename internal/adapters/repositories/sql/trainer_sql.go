@@ -3,7 +3,6 @@ package sql
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"time"
 
 	"github.com/WaritDev/private-fitness-backend/domain/repositories"
@@ -22,16 +21,12 @@ func ProvideTrainerRepository(q *dbmodel.Queries) repositories.TrainerRepository
 
 // FindAvailableTrainers finds trainers available on specific day and time
 func (r *TrainerRepository) FindAvailableTrainers(ctx context.Context, dayOfWeek string, startTime, endTime time.Time) ([]repositories.TrainerInfo, error) {
-	fmt.Println("dayOfWeek", dayOfWeek)
-	fmt.Println("startTime", startTime)
-	fmt.Println("endTime", endTime)
+	
 	rows, err := r.q.FindAvailableTrainers(ctx, dbmodel.FindAvailableTrainersParams{
 		DayOfWeek: dbmodel.TrainingAvailabilitiesDayOfWeek(dayOfWeek),
 		TIME:      startTime,
 		TIME_2:    endTime,
 	})
-	fmt.Println("err", err)
-	fmt.Println("rows", rows)
 	if err != nil {
 		return nil, err
 	}
@@ -164,4 +159,16 @@ func (r *TrainerRepository) GetTrainerAvailabilityByID(ctx context.Context, id i
 	// For now, we'll return nil to indicate we need to implement the query
 	// The use case layer will handle this by checking ownership differently
 	return nil, sql.ErrNoRows
+}
+
+// CheckAvailabilityDayOffOverlap checks if there are working hours on a specific day of week
+func (r *TrainerRepository) CheckAvailabilityDayOffOverlap(ctx context.Context, trainerUsername string, dayOfWeek string) (int64, error) {
+	count, err := r.q.CheckAvailabilityDayOffOverlap(ctx, dbmodel.CheckAvailabilityDayOffOverlapParams{
+		TrainerUsername: trainerUsername,
+		DayOfWeek:       dbmodel.TrainingAvailabilitiesDayOfWeek(dayOfWeek),
+	})
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }

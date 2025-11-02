@@ -106,8 +106,9 @@ func (r *CustomerLogRepository) GetPendingCheckInsByTrainer(ctx context.Context,
 }
 
 // UpdateCheckInLogStatus - อัปเดต status จาก PENDING เป็น CONFIRMED
-func (r *CustomerLogRepository) UpdateCheckInLogStatus(ctx context.Context, logID int32) (int64, error) {
-	res, err := r.q.UpdateCheckInLogStatus(ctx, logID)
+func (r *CustomerLogRepository) UpdateCheckInLogStatus(ctx context.Context, tx *sql.Tx, logID int32) (int64, error) {
+	qtx := r.q.WithTx(tx)
+	res, err := qtx.UpdateCheckInLogStatus(ctx, logID)
 	if err != nil {
 		return 0, fmt.Errorf("failed to update check-in log status: %w", err)
 	}

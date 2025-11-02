@@ -23,13 +23,10 @@ func ProvideAuthUseCase(authRepo repositories.AuthRepo, userRepo repositories.Us
 // Login authenticates a user and returns JWT token with user info
 func (u *AuthUseCase) Login(ctx context.Context, req requests.LoginRequest) (responses.LoginResponse, error) {
 	// Get user from database
-	fmt.Println("req.Username", req.Username)
 	user, err := u.userRepo.GetByUsername(ctx, req.Username)
 	if err != nil {
 		return responses.LoginResponse{}, fmt.Errorf("invalid credentials")
 	}
-	fmt.Println("user", user)
-	fmt.Println("req.Password", req.Password)
 
 	// Verify password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
@@ -62,6 +59,7 @@ func (u *AuthUseCase) Login(ctx context.Context, req requests.LoginRequest) (res
 			Role:      string(user.Role),
 			FirstName: user.FirstName,
 			LastName:  user.LastName,
+			IsActive:  user.IsActive.Bool,
 		},
 	}, nil
 }

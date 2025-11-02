@@ -238,15 +238,18 @@ func (q *Queries) GetAppointmentById(ctx context.Context, id int32) (GetAppointm
 
 const getAppointmentSchedules = `-- name: GetAppointmentSchedules :many
 SELECT
-  id,
-  start_time,
-  end_time,
-  customer_username
-FROM training_schedules
-WHERE trainer_username = ?
-  AND schedule_type = 'APPOINTMENT'
-  AND start_time < ?
-  AND end_time > ?
+  ts.id,
+  ts.start_time,
+  ts.end_time,
+  ts.customer_username,
+  COALESCE(cl.status, 'NONE') AS checkin_status
+FROM training_schedules ts
+LEFT JOIN customer_logs cl ON cl.schedule_id = ts.id 
+  AND cl.log_type = 'CHECK_IN'
+WHERE ts.trainer_username = ?
+  AND ts.schedule_type = 'APPOINTMENT'
+  AND ts.start_time < ?
+  AND ts.end_time > ?
 `
 
 type GetAppointmentSchedulesParams struct {
@@ -256,10 +259,11 @@ type GetAppointmentSchedulesParams struct {
 }
 
 type GetAppointmentSchedulesRow struct {
-	ID               int32          `json:"id"`
-	StartTime        time.Time      `json:"startTime"`
-	EndTime          time.Time      `json:"endTime"`
-	CustomerUsername sql.NullString `json:"customerUsername"`
+	ID               int32              `json:"id"`
+	StartTime        time.Time          `json:"startTime"`
+	EndTime          time.Time          `json:"endTime"`
+	CustomerUsername sql.NullString     `json:"customerUsername"`
+	CheckinStatus    CustomerLogsStatus `json:"checkinStatus"`
 }
 
 // Q3C.3b - ดึงนัดที่ถูกจองแล้ว (APPOINTMENT)
@@ -277,6 +281,7 @@ func (q *Queries) GetAppointmentSchedules(ctx context.Context, arg GetAppointmen
 			&i.StartTime,
 			&i.EndTime,
 			&i.CustomerUsername,
+			&i.CheckinStatus,
 		); err != nil {
 			return nil, err
 		}
@@ -303,9 +308,8 @@ FROM training_schedules
 WHERE customer_username = ?
   AND schedule_type = 'APPOINTMENT'
   AND DATE(start_time) = CURDATE()
-  AND start_time <= NOW()
   AND end_time >= NOW()
-ORDER BY start_time DESC
+ORDER BY start_time ASC
 LIMIT 1
 `
 
@@ -397,8 +401,7 @@ FROM training_schedules ts
 JOIN users u ON u.username = ts.customer_username
 LEFT JOIN customer_sessions cs ON cs.id = ts.session_id
 LEFT JOIN customer_logs cl ON cl.schedule_id = ts.id 
-  AND cl.log_type = 'CHECK_IN' 
-  AND cl.status = 'PENDING'
+  AND cl.log_type = 'CHECK_IN'
 WHERE ts.trainer_username = ?
   AND ts.schedule_type = 'APPOINTMENT'
   AND DATE(ts.start_time) >= CURDATE()
