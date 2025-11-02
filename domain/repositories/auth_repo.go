@@ -5,6 +5,7 @@ type JWTPayload struct {
 	Role      string `json:"role"`
 	FirstName string `json:"firstName,omitempty"`
 	LastName  string `json:"lastName,omitempty"`
+	IsActive  bool   `json:"isActive,omitempty"`
 }
 
 type AuthRepo interface {

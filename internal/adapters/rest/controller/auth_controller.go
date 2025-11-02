@@ -70,6 +70,15 @@ func (h *AuthController) Login(c *fiber.Ctx) error {
 		MaxAge:   60 * 60 * 24 * 7, // 7 days
 	})
 
+	if !result.User.IsActive {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"status":      "Unauthorized",
+			"status_code": fiber.StatusUnauthorized,
+			"message":     "User is not active",
+			"result":      nil,
+		})
+	}
+
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"status":      "OK",
 		"status_code": fiber.StatusOK,

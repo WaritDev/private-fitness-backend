@@ -45,6 +45,7 @@ func (u *AuthService) Login(ctx context.Context, req requests.LoginRequest) (res
 		Role:      string(user.Role),
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
+		IsActive:  user.IsActive.Bool,
 	}
 
 	token, err := u.authRepo.SignJWT(payload)
