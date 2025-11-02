@@ -13,12 +13,12 @@ import (
 )
 
 type MemberUseCase struct {
-	logRepo            repositories.CustomerLogRepository
-	sessionRepo        repositories.CustomerSessionRepository
-	scheduleRepo       repositories.TrainingScheduleRepository
-	userRepo           repositories.UserRepo
-	authRepo           repositories.AuthRepo
-	db                 *sql.DB
+	logRepo      repositories.CustomerLogRepository
+	sessionRepo  repositories.CustomerSessionRepository
+	scheduleRepo repositories.TrainingScheduleRepository
+	userRepo     repositories.UserRepo
+	authRepo     repositories.AuthRepo
+	db           *sql.DB
 }
 
 func ProvideMemberUseCase(
@@ -135,12 +135,14 @@ func (u *MemberUseCase) CheckIn(ctx context.Context, username, packageType strin
 	}
 
 	// สร้าง pending check-in log (ไม่หัก session ทันที - รอ Trainer confirm)
+	var message string
 	if scheduleID > 0 {
 		// สำหรับ SESSION: สร้าง pending log พร้อม schedule_id
 		err = u.logRepo.CreatePendingCheckInLog(ctx, username, scheduleID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create pending check-in log: %w", err)
 		}
+		message = fmt.Sprintf("Welcome, %s! Check-in pending. Please wait for trainer confirmation.", user.FirstName)
 	} else {
 		// สำหรับ DURATION: สร้าง log ปกติ (ไม่มี pending)
 		tx, err := u.db.BeginTx(ctx, nil)
@@ -157,12 +159,13 @@ func (u *MemberUseCase) CheckIn(ctx context.Context, username, packageType strin
 		if err := tx.Commit(); err != nil {
 			return nil, fmt.Errorf("failed to commit transaction: %w", err)
 		}
+		message = fmt.Sprintf("Welcome, %s!", user.FirstName)
 	}
 
 	// Build response
 	return &responses.CheckInResponse{
 		Status:      "success",
-		Message:     fmt.Sprintf("Check-in pending. Waiting for trainer confirmation, %s!", user.FirstName),
+		Message:     message,
 		Username:    username,
 		FirstName:   user.FirstName,
 		PackageType: packageType,
