@@ -86,8 +86,8 @@ type CustomerDurationTableRow struct {
 type UpdateCustomerDurationEditableFieldsParams struct {
 	ID             int32   // cd.id
 	StartDateYMD   string  // "YYYY-MM-DD"
-	PricePaid      string  // e.g. "5000.00"
-	DiscountAmount *string // nil = ไม่อัปเดต/ให้เป็น NULL, ไม่ nil = "0.00", "100.00"
+	PricePaid      float64  // e.g. "5000.00"
+	DiscountAmount *float64
 	Status         string  // "ACTIVE" | "EXPIRED" | "FROZEN" | "CANCELLED"
 }
 

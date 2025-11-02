@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"math"
 	"time"
 
 	"github.com/WaritDev/private-fitness-backend/domain/repositories"
@@ -137,22 +138,52 @@ func (r *CustomerDurationRepository) UpdateEditableFields(
 	ctx context.Context,
 	p repositories.UpdateCustomerDurationEditableFieldsParams,
 ) error {
-	var disc sql.NullString
-	if p.DiscountAmount != nil {
-		disc = sql.NullString{String: *p.DiscountAmount, Valid: true}
-	} else {
-		disc = sql.NullString{Valid: false} // จะอัปเดตเป็น NULL
+	if r.db == nil {
+		return errors.New("nil db")
 	}
 
-	statusEnum := dbmodel.CustomerDurationsStatus(p.Status)
-	return r.q.UpdateCustomerDurationEditableFields(ctx, dbmodel.UpdateCustomerDurationEditableFieldsParams{
-		STRTODATE:      p.StartDateYMD,
-		STRTODATE_2:    p.StartDateYMD,
-		PricePaid:      p.PricePaid,
-		DiscountAmount: disc,
-		Status:         statusEnum,
-		ID:             p.ID,
-	})
+	price := round2(p.PricePaid)
+
+	var disc sql.NullFloat64
+	if p.DiscountAmount != nil {
+		disc = sql.NullFloat64{Float64: round2(*p.DiscountAmount), Valid: true}
+	} else {
+		disc = sql.NullFloat64{Valid: false}
+	}
+
+	const q = `
+	UPDATE customer_durations
+	SET
+	start_date      = STR_TO_DATE(?, '%Y-%m-%d'),
+	price_paid      = ?,
+	discount_amount = ?,
+	status          = ?,
+	updated_at      = NOW()
+	WHERE id = ?;
+	`
+	res, err := r.db.ExecContext(ctx, q,
+		p.StartDateYMD,
+		price,
+		disc,
+		p.Status,
+		p.ID,
+	)
+	if err != nil {
+		return err
+	}
+
+	aff, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if aff == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+func round2(f float64) float64 {
+	return math.Round(f*100) / 100
 }
 
 func (r *CustomerDurationRepository) Delete(ctx context.Context, id int32) error {

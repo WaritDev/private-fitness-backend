@@ -32,28 +32,18 @@ func (uc *CustomerLogUsecase) Update(
 	req requests.UpdateCustomerLogRequest,
 ) (responses.CustomerLogUpdatedResponse, error) {
 
-	// 1) validate timestamp
-	ts, err := time.Parse("2006-01-02 15:04:05", req.Timestamp)
+	ts, err := time.ParseInLocation("2006-01-02 15:04:05", req.Timestamp, time.Local)
 	if err != nil {
 		return responses.CustomerLogUpdatedResponse{}, errors.New("invalid timestamp format (YYYY-MM-DD HH:MM:SS)")
 	}
 
-	// 2) validate enum
 	switch req.LogType {
 	case "CHECK_IN", "CHECK_OUT", "BOOK_SESSION", "CANCEL_SESSION":
 	default:
 		return responses.CustomerLogUpdatedResponse{}, errors.New("invalid logType")
 	}
 
-	// 3) persist
-	affected, err := uc.repo.UpdateByID(ctx, id, ts, req.LogType)
-	if err != nil {
-		return responses.CustomerLogUpdatedResponse{}, err
-	}
-	if affected == 0 {
-		return responses.CustomerLogUpdatedResponse{}, errors.New("log not found")
-	}
-
+	uc.repo.UpdateByID(ctx, id, ts, req.LogType)
 	return responses.CustomerLogUpdatedResponse{
 		Message: fmt.Sprintf("Log: %d updated successfully", id),
 	}, nil

@@ -46,7 +46,6 @@ SELECT
   created_at,
   updated_at
 FROM products
-WHERE is_active = TRUE
 ORDER BY category, list_price ASC;
 
 -- name: GetProductById :one

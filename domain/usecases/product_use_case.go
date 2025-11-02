@@ -99,87 +99,82 @@ func (uc *ProductUseCase) List(ctx context.Context) ([]dbmodel.ListProductsRow, 
 	return uc.repo.List(ctx)
 }
 
+// usecases/product_usecase.go
 func (uc *ProductUseCase) Create(ctx context.Context, req requests.CreateProductRequest) (responses.ProductCreatedResponse, error) {
-	// 1) Validate base
-	name := strings.TrimSpace(req.Name)
-	if name == "" {
-		return responses.ProductCreatedResponse{}, errors.New("name is required")
-	}
+    name := strings.TrimSpace(req.Name)
+    if name == "" {
+        return responses.ProductCreatedResponse{}, errors.New("name is required")
+    }
 
-	pt := normalizeType(req.ProductType)        // DURATION|SESSION
-	cat := normalizeCategory(req.ProductCategory) // ECONOMY|BUSINESS|FIRST_CLASS
+    pt := normalizeType(req.ProductType) 
+    cat := normalizeCategory(req.ProductCategory)
 
-	if pt == "" {
-		return responses.ProductCreatedResponse{}, errors.New("invalid productType")
-	}
-	if cat == "" {
-		return responses.ProductCreatedResponse{}, errors.New("invalid productCategory")
-	}
-	if req.ListPrice < 0 {
-		return responses.ProductCreatedResponse{}, errors.New("listPrice must be >= 0")
-	}
+    if req.ListPrice < 0 {
+        return responses.ProductCreatedResponse{}, errors.New("listPrice must be ≥ 0")
+    }
+    price2 := round2(req.ListPrice) 
+    lp := fmt.Sprintf("%.2f", price2) 
 
-	// 2) Check Payment Account active
-	cnt, err := uc.repo.CheckPaymentAccountActive(ctx, req.PaymentAccountID)
-	if err != nil {
-		return responses.ProductCreatedResponse{}, err
-	}
-	if cnt == 0 {
-		return responses.ProductCreatedResponse{}, errors.New("payment account not found or inactive")
-	}
+    cnt, err := uc.repo.CheckPaymentAccountActive(ctx, req.PaymentAccountID)
+    if err != nil {
+        return responses.ProductCreatedResponse{}, err
+    }
+    if cnt == 0 {
+        return responses.ProductCreatedResponse{}, errors.New("payment account not found or inactive")
+    }
 
-	// 3) Branch by type + validate cross fields
-	lp := fmt.Sprintf("%.2f", req.ListPrice)
+    switch pt {
+    case "DURATION":
+        if req.DurationDays == nil || *req.DurationDays <= 0 {
+            return responses.ProductCreatedResponse{}, errors.New("durationDays must be > 0 for DURATION")
+        }
+        if req.SessionAmount != nil {
+            return responses.ProductCreatedResponse{}, errors.New("sessionAmount must be null for DURATION")
+        }
 
-	switch pt {
-	case "DURATION":
-		if req.DurationDays == nil || *req.DurationDays <= 0 {
-			return responses.ProductCreatedResponse{}, errors.New("durationDays must be > 0 for DURATION")
-		}
-		if req.SessionAmount != nil {
-			return responses.ProductCreatedResponse{}, errors.New("sessionAmount must be null for DURATION")
-		}
-		id, err := uc.repo.InsertDuration(ctx, repositories.CreateProductDurationParams{
-			Name:             name,
-			Category:         cat,
-			ListPrice:        lp,
-			DurationDays:     *req.DurationDays,
-			IsActive:         req.IsActive,
-			PaymentAccountID: req.PaymentAccountID,
-		})
-		if err != nil {
-			return responses.ProductCreatedResponse{}, err
-		}
-		return responses.ProductCreatedResponse{
-			ID:      id,
-			Message: fmt.Sprintf("Product: %d created successfully", id),
-		}, nil
+        id, err := uc.repo.InsertDuration(ctx, repositories.CreateProductDurationParams{
+            Name:             name,
+            Category:         cat,
+            ListPrice:        lp,      
+            DurationDays:     *req.DurationDays,
+            IsActive:         req.IsActive,
+            PaymentAccountID: req.PaymentAccountID,
+        })
+        if err != nil {
+            return responses.ProductCreatedResponse{}, err
+        }
+        return responses.ProductCreatedResponse{
+            ID:      id,
+            Message: fmt.Sprintf("Product: %d created successfully", id),
+        }, nil
 
-	case "SESSION":
-		if req.SessionAmount == nil || *req.SessionAmount <= 0 {
-			return responses.ProductCreatedResponse{}, errors.New("sessionAmount must be > 0 for SESSION")
-		}
-		if req.DurationDays != nil {
-			return responses.ProductCreatedResponse{}, errors.New("durationDays must be null for SESSION")
-		}
-		id, err := uc.repo.InsertSession(ctx, repositories.CreateProductSessionParams{
-			Name:             name,
-			Category:         cat,
-			ListPrice:        lp,
-			SessionAmount:    *req.SessionAmount,
-			IsActive:         req.IsActive,
-			PaymentAccountID: req.PaymentAccountID,
-		})
-		if err != nil {
-			return responses.ProductCreatedResponse{}, err
-		}
-		return responses.ProductCreatedResponse{
-			ID:      id,
-			Message: fmt.Sprintf("Product: %d created successfully", id),
-		}, nil
-	}
+    case "SESSION":
+        if req.SessionAmount == nil || *req.SessionAmount <= 0 {
+            return responses.ProductCreatedResponse{}, errors.New("sessionAmount must be > 0 for SESSION")
+        }
+        if req.DurationDays != nil {
+            return responses.ProductCreatedResponse{}, errors.New("durationDays must be null for SESSION")
+        }
 
-	return responses.ProductCreatedResponse{}, errors.New("unreachable")
+        id, err := uc.repo.InsertSession(ctx, repositories.CreateProductSessionParams{
+            Name:             name,
+            Category:         cat,
+            ListPrice:        lp,  
+            SessionAmount:    *req.SessionAmount,
+            IsActive:         req.IsActive,
+            PaymentAccountID: req.PaymentAccountID,
+        })
+        if err != nil {
+            return responses.ProductCreatedResponse{}, err
+        }
+        return responses.ProductCreatedResponse{
+            ID:      id,
+            Message: fmt.Sprintf("Product: %d created successfully", id),
+        }, nil
+
+    default:
+        return responses.ProductCreatedResponse{}, errors.New("invalid product type")
+    }
 }
 
 func normalizeType(s string) string {
@@ -208,66 +203,54 @@ func normalizeCategory(s string) string {
 }
 
 func (uc *ProductUseCase) Update(
-    ctx context.Context,
-    id int32,
-    req requests.UpdateProductRequest,
+	ctx context.Context,
+	id int32,
+	req requests.UpdateProductRequest,
 ) (responses.ProductUpdatedResponse, error) {
+	if req.ListPrice < 0 {
+		return responses.ProductUpdatedResponse{}, errors.New("listPrice must be ≥ 0")
+	}
 
-    if req.Name == "" {
-        return responses.ProductUpdatedResponse{}, errors.New("name cannot be empty")
-    }
-    if req.ListPrice < 0 {
-        return responses.ProductUpdatedResponse{}, errors.New("listPrice must be >= 0")
-    }
-    if req.Category == "" {
-        return responses.ProductUpdatedResponse{}, errors.New("category is required")
-    }
-
-    // ตรวจสอบเงื่อนไขตามประเภท
-    switch req.Type {
-    case "DURATION":
-        if req.DurationDays == nil || *req.DurationDays <= 0 {
-            return responses.ProductUpdatedResponse{}, errors.New("durationDays must be > 0 for DURATION")
-        }
-        priceStr := fmt.Sprintf("%.2f", req.ListPrice)
-		err := uc.repo.UpdateDuration(ctx, repositories.UpdateProductDurationParams{
+	switch strings.ToUpper(req.Type) {
+	case "DURATION":
+		if req.DurationDays == nil || *req.DurationDays <= 0 {
+			return responses.ProductUpdatedResponse{}, errors.New("durationDays must be > 0 for DURATION")
+		}
+		if err := uc.repo.UpdateDuration(ctx, repositories.UpdateProductDurationParams{
 			ID:               id,
 			Name:             req.Name,
 			Category:         req.Category,
-			ListPrice:        priceStr,
+			ListPrice:        req.ListPrice,
 			DurationDays:     *req.DurationDays,
 			IsActive:         req.IsActive,
 			PaymentAccountID: req.PaymentAccountID,
-		})
-        if err != nil {
-            return responses.ProductUpdatedResponse{}, err
-        }
+		}); err != nil {
+			return responses.ProductUpdatedResponse{}, err
+		}
 
-    case "SESSION":
-        if req.SessionAmount == nil || *req.SessionAmount <= 0 {
-            return responses.ProductUpdatedResponse{}, errors.New("sessionAmount must be > 0 for SESSION")
-        }
-		priceStr := fmt.Sprintf("%.2f", req.ListPrice)
-        err := uc.repo.UpdateSession(ctx, repositories.UpdateProductSessionParams{
-            ID:              id,
-            Name:            req.Name,
-            Category:        req.Category,
-            ListPrice:       priceStr,
-            SessionAmount:   *req.SessionAmount,
-            IsActive:        req.IsActive,
-            PaymentAccountID: req.PaymentAccountID,
-        })
-        if err != nil {
-            return responses.ProductUpdatedResponse{}, err
-        }
+	case "SESSION":
+		if req.SessionAmount == nil || *req.SessionAmount <= 0 {
+			return responses.ProductUpdatedResponse{}, errors.New("sessionAmount must be > 0 for SESSION")
+		}
+		if err := uc.repo.UpdateSession(ctx, repositories.UpdateProductSessionParams{
+			ID:               id,
+			Name:             req.Name,
+			Category:         req.Category,
+			ListPrice:        req.ListPrice,
+			SessionAmount:    *req.SessionAmount,
+			IsActive:         req.IsActive,
+			PaymentAccountID: req.PaymentAccountID,
+		}); err != nil {
+			return responses.ProductUpdatedResponse{}, err
+		}
 
-    default:
-        return responses.ProductUpdatedResponse{}, errors.New("invalid product type")
-    }
+	default:
+		return responses.ProductUpdatedResponse{}, errors.New("invalid product type")
+	}
 
-    return responses.ProductUpdatedResponse{
-        Message: fmt.Sprintf("Product: %d updated successfully", id),
-    }, nil
+	return responses.ProductUpdatedResponse{
+		Message: fmt.Sprintf("Product: %d updated successfully", id),
+	}, nil
 }
 
 func (uc *ProductUseCase) Delete(
@@ -309,13 +292,12 @@ func (uc *ProductUseCase) GetByID(ctx context.Context, id string) (responses.Pro
 		return responses.Product{}, err
 	}
 
-	// DECIMAL(x,2) string -> int64 (สตางค์)
-	listPrice, err := utils.ParseDecimalToInt64(row.ListPrice, 2)
+	listPriceFloat, err := strconv.ParseFloat(row.ListPrice, 64)
 	if err != nil {
-		return responses.Product{}, err
+		return responses.Product{}, fmt.Errorf("invalid list_price: %w", err)
 	}
+	listPriceFloat = round2(listPriceFloat)
 
-	// *int32 → int32 (ถ้า nil ให้ default 0)
 	var duration int32
 	if row.DurationDays != nil {
 		duration = *row.DurationDays
@@ -326,19 +308,17 @@ func (uc *ProductUseCase) GetByID(ctx context.Context, id string) (responses.Pro
 		sessions = *row.SessionAmount
 	}
 
-	// tinyint(1) → bool
 	isActive := row.IsActive == 1
 
-	// time.Time → RFC3339 string
 	createdAt := row.CreatedAt.Format(time.RFC3339)
 	updatedAt := row.UpdatedAt.Format(time.RFC3339)
 
 	resp := responses.Product{
-		ID:               utils.Itoa(row.ID), // int32 → string
+		ID:               utils.Itoa(row.ID),
 		Name:             row.Name,
-		Type:             string(row.Type),     // enum → string
-		Category:         string(row.Category), // enum → string
-		ListPrice:        listPrice,
+		Type:             string(row.Type),
+		Category:         string(row.Category),
+		ListPrice:        listPriceFloat,
 		DurationDays:     duration,
 		SessionAmount:    sessions,
 		IsActive:         isActive,
@@ -346,5 +326,6 @@ func (uc *ProductUseCase) GetByID(ctx context.Context, id string) (responses.Pro
 		CreatedAt:        createdAt,
 		UpdatedAt:        updatedAt,
 	}
+
 	return resp, nil
 }
