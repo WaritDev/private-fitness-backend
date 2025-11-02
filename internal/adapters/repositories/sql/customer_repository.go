@@ -3,7 +3,6 @@ package sql
 import (
 	"context"
 	"database/sql"
-	"strings"
 
 	"github.com/WaritDev/private-fitness-backend/domain/repositories"
 	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db/dbmodel"
@@ -36,7 +35,7 @@ func (r *CustomerRepository) CheckPhoneExistsExcept(ctx context.Context, phone, 
 
 func (r *CustomerRepository) CheckGmailExistsExcept(ctx context.Context, gmail, username string) (int64, error) {
 	return r.q.CheckCustomerGmailExistsExcept(ctx, dbmodel.CheckCustomerGmailExistsExceptParams{
-		LOWER:    strings.ToLower(gmail),
+		Gmail:    gmail,
 		Username: username,
 	})
 }
@@ -48,7 +47,7 @@ func (r *CustomerRepository) UpdateUserNoPassword(ctx context.Context, p reposit
 		Gender:      dbmodel.UsersGender(p.Gender),
 		DateOfBirth: p.DateOfBirth,
 		PhoneNumber: p.PhoneNumber,
-		Gmail:       strings.ToLower(p.Gmail),
+		Gmail:       p.Gmail,
 		IsActive:    sql.NullBool{Bool: p.IsActive, Valid: true},
 		Username:    p.Username,
 	})
@@ -62,7 +61,7 @@ func (r *CustomerRepository) UpdateUserWithPassword(ctx context.Context, p repos
 		Gender:      dbmodel.UsersGender(p.Gender),
 		DateOfBirth: p.DateOfBirth,
 		PhoneNumber: p.PhoneNumber,
-		Gmail:       strings.ToLower(p.Gmail),
+		Gmail:       p.Gmail,
 		IsActive:    sql.NullBool{Bool: p.IsActive, Valid: true},
 		Username:    p.Username,
 	})

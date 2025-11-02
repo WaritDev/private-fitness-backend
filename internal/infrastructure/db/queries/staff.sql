@@ -22,7 +22,7 @@ WHERE phone_number = ?;
 -- name: CheckGmailExists :one
 SELECT COUNT(gmail) AS count
 FROM users
-WHERE LOWER(gmail) = LOWER(?);
+WHERE gmail = ?;
 
 -- name: CreateStaff :exec
 INSERT INTO users (
@@ -83,7 +83,7 @@ WHERE phone_number = ?
 -- name: CheckGmailExistsExceptUsername :one
 SELECT COUNT(username) as count
 FROM users
-WHERE LOWER(gmail) = LOWER(?)
+WHERE gmail = ?
     AND username != ?;
 
 -- name: GetUserRole :one

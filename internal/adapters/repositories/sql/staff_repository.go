@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"strings"
 
 	"github.com/WaritDev/private-fitness-backend/domain/repositories"
 	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db/dbmodel"
@@ -46,7 +45,7 @@ func (r *StaffRepository) Create(ctx context.Context, p repositories.CreateStaff
 		Gender:      dbmodel.UsersGender(p.Gender),
 		DateOfBirth: p.DateOfBirth,
 		PhoneNumber: p.PhoneNumber,
-		Gmail:       strings.ToLower(p.Gmail),
+		Gmail:       p.Gmail,
 		Specialty:   utils.ToNullString(p.Specialty),
 	})
 }
@@ -63,7 +62,7 @@ func (r *StaffRepository) CheckPhoneExistsExceptUsername(ctx context.Context, ph
 
 func (r *StaffRepository) CheckGmailExistsExceptUsername(ctx context.Context, gmail, username string) (int64, error) {
 	return r.q.CheckGmailExistsExceptUsername(ctx, dbmodel.CheckGmailExistsExceptUsernameParams{
-		LOWER:    strings.ToLower(gmail),
+		Gmail:    gmail,
 		Username: username,
 	})
 }
@@ -81,7 +80,7 @@ func (r *StaffRepository) UpdateNoPassword(ctx context.Context, p repositories.U
 		Gender:      dbmodel.UsersGender(p.Gender),
 		DateOfBirth: p.DateOfBirth,
 		PhoneNumber: p.PhoneNumber,
-		Gmail:       strings.ToLower(p.Gmail),
+		Gmail:       p.Gmail,
 		Specialty:   ns,
 		IsActive:    sql.NullBool{Bool: p.IsActive, Valid: true},
 		Username:    p.Username,
@@ -102,7 +101,7 @@ func (r *StaffRepository) UpdateWithPassword(ctx context.Context, p repositories
 		Gender:      dbmodel.UsersGender(p.Gender),
 		DateOfBirth: p.DateOfBirth,
 		PhoneNumber: p.PhoneNumber,
-		Gmail:       strings.ToLower(p.Gmail),
+		Gmail:       p.Gmail,
 		Specialty:   ns,
 		IsActive:    sql.NullBool{Bool: p.IsActive, Valid: true},
 		Username:    p.Username,

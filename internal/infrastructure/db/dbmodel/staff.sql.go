@@ -14,11 +14,11 @@ import (
 const checkGmailExists = `-- name: CheckGmailExists :one
 SELECT COUNT(gmail) AS count
 FROM users
-WHERE LOWER(gmail) = LOWER(?)
+WHERE gmail = ?
 `
 
-func (q *Queries) CheckGmailExists(ctx context.Context, lower string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, checkGmailExists, lower)
+func (q *Queries) CheckGmailExists(ctx context.Context, gmail string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, checkGmailExists, gmail)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -27,17 +27,17 @@ func (q *Queries) CheckGmailExists(ctx context.Context, lower string) (int64, er
 const checkGmailExistsExceptUsername = `-- name: CheckGmailExistsExceptUsername :one
 SELECT COUNT(username) as count
 FROM users
-WHERE LOWER(gmail) = LOWER(?)
+WHERE gmail = ?
     AND username != ?
 `
 
 type CheckGmailExistsExceptUsernameParams struct {
-	LOWER    string `json:"LOWER"`
+	Gmail    string `json:"gmail"`
 	Username string `json:"username"`
 }
 
 func (q *Queries) CheckGmailExistsExceptUsername(ctx context.Context, arg CheckGmailExistsExceptUsernameParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, checkGmailExistsExceptUsername, arg.LOWER, arg.Username)
+	row := q.db.QueryRowContext(ctx, checkGmailExistsExceptUsername, arg.Gmail, arg.Username)
 	var count int64
 	err := row.Scan(&count)
 	return count, err

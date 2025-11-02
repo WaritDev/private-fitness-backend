@@ -14,17 +14,17 @@ import (
 const checkCustomerGmailExistsExcept = `-- name: CheckCustomerGmailExistsExcept :one
 SELECT COUNT(u.username) AS count
 FROM users u
-WHERE LOWER(u.gmail) = LOWER(?)
+WHERE u.gmail = ?
   AND u.username <> ?
 `
 
 type CheckCustomerGmailExistsExceptParams struct {
-	LOWER    string `json:"LOWER"`
+	Gmail    string `json:"gmail"`
 	Username string `json:"username"`
 }
 
 func (q *Queries) CheckCustomerGmailExistsExcept(ctx context.Context, arg CheckCustomerGmailExistsExceptParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, checkCustomerGmailExistsExcept, arg.LOWER, arg.Username)
+	row := q.db.QueryRowContext(ctx, checkCustomerGmailExistsExcept, arg.Gmail, arg.Username)
 	var count int64
 	err := row.Scan(&count)
 	return count, err

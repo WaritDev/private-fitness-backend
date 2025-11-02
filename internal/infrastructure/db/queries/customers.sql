@@ -71,7 +71,7 @@ WHERE u.phone_number = ?
 -- name: CheckCustomerGmailExistsExcept :one
 SELECT COUNT(u.username) AS count
 FROM users u
-WHERE LOWER(u.gmail) = LOWER(?)
+WHERE u.gmail = ?
   AND u.username <> ?;
 
 -- อัปเดต users: ไม่มีการเปลี่ยน password

@@ -36,7 +36,13 @@ func (r *UserRepository) List(ctx context.Context) ([]dbmodel.User, error) {
 }
 
 func (r *UserRepository) GetByUsername(ctx context.Context, username string) (dbmodel.GetUserByUsernameRow, error) {
-	return r.q.GetUserByUsername(ctx, username)
+	fmt.Println("username", username)
+	user, err := r.q.GetUserByUsername(ctx, username)
+	if err != nil {
+		return dbmodel.GetUserByUsernameRow{}, err
+	}
+	fmt.Println("user", user)
+	return user, nil
 }
 
 func (r *UserRepository) CheckUsernameExists(ctx context.Context, username string) (bool, error) {

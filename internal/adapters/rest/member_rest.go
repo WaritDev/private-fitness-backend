@@ -36,6 +36,8 @@ func (h *MemberHandler) GenerateQRCode(c *fiber.Ctx) error {
 		}
 	}
 
+	fmt.Println("token", token)
+
 	if token == "" {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"status":      "error",
