@@ -1,4 +1,4 @@
-package rest
+package controller
 
 import (
 	"database/sql"
@@ -7,20 +7,20 @@ import (
 	"strings"
 
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
-	"github.com/WaritDev/private-fitness-backend/domain/usecases"
+	"github.com/WaritDev/private-fitness-backend/domain/services"
 	"github.com/gofiber/fiber/v2"
 )
 
-type CustomerSessionHandler struct {
-	useCase *usecases.CustomerSessionUseCase
-	authUC  *usecases.AuthUseCase
+type CustomerSessionController struct {
+	useCase *services.CustomerSessionService
+	authUC  *services.AuthService
 }
 
-func ProvideCustomerSessionHandler(
-	useCase *usecases.CustomerSessionUseCase,
-	authUC *usecases.AuthUseCase,
-) *CustomerSessionHandler {
-	return &CustomerSessionHandler{
+func ProvideCustomerSessionController(
+	useCase *services.CustomerSessionService,
+	authUC *services.AuthService,
+) *CustomerSessionController {
+	return &CustomerSessionController{
 		useCase: useCase,
 		authUC:  authUC,
 	}
@@ -28,7 +28,7 @@ func ProvideCustomerSessionHandler(
 
 // Register - POST /api/customers/sessions/register
 // Use Case 2.2C: ลงทะเบียนผู้ใช้งานสำหรับคอร์ส Sessions
-func (h *CustomerSessionHandler) Register(c *fiber.Ctx) error {
+func (h *CustomerSessionController) Register(c *fiber.Ctx) error {
 	var req requests.RegisterCustomerSessionRequest
 
 	// Parse request body
@@ -96,7 +96,7 @@ func (h *CustomerSessionHandler) Register(c *fiber.Ctx) error {
 // CheckPermission - GET /api/customers/sessions/check-permission
 // Q2C.1: ตรวจสอบสิทธิ์การเข้าถึงฟังก์ชันการจองก่อนโหลดปฏิทิน
 // ตรวจสอบว่า Customer มีแพ็กเกจ Sessions แบบ ACTIVE หรือไม่
-func (h *CustomerSessionHandler) CheckPermission(c *fiber.Ctx) error {
+func (h *CustomerSessionController) CheckPermission(c *fiber.Ctx) error {
 	// Get customer username from query parameter
 	customerUsername := c.Query("username")
 
@@ -134,7 +134,7 @@ func (h *CustomerSessionHandler) CheckPermission(c *fiber.Ctx) error {
 
 // GetActiveSessions - GET /api/customers/sessions/active/:username
 // ดึงข้อมูล Session packages ที่ ACTIVE ของลูกค้า
-func (h *CustomerSessionHandler) GetActiveSessions(c *fiber.Ctx) error {
+func (h *CustomerSessionController) GetActiveSessions(c *fiber.Ctx) error {
 	// Get customer username from path parameter
 	customerUsername := c.Params("username")
 
@@ -167,7 +167,7 @@ func (h *CustomerSessionHandler) GetActiveSessions(c *fiber.Ctx) error {
 	})
 }
 
-func (h *CustomerSessionHandler) ListSessions(c *fiber.Ctx) error {
+func (h *CustomerSessionController) ListSessions(c *fiber.Ctx) error {
 	resp, err := h.useCase.List(c.Context(), requests.ListCustomerSessionsRequest{})
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
@@ -175,7 +175,7 @@ func (h *CustomerSessionHandler) ListSessions(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(resp)
 }
 
-func (h *CustomerSessionHandler) Update(c *fiber.Ctx) error {
+func (h *CustomerSessionController) Update(c *fiber.Ctx) error {
 	idStr := c.Params("id")
 	id64, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
@@ -194,7 +194,7 @@ func (h *CustomerSessionHandler) Update(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(resp)
 }
 
-func (h *CustomerSessionHandler) Delete(c *fiber.Ctx) error {
+func (h *CustomerSessionController) Delete(c *fiber.Ctx) error {
 	idStr := c.Params("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -213,7 +213,7 @@ func (h *CustomerSessionHandler) Delete(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(res)
 }
 
-func (h *CustomerSessionHandler) GetByID(c *fiber.Ctx) error {
+func (h *CustomerSessionController) GetByID(c *fiber.Ctx) error {
 	id := strings.TrimSpace(c.Params("id"))
 	if id == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "id required"})
@@ -232,7 +232,7 @@ func (h *CustomerSessionHandler) GetByID(c *fiber.Ctx) error {
 
 // RenewSession - POST /api/customer-sessions/renew
 // Use Case: ต่ออายุ/ซื้อเพิ่ม Session Package (ลูกค้าซื้อเอง)
-func (h *CustomerSessionHandler) RenewSession(c *fiber.Ctx) error {
+func (h *CustomerSessionController) RenewSession(c *fiber.Ctx) error {
 	// Step 1: Extract JWT token from Cookie or Authorization header
 	token := c.Cookies("pf_auth")
 	if token == "" {

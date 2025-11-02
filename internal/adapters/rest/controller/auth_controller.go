@@ -1,4 +1,4 @@
-package rest
+package controller
 
 import (
 	"os"
@@ -6,20 +6,20 @@ import (
 	"time"
 
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
-	"github.com/WaritDev/private-fitness-backend/domain/usecases"
+	"github.com/WaritDev/private-fitness-backend/domain/services"
 	"github.com/gofiber/fiber/v2"
 )
 
-type AuthHandler struct {
-	UC *usecases.AuthUseCase
+type AuthController struct {
+	UC *services.AuthService
 }
 
-func ProvideAuthHandler(uc *usecases.AuthUseCase) *AuthHandler {
-	return &AuthHandler{UC: uc}
+func ProvideAuthController(uc *services.AuthService) *AuthController {
+	return &AuthController{UC: uc}
 }
 
 // POST /api/auth/login
-func (h *AuthHandler) Login(c *fiber.Ctx) error {
+func (h *AuthController) Login(c *fiber.Ctx) error {
 	var req requests.LoginRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -82,7 +82,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 }
 
 // POST /api/auth/signup
-func (h *AuthHandler) Signup(c *fiber.Ctx) error {
+func (h *AuthController) Signup(c *fiber.Ctx) error {
 	var req requests.SignupRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -119,7 +119,7 @@ func (h *AuthHandler) Signup(c *fiber.Ctx) error {
 }
 
 // POST/GET /api/auth/logout
-func (h *AuthHandler) Logout(c *fiber.Ctx) error {
+func (h *AuthController) Logout(c *fiber.Ctx) error {
 	// Clear cookie
 	c.Cookie(&fiber.Cookie{
 		Name:     "pf_auth",
@@ -141,7 +141,7 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 }
 
 // GET /api/auth/me
-func (h *AuthHandler) Me(c *fiber.Ctx) error {
+func (h *AuthController) Me(c *fiber.Ctx) error {
 	// Extract token from cookie or Authorization header
 	token := c.Cookies("pf_auth")
 	if token == "" {

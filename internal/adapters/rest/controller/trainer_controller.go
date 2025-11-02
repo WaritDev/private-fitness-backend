@@ -1,28 +1,28 @@
-package rest
+package controller
 
 import (
 	"strings"
 	"time"
 	"fmt"
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
-	"github.com/WaritDev/private-fitness-backend/domain/usecases"
+	"github.com/WaritDev/private-fitness-backend/domain/services"
 	"github.com/gofiber/fiber/v2"
 )
 
-type TrainerHandler struct {
-	sessionUC *usecases.SessionUseCase
-	trainerUC *usecases.TrainerUseCase
+type TrainerController struct {
+	sessionUC *services.SessionService
+	trainerUC *services.TrainerService
 }
 
-func ProvideTrainerHandler(sessionUC *usecases.SessionUseCase, trainerUC *usecases.TrainerUseCase) *TrainerHandler {
-	return &TrainerHandler{
+func ProvideTrainerController(sessionUC *services.SessionService, trainerUC *services.TrainerService) *TrainerController {
+	return &TrainerController{
 		sessionUC: sessionUC,
 		trainerUC: trainerUC,
 	}
 }
 
 // POST /api/trainers/match - จับคู่เทรนเนอร์ตาม Use Case 4S
-func (h *TrainerHandler) MatchTrainer(c *fiber.Ctx) error {
+func (h *TrainerController) MatchTrainer(c *fiber.Ctx) error {
 	// Parse raw JSON first to handle time parsing manually if needed
 	var rawReq map[string]interface{}
 	if err := c.BodyParser(&rawReq); err != nil {
@@ -171,7 +171,7 @@ func (h *TrainerHandler) MatchTrainer(c *fiber.Ctx) error {
 }
 
 // GET /api/trainers - ดึงรายชื่อเทรนเนอร์ทั้งหมด (สำหรับ dropdown)
-func (h *TrainerHandler) ListAllTrainers(c *fiber.Ctx) error {
+func (h *TrainerController) ListAllTrainers(c *fiber.Ctx) error {
 	result, err := h.sessionUC.ListAllTrainers(c.Context())
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -193,7 +193,7 @@ func (h *TrainerHandler) ListAllTrainers(c *fiber.Ctx) error {
 // Use Case 1P: Manage Working Hours
 
 // GET /api/trainers/working-hours - ดึงรายการเวลาทำงานของเทรนเนอร์
-func (h *TrainerHandler) GetWorkingHours(c *fiber.Ctx) error {
+func (h *TrainerController) GetWorkingHours(c *fiber.Ctx) error {
 	// ดึง trainerUsername จาก JWT claims (set by middleware)
 	trainerUsername, ok := c.Locals("username").(string)
 	if !ok || trainerUsername == "" {
@@ -216,7 +216,7 @@ func (h *TrainerHandler) GetWorkingHours(c *fiber.Ctx) error {
 }
 
 // POST /api/trainers/working-hours - เพิ่มเวลาทำงานใหม่
-func (h *TrainerHandler) AddWorkingTime(c *fiber.Ctx) error {
+func (h *TrainerController) AddWorkingTime(c *fiber.Ctx) error {
 	// ดึง trainerUsername จาก JWT claims (set by middleware)
 	trainerUsername, ok := c.Locals("username").(string)
 	if !ok || trainerUsername == "" {
@@ -291,7 +291,7 @@ func (h *TrainerHandler) AddWorkingTime(c *fiber.Ctx) error {
 }
 
 // PUT /api/trainers/working-hours/:id - แก้ไขเวลาทำงาน (Q1P.4)
-func (h *TrainerHandler) UpdateWorkingTime(c *fiber.Ctx) error {
+func (h *TrainerController) UpdateWorkingTime(c *fiber.Ctx) error {
 	// ดึง trainerUsername จาก JWT claims (set by middleware)
 	trainerUsername, ok := c.Locals("username").(string)
 	if !ok || trainerUsername == "" {
@@ -361,7 +361,7 @@ func (h *TrainerHandler) UpdateWorkingTime(c *fiber.Ctx) error {
 }
 
 // DELETE /api/trainers/working-hours/:id - ลบเวลาทำงาน (Q1P.5)
-func (h *TrainerHandler) DeleteWorkingTime(c *fiber.Ctx) error {
+func (h *TrainerController) DeleteWorkingTime(c *fiber.Ctx) error {
 	// ดึง trainerUsername จาก JWT claims (set by middleware)
 	trainerUsername, ok := c.Locals("username").(string)
 	if !ok || trainerUsername == "" {
@@ -400,7 +400,7 @@ func (h *TrainerHandler) DeleteWorkingTime(c *fiber.Ctx) error {
 // ========== Use Case: Trainer Calendar & Check-in Confirmation ==========
 
 // GET /api/trainers/calendar - ดึง appointments พร้อม pending check-ins
-func (h *TrainerHandler) GetCalendar(c *fiber.Ctx) error {
+func (h *TrainerController) GetCalendar(c *fiber.Ctx) error {
 	// ดึง trainerUsername จาก JWT claims (set by middleware)
 	trainerUsername, ok := c.Locals("username").(string)
 	if !ok || trainerUsername == "" {
@@ -423,7 +423,7 @@ func (h *TrainerHandler) GetCalendar(c *fiber.Ctx) error {
 }
 
 // POST /api/trainers/checkin - Trainer confirm check-in และหัก session
-func (h *TrainerHandler) ConfirmCheckIn(c *fiber.Ctx) error {
+func (h *TrainerController) ConfirmCheckIn(c *fiber.Ctx) error {
 	// ดึง trainerUsername จาก JWT claims (set by middleware)
 	trainerUsername, ok := c.Locals("username").(string)
 	if !ok || trainerUsername == "" {
@@ -470,7 +470,7 @@ func (h *TrainerHandler) ConfirmCheckIn(c *fiber.Ctx) error {
 // ========== Use Case 3P: Manage Day-Offs ==========
 
 // GET /api/trainers/day-offs - ดึงรายการวันหยุดของเทรนเนอร์
-func (h *TrainerHandler) GetDayOffs(c *fiber.Ctx) error {
+func (h *TrainerController) GetDayOffs(c *fiber.Ctx) error {
 	// ดึง trainerUsername จาก JWT claims (set by middleware)
 	trainerUsername, ok := c.Locals("username").(string)
 	if !ok || trainerUsername == "" {
@@ -493,7 +493,7 @@ func (h *TrainerHandler) GetDayOffs(c *fiber.Ctx) error {
 }
 
 // POST /api/trainers/day-offs - เพิ่มวันหยุดใหม่
-func (h *TrainerHandler) AddDayOff(c *fiber.Ctx) error {
+func (h *TrainerController) AddDayOff(c *fiber.Ctx) error {
 	// ดึง trainerUsername จาก JWT claims (set by middleware)
 	trainerUsername, ok := c.Locals("username").(string)
 	if !ok || trainerUsername == "" {
@@ -538,7 +538,7 @@ func (h *TrainerHandler) AddDayOff(c *fiber.Ctx) error {
 }
 
 // DELETE /api/trainers/day-offs/:id - ลบวันหยุด
-func (h *TrainerHandler) DeleteDayOff(c *fiber.Ctx) error {
+func (h *TrainerController) DeleteDayOff(c *fiber.Ctx) error {
 	// ดึง trainerUsername จาก JWT claims (set by middleware)
 	trainerUsername, ok := c.Locals("username").(string)
 	if !ok || trainerUsername == "" {

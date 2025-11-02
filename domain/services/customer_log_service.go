@@ -1,4 +1,4 @@
-package usecases
+package services
 
 import (
 	"context"
@@ -14,19 +14,19 @@ import (
 	"github.com/WaritDev/private-fitness-backend/utils"
 )
 
-type CustomerLogUsecase struct {
+type CustomerLogService struct {
 	repo repositories.CustomerLogRepository
 }
 
-func ProvideCustomerLogUsecase(repo repositories.CustomerLogRepository) *CustomerLogUsecase {
-	return &CustomerLogUsecase{repo: repo}
+func ProvideCustomerLogService(repo repositories.CustomerLogRepository) *CustomerLogService {
+	return &CustomerLogService{repo: repo}
 }
 
-func (uc *CustomerLogUsecase) List(ctx context.Context) ([]dbmodel.ListCustomerLogsRow, error) {
+func (uc *CustomerLogService) List(ctx context.Context) ([]dbmodel.ListCustomerLogsRow, error) {
 	return uc.repo.List(ctx)
 }
 
-func (uc *CustomerLogUsecase) Update(
+func (uc *CustomerLogService) Update(
 	ctx context.Context,
 	id int32,
 	req requests.UpdateCustomerLogRequest,
@@ -49,7 +49,7 @@ func (uc *CustomerLogUsecase) Update(
 	}, nil
 }
 
-func (uc *CustomerLogUsecase) Delete(
+func (uc *CustomerLogService) Delete(
 	ctx context.Context,
 	id int32,
 ) (responses.CustomerLogDeletedResponse, error) {
@@ -67,7 +67,7 @@ func (uc *CustomerLogUsecase) Delete(
 	}, nil
 }
 
-func (uc *CustomerLogUsecase) GetByID(ctx context.Context, id string) (responses.CustomerLog, error) {
+func (uc *CustomerLogService) GetByID(ctx context.Context, id string) (responses.CustomerLog, error) {
 	if strings.TrimSpace(id) == "" {
 		return responses.CustomerLog{}, errors.New("id required")
 	}

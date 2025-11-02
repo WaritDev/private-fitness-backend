@@ -1,4 +1,4 @@
-package usecases
+package services
 
 import (
 	"context"
@@ -10,12 +10,12 @@ import (
 	"github.com/WaritDev/private-fitness-backend/domain/responses"
 )
 
-type SessionUseCase struct {
+type SessionService struct {
 	trainerRepo repositories.TrainerRepository
 }
 
-func ProvideSessionUseCase(trainerRepo repositories.TrainerRepository) *SessionUseCase {
-	return &SessionUseCase{
+func ProvideSessionService(trainerRepo repositories.TrainerRepository) *SessionService {
+	return &SessionService{
 		trainerRepo: trainerRepo,
 	}
 }
@@ -27,7 +27,7 @@ func ProvideSessionUseCase(trainerRepo repositories.TrainerRepository) *SessionU
 // 3. เรียงตามจำนวนนัดหมาย (น้อย -> มาก) และวันที่สร้าง (เก่า -> ใหม่)
 // 4. ตรวจสอบว่ามีนัดซ้อนทับหรือไม่
 // 5. คืนค่าเทรนเนอร์คนแรกที่ไม่มีนัดซ้อนทับ
-func (u *SessionUseCase) MatchTrainer(ctx context.Context, req requests.MatchTrainerRequest) (*responses.TrainerMatchResponse, error) {
+func (u *SessionService) MatchTrainer(ctx context.Context, req requests.MatchTrainerRequest) (*responses.TrainerMatchResponse, error) {
 	// Step 1: Find available trainers by day and time
 	availableTrainers, err := u.trainerRepo.FindAvailableTrainers(ctx, req.DayOfWeek, req.StartTime, req.EndTime)
 	fmt.Println("availableTrainers", availableTrainers)
@@ -98,7 +98,7 @@ func (u *SessionUseCase) MatchTrainer(ctx context.Context, req requests.MatchTra
 }
 
 // ListAllTrainers - ดึงรายชื่อเทรนเนอร์ทั้งหมด (สำหรับ dropdown)
-func (u *SessionUseCase) ListAllTrainers(ctx context.Context) ([]responses.TrainerListResponse, error) {
+func (u *SessionService) ListAllTrainers(ctx context.Context) ([]responses.TrainerListResponse, error) {
 	trainers, err := u.trainerRepo.ListAllTrainers(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list trainers: %w", err)

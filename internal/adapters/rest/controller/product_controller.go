@@ -1,23 +1,23 @@
-package rest
+package controller
 
 import (
 	"strconv"
 
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
-	"github.com/WaritDev/private-fitness-backend/domain/usecases"
+	"github.com/WaritDev/private-fitness-backend/domain/services"
 	"github.com/gofiber/fiber/v2"
 )
 
-type ProductHandler struct {
-	UC *usecases.ProductUseCase
+type ProductController struct {
+	UC *services.ProductService
 }
 
-func ProvideProductHandler(uc *usecases.ProductUseCase) *ProductHandler {
-	return &ProductHandler{UC: uc}
+func ProvideProductController(uc *services.ProductService) *ProductController {
+	return &ProductController{UC: uc}
 }
 
 // GET /api/products
-func (h *ProductHandler) ListAllProducts(c *fiber.Ctx) error {
+func (h *ProductController) ListAllProducts(c *fiber.Ctx) error {
 	products, err := h.UC.ListAllProducts(c.Context())
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -37,7 +37,7 @@ func (h *ProductHandler) ListAllProducts(c *fiber.Ctx) error {
 }
 
 // GET /api/products/:id
-func (h *ProductHandler) GetProductByID(c *fiber.Ctx) error {
+func (h *ProductController) GetProductByID(c *fiber.Ctx) error {
 	idStr := c.Params("id")
 	id, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
@@ -68,7 +68,7 @@ func (h *ProductHandler) GetProductByID(c *fiber.Ctx) error {
 }
 
 // GET /api/durations
-func (h *ProductHandler) ListDurations(c *fiber.Ctx) error {
+func (h *ProductController) ListDurations(c *fiber.Ctx) error {
 	products, err := h.UC.ListDurations(c.Context())
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -88,7 +88,7 @@ func (h *ProductHandler) ListDurations(c *fiber.Ctx) error {
 }
 
 // GET /api/sessions
-func (h *ProductHandler) ListSessions(c *fiber.Ctx) error {
+func (h *ProductController) ListSessions(c *fiber.Ctx) error {
 	products, err := h.UC.ListSessions(c.Context())
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -107,7 +107,7 @@ func (h *ProductHandler) ListSessions(c *fiber.Ctx) error {
 	})
 }
 
-func (h *ProductHandler) List(c *fiber.Ctx) error {
+func (h *ProductController) List(c *fiber.Ctx) error {
 	resp, err := h.UC.List(c.Context())
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
@@ -115,7 +115,7 @@ func (h *ProductHandler) List(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(resp)
 }
 
-func (h *ProductHandler) Create(c *fiber.Ctx) error {
+func (h *ProductController) Create(c *fiber.Ctx) error {
 	var req requests.CreateProductRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid json"})
@@ -129,7 +129,7 @@ func (h *ProductHandler) Create(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(res)
 }
 
-func (h *ProductHandler) Update(c *fiber.Ctx) error {
+func (h *ProductController) Update(c *fiber.Ctx) error {
     idStr := c.Params("id")
     id, err := strconv.Atoi(idStr)
     if err != nil {
@@ -149,7 +149,7 @@ func (h *ProductHandler) Update(c *fiber.Ctx) error {
     return c.JSON(res)
 }
 
-func (h *ProductHandler) Delete(c *fiber.Ctx) error {
+func (h *ProductController) Delete(c *fiber.Ctx) error {
     idStr := c.Params("id")
     id, err := strconv.Atoi(idStr)
     if err != nil {
@@ -165,7 +165,7 @@ func (h *ProductHandler) Delete(c *fiber.Ctx) error {
 }
 
 // GET /api/products/:id
-func (h *ProductHandler) GetByID(c *fiber.Ctx) error {
+func (h *ProductController) GetByID(c *fiber.Ctx) error {
 	id := c.Params("id", "")
 	resp, err := h.UC.GetByID(c.Context(), id)
 	if err != nil {

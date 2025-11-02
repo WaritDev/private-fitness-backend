@@ -1,4 +1,4 @@
-package rest
+package controller
 
 import (
 	"database/sql"
@@ -7,20 +7,20 @@ import (
 	"strings"
 
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
-	"github.com/WaritDev/private-fitness-backend/domain/usecases"
+	"github.com/WaritDev/private-fitness-backend/domain/services"
 	"github.com/gofiber/fiber/v2"
 )
 
-type CustomerDurationHandler struct {
-	UC     *usecases.CustomerDurationUseCase
-	AuthUC *usecases.AuthUseCase
+type CustomerDurationController struct {
+	UC     *services.CustomerDurationService
+	AuthUC *services.AuthService
 }
 
-func ProvideCustomerDurationHandler(
-	uc *usecases.CustomerDurationUseCase,
-	authUC *usecases.AuthUseCase,
-) *CustomerDurationHandler {
-	return &CustomerDurationHandler{
+func ProvideCustomerDurationController(
+	uc *services.CustomerDurationService,
+	authUC *services.AuthService,
+) *CustomerDurationController {
+	return &CustomerDurationController{
 		UC:     uc,
 		AuthUC: authUC,
 	}
@@ -28,7 +28,7 @@ func ProvideCustomerDurationHandler(
 
 // POST /api/durations/purchase
 // ต้อง authenticated ก่อน (check JWT)
-func (h *CustomerDurationHandler) PurchaseDuration(c *fiber.Ctx) error {
+func (h *CustomerDurationController) PurchaseDuration(c *fiber.Ctx) error {
 	// Extract and verify token
 	token := c.Cookies("pf_auth")
 	if token == "" {
@@ -116,7 +116,7 @@ func (h *CustomerDurationHandler) PurchaseDuration(c *fiber.Ctx) error {
 
 // GET /api/durations/my
 // Get all durations for current authenticated user
-func (h *CustomerDurationHandler) GetMyDurations(c *fiber.Ctx) error {
+func (h *CustomerDurationController) GetMyDurations(c *fiber.Ctx) error {
 	// Extract and verify token
 	token := c.Cookies("pf_auth")
 	if token == "" {
@@ -167,7 +167,7 @@ func (h *CustomerDurationHandler) GetMyDurations(c *fiber.Ctx) error {
 
 // GetActiveDuration - GET /api/customers/durations/active/:username
 // ดึงข้อมูล Duration packages ที่ ACTIVE ของลูกค้า (คล้าย GetActiveSessions)
-func (h *CustomerDurationHandler) GetActiveDuration(c *fiber.Ctx) error {
+func (h *CustomerDurationController) GetActiveDuration(c *fiber.Ctx) error {
 	username := c.Params("username")
 	if username == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -197,7 +197,7 @@ func (h *CustomerDurationHandler) GetActiveDuration(c *fiber.Ctx) error {
 	})
 }
 
-func (h *CustomerDurationHandler) ListDurations(c *fiber.Ctx) error {
+func (h *CustomerDurationController) ListDurations(c *fiber.Ctx) error {
 	resp, err := h.UC.List(c.Context())
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
@@ -205,7 +205,7 @@ func (h *CustomerDurationHandler) ListDurations(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(resp)
 }
 
-func (h *CustomerDurationHandler) Update(c *fiber.Ctx) error {
+func (h *CustomerDurationController) Update(c *fiber.Ctx) error {
 	idStr := c.Params("id")
 	id64, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
@@ -224,7 +224,7 @@ func (h *CustomerDurationHandler) Update(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(resp)
 }
 
-func (h *CustomerDurationHandler) Delete(c *fiber.Ctx) error {
+func (h *CustomerDurationController) Delete(c *fiber.Ctx) error {
 	idStr := c.Params("id")
 	id64, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
@@ -244,7 +244,7 @@ func (h *CustomerDurationHandler) Delete(c *fiber.Ctx) error {
 
 // Register - POST /api/customers/durations/register
 // Use Case 2.1C: ลงทะเบียนผู้ใช้งานสำหรับแพ็กเกจ Duration
-func (h *CustomerDurationHandler) Register(c *fiber.Ctx) error {
+func (h *CustomerDurationController) Register(c *fiber.Ctx) error {
 	var req requests.RegisterCustomerDurationRequest
 
 	// Parse request body
@@ -309,7 +309,7 @@ func (h *CustomerDurationHandler) Register(c *fiber.Ctx) error {
 	})
 }
 
-func (h *CustomerDurationHandler) GetByID(c *fiber.Ctx) error {
+func (h *CustomerDurationController) GetByID(c *fiber.Ctx) error {
 	id := strings.TrimSpace(c.Params("id"))
 	if id == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "id required"})
@@ -326,7 +326,7 @@ func (h *CustomerDurationHandler) GetByID(c *fiber.Ctx) error {
 }
 
 // POST /api/customer-durations/renew - Customer self-purchase duration package
-func (h *CustomerDurationHandler) RenewDuration(c *fiber.Ctx) error {
+func (h *CustomerDurationController) RenewDuration(c *fiber.Ctx) error {
 	// Step 1: Extract JWT token from Cookie or Authorization header
 	token := c.Cookies("pf_auth")
 	if token == "" {

@@ -1,4 +1,4 @@
-package usecases
+package services
 
 import (
 	"context"
@@ -8,19 +8,19 @@ import (
 	res "github.com/WaritDev/private-fitness-backend/domain/responses"
 )
 
-type ManagerDashboardUsecase interface {
+type ManagerDashboardService interface {
 	Get(ctx context.Context, start, end time.Time) (*res.ManagerDashboardResponse, error)
 }
 
-type managerDashboardUsecase struct {
+type managerDashboardService struct {
 	repo domrepo.ManagerDashboardRepository
 }
 
-func ProvideManagerDashboardUsecase(r domrepo.ManagerDashboardRepository) ManagerDashboardUsecase {
-	return &managerDashboardUsecase{repo: r}
+func ProvideManagerDashboardService(r domrepo.ManagerDashboardRepository) ManagerDashboardService {
+	return &managerDashboardService{repo: r}
 }
 
-func (uc *managerDashboardUsecase) Get(ctx context.Context, start, end time.Time) (*res.ManagerDashboardResponse, error) {
+func (uc *managerDashboardService) Get(ctx context.Context, start, end time.Time) (*res.ManagerDashboardResponse, error) {
 	total, err := uc.repo.TotalRevenue(ctx, start, end)
 	if err != nil { return nil, err }
 

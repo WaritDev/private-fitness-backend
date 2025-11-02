@@ -1,4 +1,4 @@
-package usecases
+package services
 
 import (
 	"context"
@@ -11,17 +11,17 @@ import (
 	"github.com/WaritDev/private-fitness-backend/domain/responses"
 )
 
-type AuthUseCase struct {
+type AuthService struct {
 	authRepo repositories.AuthRepo
 	userRepo repositories.UserRepo
 }
 
-func ProvideAuthUseCase(authRepo repositories.AuthRepo, userRepo repositories.UserRepo) *AuthUseCase {
-	return &AuthUseCase{authRepo: authRepo, userRepo: userRepo}
+func ProvideAuthService(authRepo repositories.AuthRepo, userRepo repositories.UserRepo) *AuthService {
+	return &AuthService{authRepo: authRepo, userRepo: userRepo}
 }
 
 // Login authenticates a user and returns JWT token with user info
-func (u *AuthUseCase) Login(ctx context.Context, req requests.LoginRequest) (responses.LoginResponse, error) {
+func (u *AuthService) Login(ctx context.Context, req requests.LoginRequest) (responses.LoginResponse, error) {
 	// Get user from database
 	user, err := u.userRepo.GetByUsername(ctx, req.Username)
 	if err != nil {
@@ -65,7 +65,7 @@ func (u *AuthUseCase) Login(ctx context.Context, req requests.LoginRequest) (res
 }
 
 // Signup registers a new customer user
-func (u *AuthUseCase) Signup(ctx context.Context, req requests.SignupRequest) error {
+func (u *AuthService) Signup(ctx context.Context, req requests.SignupRequest) error {
 	// Basic validation (complex validation done on frontend)
 	if len(req.Username) < 4 || len(req.Username) > 30 {
 		return fmt.Errorf("username must be between 4 and 30 characters")
@@ -126,7 +126,7 @@ func (u *AuthUseCase) Signup(ctx context.Context, req requests.SignupRequest) er
 }
 
 // VerifyToken verifies a JWT token and returns the payload
-func (u *AuthUseCase) VerifyToken(ctx context.Context, token string) (*repositories.JWTPayload, error) {
+func (u *AuthService) VerifyToken(ctx context.Context, token string) (*repositories.JWTPayload, error) {
 	payload, err := u.authRepo.VerifyJWT(token)
 	if err != nil {
 		return nil, fmt.Errorf("invalid token: %w", err)

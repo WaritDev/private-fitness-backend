@@ -1,4 +1,4 @@
-package rest
+package controller
 
 import (
 	"database/sql"
@@ -8,31 +8,31 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
-	"github.com/WaritDev/private-fitness-backend/domain/usecases"
+	"github.com/WaritDev/private-fitness-backend/domain/services"
 )
 
-type StaffHandler struct {
-	uc *usecases.StaffUsecase
+type StaffController struct {
+	uc *services.StaffService
 }
 
-func ProvideStaffHandler(uc *usecases.StaffUsecase) *StaffHandler {
-	return &StaffHandler{uc: uc}
+func ProvideStaffController(uc *services.StaffService) *StaffController {
+	return &StaffController{uc: uc}
 }
 
-func (h *StaffHandler) Register(r fiber.Router) {
+func (h *StaffController) Register(r fiber.Router) {
 	r.Get("/staffs", h.ListStaffs)
 	r.Post("/staffs", h.CreateStaff)
 	r.Post("/staffs/:username/update", h.UpdateStaff)
 	r.Delete("/staffs/:username", h.DeleteStaff)
 }
 
-func (h *StaffHandler) ListStaffs(c *fiber.Ctx) error {
+func (h *StaffController) ListStaffs(c *fiber.Ctx) error {
 	resp, err := h.uc.ListStaffs(c.Context())
 	if err != nil { return fiber.NewError(fiber.StatusBadRequest, err.Error()) }
 	return c.Status(fiber.StatusOK).JSON(resp)
 }
 
-func (h *StaffHandler) CreateStaff(c *fiber.Ctx) error {
+func (h *StaffController) CreateStaff(c *fiber.Ctx) error {
 	var body requests.CreateStaffRequest
 	if err := c.BodyParser(&body); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
@@ -42,7 +42,7 @@ func (h *StaffHandler) CreateStaff(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(resp)
 }
 
-func (h *StaffHandler) UpdateStaff(c *fiber.Ctx) error {
+func (h *StaffController) UpdateStaff(c *fiber.Ctx) error {
 	target := c.Params("username")
 	var body requests.UpdateStaffRequest
 	if err := c.BodyParser(&body); err != nil { return fiber.NewError(fiber.StatusBadRequest, err.Error()) }
@@ -52,14 +52,14 @@ func (h *StaffHandler) UpdateStaff(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(resp)
 }
 
-func (h *StaffHandler) DeleteStaff(c *fiber.Ctx) error {
+func (h *StaffController) DeleteStaff(c *fiber.Ctx) error {
 	target := c.Params("username")
 	resp, err := h.uc.DeleteStaff(c.Context(), target)
 	if err != nil { return fiber.NewError(fiber.StatusBadRequest, err.Error()) }
 	return c.Status(fiber.StatusOK).JSON(resp)
 }
 
-func (h *StaffHandler) GetStaffByUsername(c *fiber.Ctx) error {
+func (h *StaffController) GetStaffByUsername(c *fiber.Ctx) error {
 	username := strings.TrimSpace(c.Params("username"))
 	if username == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{

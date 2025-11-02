@@ -1,26 +1,26 @@
-package rest
+package controller
 
 import (
 	"time"
 
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
-	"github.com/WaritDev/private-fitness-backend/domain/usecases"
+	"github.com/WaritDev/private-fitness-backend/domain/services"
 	"github.com/gofiber/fiber/v2"
 )
 
-type BookingHandler struct {
-	useCase *usecases.BookingUseCase
+type BookingController struct {
+	useCase *services.BookingService
 }
 
-func ProvideBookingHandler(useCase *usecases.BookingUseCase) *BookingHandler {
-	return &BookingHandler{
+func ProvideBookingController(useCase *services.BookingService) *BookingController {
+	return &BookingController{
 		useCase: useCase,
 	}
 }
 
 // GetBookingSlots - GET /api/bookings/slots
 // ดึงข้อมูล Booking Slots พร้อมข้อมูล availability, day offs, และ appointments
-func (h *BookingHandler) GetBookingSlots(c *fiber.Ctx) error {
+func (h *BookingController) GetBookingSlots(c *fiber.Ctx) error {
 	// Parse query parameters
 	trainerUsername := c.Query("trainerUsername")
 	calendarStartStr := c.Query("calendarStart") // ISO format: 2025-11-01T00:00:00Z
@@ -97,7 +97,7 @@ func (h *BookingHandler) GetBookingSlots(c *fiber.Ctx) error {
 
 // BookAppointment - POST /api/bookings/book
 // Q3C: จองนัดหมายกับเทรนเนอร์ (Transaction: Check + INSERT + UPDATE + LOG)
-func (h *BookingHandler) BookAppointment(c *fiber.Ctx) error {
+func (h *BookingController) BookAppointment(c *fiber.Ctx) error {
 	// Parse request body
 	var req requests.BookAppointmentRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -151,7 +151,7 @@ func (h *BookingHandler) BookAppointment(c *fiber.Ctx) error {
 
 // CancelAppointment - DELETE /api/bookings/cancel/:id
 // ยกเลิกการจอง (Transaction: Check + DELETE + DECREMENT + LOG)
-func (h *BookingHandler) CancelAppointment(c *fiber.Ctx) error {
+func (h *BookingController) CancelAppointment(c *fiber.Ctx) error {
 	// Parse path parameter
 	appointmentID, err := c.ParamsInt("id")
 	if err != nil || appointmentID <= 0 {

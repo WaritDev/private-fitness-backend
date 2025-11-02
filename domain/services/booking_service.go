@@ -1,4 +1,4 @@
-package usecases
+package services
 
 import (
 	"context"
@@ -11,20 +11,20 @@ import (
 	"github.com/WaritDev/private-fitness-backend/domain/responses"
 )
 
-type BookingUseCase struct {
+type BookingService struct {
 	scheduleRepo    repositories.TrainingScheduleRepository
 	sessionRepo     repositories.CustomerSessionRepository
 	customerLogRepo repositories.CustomerLogRepository
 	db              *sql.DB
 }
 
-func ProvideBookingUseCase(
+func ProvideBookingService(
 	scheduleRepo repositories.TrainingScheduleRepository,
 	sessionRepo repositories.CustomerSessionRepository,
 	customerLogRepo repositories.CustomerLogRepository,
 	db *sql.DB,
-) *BookingUseCase {
-	return &BookingUseCase{
+) *BookingService {
+	return &BookingService{
 		scheduleRepo:    scheduleRepo,
 		sessionRepo:     sessionRepo,
 		customerLogRepo: customerLogRepo,
@@ -33,7 +33,7 @@ func ProvideBookingUseCase(
 }
 
 // GetBookingSlots - ดึงข้อมูล Booking Slots โดยรวมข้อมูล 3 ส่วน
-func (u *BookingUseCase) GetBookingSlots(ctx context.Context, req requests.GetBookingSlotsRequest) (*responses.GetBookingSlotsResponse, error) {
+func (u *BookingService) GetBookingSlots(ctx context.Context, req requests.GetBookingSlotsRequest) (*responses.GetBookingSlotsResponse, error) {
 	// 1. ดึงเวลาทำงานประจำสัปดาห์ (TRAINING_AVAILABILITY)
 	availability, err := u.scheduleRepo.GetTrainerAvailability(ctx, req.TrainerUsername)
 	if err != nil {
@@ -73,7 +73,7 @@ func (u *BookingUseCase) GetBookingSlots(ctx context.Context, req requests.GetBo
 }
 
 // calculateAvailableSlots - คำนวณ Booking Slots ทุก 30 นาที
-func (u *BookingUseCase) calculateAvailableSlots(
+func (u *BookingService) calculateAvailableSlots(
 	availability []repositories.TrainerAvailabilityInfo,
 	dayOffs []repositories.ScheduleTimeSlot,
 	appointments []repositories.AppointmentInfo,
@@ -228,7 +228,7 @@ func (u *BookingUseCase) calculateAvailableSlots(
 }
 
 // getDayOfWeekString - แปลง time.Weekday เป็น string (MONDAY, TUESDAY, ...)
-func (u *BookingUseCase) getDayOfWeekString(weekday time.Weekday) string {
+func (u *BookingService) getDayOfWeekString(weekday time.Weekday) string {
 	switch weekday {
 	case time.Sunday:
 		return "SUNDAY"
@@ -251,7 +251,7 @@ func (u *BookingUseCase) getDayOfWeekString(weekday time.Weekday) string {
 
 // filterCustomerBookings - กรองเฉพาะการจองของ customer นี้
 // ใช้สำหรับแสดงรายการนัดหมายของ customer ในรูปแบบ BookingSlot
-func (u *BookingUseCase) filterCustomerBookings(
+func (u *BookingService) filterCustomerBookings(
 	appointments []repositories.AppointmentInfo,
 	customerUsername string,
 ) []responses.BookingSlot {
@@ -291,7 +291,7 @@ func (u *BookingUseCase) filterCustomerBookings(
 }
 
 // mapToWeeklyAvailability - แปลงข้อมูล availability เป็น response format
-func (u *BookingUseCase) mapToWeeklyAvailability(availability []repositories.TrainerAvailabilityInfo) []responses.TrainerAvailability {
+func (u *BookingService) mapToWeeklyAvailability(availability []repositories.TrainerAvailabilityInfo) []responses.TrainerAvailability {
 	result := make([]responses.TrainerAvailability, len(availability))
 	for i, a := range availability {
 		result[i] = responses.TrainerAvailability{
@@ -304,7 +304,7 @@ func (u *BookingUseCase) mapToWeeklyAvailability(availability []repositories.Tra
 }
 
 // mapToDayOffSlots - แปลงข้อมูล day offs เป็น response format
-func (u *BookingUseCase) mapToDayOffSlots(dayOffs []repositories.ScheduleTimeSlot) []responses.DayOffSlot {
+func (u *BookingService) mapToDayOffSlots(dayOffs []repositories.ScheduleTimeSlot) []responses.DayOffSlot {
 	result := make([]responses.DayOffSlot, len(dayOffs))
 	for i, d := range dayOffs {
 		result[i] = responses.DayOffSlot{
@@ -316,7 +316,7 @@ func (u *BookingUseCase) mapToDayOffSlots(dayOffs []repositories.ScheduleTimeSlo
 }
 
 // mapToAppointmentSlots - แปลงข้อมูล appointments เป็น response format
-func (u *BookingUseCase) mapToAppointmentSlots(appointments []repositories.AppointmentInfo) []responses.AppointmentSlot {
+func (u *BookingService) mapToAppointmentSlots(appointments []repositories.AppointmentInfo) []responses.AppointmentSlot {
 	result := make([]responses.AppointmentSlot, len(appointments))
 	for i, a := range appointments {
 		result[i] = responses.AppointmentSlot{
@@ -330,7 +330,7 @@ func (u *BookingUseCase) mapToAppointmentSlots(appointments []repositories.Appoi
 }
 
 // BookAppointment - Q3C: จองนัดหมาย (Transaction: Check + INSERT schedule + UPDATE session + INSERT log)
-func (u *BookingUseCase) BookAppointment(ctx context.Context, req requests.BookAppointmentRequest) (*responses.BookAppointmentResponse, error) {
+func (u *BookingService) BookAppointment(ctx context.Context, req requests.BookAppointmentRequest) (*responses.BookAppointmentResponse, error) {
 	// Parse time strings to time.Time
 	startTime, err := time.Parse(time.RFC3339, req.StartTime)
 	if err != nil {
@@ -425,7 +425,7 @@ func (u *BookingUseCase) BookAppointment(ctx context.Context, req requests.BookA
 }
 
 // CancelAppointment - ยกเลิกการจอง (Transaction: Check + DELETE schedule + DECREMENT session + INSERT log)
-func (u *BookingUseCase) CancelAppointment(ctx context.Context, req requests.CancelAppointmentRequest) (*responses.CancelAppointmentResponse, error) {
+func (u *BookingService) CancelAppointment(ctx context.Context, req requests.CancelAppointmentRequest) (*responses.CancelAppointmentResponse, error) {
 	// Validation 1: ตรวจสอบว่าการจองนี้มีอยู่จริง
 	appointment, err := u.scheduleRepo.GetAppointmentById(ctx, req.AppointmentID)
 	if err != nil {

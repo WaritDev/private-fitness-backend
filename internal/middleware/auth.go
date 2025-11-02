@@ -3,12 +3,12 @@ package middleware
 import (
 	"strings"
 
-	"github.com/WaritDev/private-fitness-backend/domain/usecases"
+	"github.com/WaritDev/private-fitness-backend/domain/services"
 	"github.com/gofiber/fiber/v2"
 )
 
 // AuthMiddleware creates middleware that extracts JWT token and sets username in context
-func AuthMiddleware(authUC *usecases.AuthUseCase) fiber.Handler {
+func AuthMiddleware(authUC *services.AuthService) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		// Extract token from cookie or Authorization header
 		token := c.Cookies("pf_auth")

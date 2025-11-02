@@ -1,4 +1,4 @@
-package usecases
+package services
 
 import (
 	"context"
@@ -17,18 +17,18 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type CustomerSessionUseCase struct {
+type CustomerSessionService struct {
 	sessionRepo repositories.CustomerSessionRepository
 	userRepo    repositories.UserRepo
 	db          *sql.DB
 }
 
-func ProvideCustomerSessionUseCase(
+func ProvideCustomerSessionService(
 	sessionRepo repositories.CustomerSessionRepository,
 	userRepo repositories.UserRepo,
 	db *sql.DB,
-) *CustomerSessionUseCase {
-	return &CustomerSessionUseCase{
+) *CustomerSessionService {
+	return &CustomerSessionService{
 		sessionRepo: sessionRepo,
 		userRepo:    userRepo,
 		db:          db,
@@ -36,7 +36,7 @@ func ProvideCustomerSessionUseCase(
 }
 
 // RegisterCustomerSession - Use Case 2.2C: ลงทะเบียนผู้ใช้งานสำหรับคอร์ส Sessions
-func (u *CustomerSessionUseCase) RegisterCustomerSession(ctx context.Context, req requests.RegisterCustomerSessionRequest) (*responses.RegisterCustomerSessionResponse, error) {
+func (u *CustomerSessionService) RegisterCustomerSession(ctx context.Context, req requests.RegisterCustomerSessionRequest) (*responses.RegisterCustomerSessionResponse, error) {
 	// Validate username not exists (Q2.2C.1)
 	exists, err := u.userRepo.CheckUsernameExists(ctx, req.Username)
 	if err != nil {
@@ -154,7 +154,7 @@ func (u *CustomerSessionUseCase) RegisterCustomerSession(ctx context.Context, re
 // CheckBookingPermission - Q2C.1: ตรวจสอบสิทธิ์การเข้าถึงฟังก์ชันการจองก่อนโหลดปฏิทิน
 // ตรวจสอบว่า Customer มีแพ็กเกจ Sessions แบบ ACTIVE หรือไม่
 // หมายเหตุ: ถ้าทำครบแล้วจะเปลี่ยน status เป็น 'COMPLETED' โดยอัตโนมัติ
-func (u *CustomerSessionUseCase) CheckBookingPermission(ctx context.Context, customerUsername string) (bool, error) {
+func (u *CustomerSessionService) CheckBookingPermission(ctx context.Context, customerUsername string) (bool, error) {
 	hasPermission, err := u.sessionRepo.CheckBookingPermission(ctx, customerUsername)
 	if err != nil {
 		return false, fmt.Errorf("failed to check booking permission: %w", err)
@@ -164,7 +164,7 @@ func (u *CustomerSessionUseCase) CheckBookingPermission(ctx context.Context, cus
 }
 
 // GetCustomerActiveSessions - ดึงข้อมูล Session packages ที่ ACTIVE ของลูกค้า
-func (u *CustomerSessionUseCase) GetCustomerActiveSessions(ctx context.Context, customerUsername string) ([]responses.CustomerSessionPackageResponse, error) {
+func (u *CustomerSessionService) GetCustomerActiveSessions(ctx context.Context, customerUsername string) ([]responses.CustomerSessionPackageResponse, error) {
 	packages, err := u.sessionRepo.GetCustomerActiveSessions(ctx, customerUsername)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get customer active sessions: %w", err)
@@ -197,7 +197,7 @@ func (u *CustomerSessionUseCase) GetCustomerActiveSessions(ctx context.Context, 
 	return result, nil
 }
 
-func (uc *CustomerSessionUseCase) List(ctx context.Context, req requests.ListCustomerSessionsRequest) (responses.ListCustomerSessionsResponse, error) {
+func (uc *CustomerSessionService) List(ctx context.Context, req requests.ListCustomerSessionsRequest) (responses.ListCustomerSessionsResponse, error) {
 	limit := req.Limit
 	if limit <= 0 || limit > 100 {
 		limit = 10
@@ -229,7 +229,7 @@ func (uc *CustomerSessionUseCase) List(ctx context.Context, req requests.ListCus
 	}, nil
 }
 
-func (uc *CustomerSessionUseCase) Update(
+func (uc *CustomerSessionService) Update(
 	ctx context.Context,
 	id int32,
 	req requests.UpdateCustomerSessionRequest,
@@ -258,7 +258,7 @@ func (uc *CustomerSessionUseCase) Update(
 	}, nil
 }
 
-func (uc *CustomerSessionUseCase) Delete(
+func (uc *CustomerSessionService) Delete(
 	ctx context.Context,
 	id int32,
 ) (responses.CustomerSessionDeletedResponse, error) {
@@ -275,7 +275,7 @@ func (uc *CustomerSessionUseCase) Delete(
 	}, nil
 }
 
-func (uc *CustomerSessionUseCase) GetByID(ctx context.Context, id string) (responses.CustomerSession, error) {
+func (uc *CustomerSessionService) GetByID(ctx context.Context, id string) (responses.CustomerSession, error) {
 	if strings.TrimSpace(id) == "" {
 		return responses.CustomerSession{}, errors.New("id required")
 	}
@@ -318,7 +318,7 @@ func (uc *CustomerSessionUseCase) GetByID(ctx context.Context, id string) (respo
 }
 
 // RenewSession - Use Case: ต่ออายุ/ซื้อเพิ่ม Session Package (ลูกค้าซื้อเอง)
-func (u *CustomerSessionUseCase) RenewSession(ctx context.Context, customerUsername string, req requests.RenewSessionRequest) (*responses.RenewSessionResponse, error) {
+func (u *CustomerSessionService) RenewSession(ctx context.Context, customerUsername string, req requests.RenewSessionRequest) (*responses.RenewSessionResponse, error) {
 	// 1. ตรวจสอบว่า product มีอยู่และเป็น SESSION type
 	var (
 		productID     int32

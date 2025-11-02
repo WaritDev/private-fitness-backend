@@ -8,58 +8,58 @@ package wire
 
 import (
 	"github.com/WaritDev/private-fitness-backend/config"
-	"github.com/WaritDev/private-fitness-backend/domain/usecases"
+	"github.com/WaritDev/private-fitness-backend/domain/services"
 	"github.com/WaritDev/private-fitness-backend/internal/adapters/repositories/sql"
-	"github.com/WaritDev/private-fitness-backend/internal/adapters/rest"
+	"github.com/WaritDev/private-fitness-backend/internal/adapters/rest/controller"
 	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db"
 )
 
 // Injectors from wire.go:
 
-func InitializeHandler() *rest.Handler {
+func InitializeController() *controller.Controller {
 	context := ProvideContext()
 	configConfig := config.ProvideConfig()
 	sqlDB := db.ProvideMariaDB(context, configConfig)
 	queries := db.ProvideQueries(sqlDB)
 	userRepository := sql.ProvideUserRepository(queries, sqlDB)
-	userUseCase := usecases.ProvideUserUseCase(userRepository)
-	userHandler := rest.ProvideUserHandler(userUseCase)
+	userService := services.ProvideUserService(userRepository)
+	userController := controller.ProvideUserController(userService)
 	managerDashboardRepository := sql.ProvideManagerDashboardRepository(sqlDB)
-	managerDashboardUsecase := usecases.ProvideManagerDashboardUsecase(managerDashboardRepository)
-	managerDashboardHandler := rest.ProvideManagerDashboardHandler(managerDashboardUsecase)
+	managerDashboardService := services.ProvideManagerDashboardService(managerDashboardRepository)
+	managerDashboardController := controller.ProvideManagerDashboardController(managerDashboardService)
 	authRepository := sql.ProvideAuthRepository()
-	authUseCase := usecases.ProvideAuthUseCase(authRepository, userRepository)
-	authHandler := rest.ProvideAuthHandler(authUseCase)
+	authService := services.ProvideAuthService(authRepository, userRepository)
+	authController := controller.ProvideAuthController(authService)
 	productRepository := sql.ProvideProductRepository(queries)
-	productUseCase := usecases.ProvideProductUseCase(productRepository)
-	productHandler := rest.ProvideProductHandler(productUseCase)
+	productService := services.ProvideProductService(productRepository)
+	productController := controller.ProvideProductController(productService)
 	trainerRepository := sql.ProvideTrainerRepository(queries)
-	sessionUseCase := usecases.ProvideSessionUseCase(trainerRepository)
+	sessionService := services.ProvideSessionService(trainerRepository)
 	trainingScheduleRepository := sql.ProvideTrainingScheduleRepository(queries)
 	customerLogRepository := sql.ProvideCustomerLogRepository(queries)
 	customerSessionRepository := sql.ProvideCustomerSessionRepository(queries, sqlDB)
-	trainerUseCase := usecases.ProvideTrainerUseCase(trainerRepository, trainingScheduleRepository, customerLogRepository, customerSessionRepository, sqlDB)
-	trainerHandler := rest.ProvideTrainerHandler(sessionUseCase, trainerUseCase)
+	trainerService := services.ProvideTrainerService(trainerRepository, trainingScheduleRepository, customerLogRepository, customerSessionRepository, sqlDB)
+	trainerController := controller.ProvideTrainerController(sessionService, trainerService)
 	paymentAccountRepository := sql.ProvidePaymentAccountRepository(queries)
-	paymentUseCase := usecases.ProvidePaymentUseCase(paymentAccountRepository, configConfig)
-	paymentHandler := rest.ProvidePaymentHandler(paymentUseCase)
+	paymentService := services.ProvidePaymentService(paymentAccountRepository, configConfig)
+	paymentController := controller.ProvidePaymentController(paymentService)
 	staffRepository := sql.ProvideStaffRepository(sqlDB)
-	staffUsecase := usecases.ProvideStaffUsecase(staffRepository)
-	staffHandler := rest.ProvideStaffHandler(staffUsecase)
+	staffService := services.ProvideStaffService(staffRepository)
+	staffController := controller.ProvideStaffController(staffService)
 	customerRepository := sql.ProvideCustomerRepository(sqlDB)
-	customerUsecase := usecases.ProvideCustomerUsecase(customerRepository)
-	customerHandler := rest.ProvideCustomerHandler(customerUsecase)
-	customerSessionUseCase := usecases.ProvideCustomerSessionUseCase(customerSessionRepository, userRepository, sqlDB)
-	customerSessionHandler := rest.ProvideCustomerSessionHandler(customerSessionUseCase, authUseCase)
+	customerService := services.ProvideCustomerService(customerRepository)
+	customerController := controller.ProvideCustomerController(customerService)
+	customerSessionService := services.ProvideCustomerSessionService(customerSessionRepository, userRepository, sqlDB)
+	customerSessionController := controller.ProvideCustomerSessionController(customerSessionService, authService)
 	customerDurationRepository := sql.ProvideCustomerDurationRepository(queries, sqlDB)
-	customerDurationUseCase := usecases.ProvideCustomerDurationUseCase(customerDurationRepository, productRepository, userRepository, sqlDB)
-	customerDurationHandler := rest.ProvideCustomerDurationHandler(customerDurationUseCase, authUseCase)
-	bookingUseCase := usecases.ProvideBookingUseCase(trainingScheduleRepository, customerSessionRepository, customerLogRepository, sqlDB)
-	bookingHandler := rest.ProvideBookingHandler(bookingUseCase)
-	memberUseCase := usecases.ProvideMemberUseCase(customerLogRepository, customerSessionRepository, trainingScheduleRepository, userRepository, authRepository, sqlDB)
-	memberHandler := rest.ProvideMemberHandler(memberUseCase, authUseCase)
-	customerLogUsecase := usecases.ProvideCustomerLogUsecase(customerLogRepository)
-	customerLogHandler := rest.ProvideCustomerLogHandler(customerLogUsecase)
-	handler := rest.ProvideHandler(userHandler, managerDashboardHandler, authHandler, productHandler, trainerHandler, paymentHandler, staffHandler, customerHandler, customerSessionHandler, customerDurationHandler, bookingHandler, memberHandler, customerLogHandler)
-	return handler
+	customerDurationService := services.ProvideCustomerDurationService(customerDurationRepository, productRepository, userRepository, sqlDB)
+	customerDurationController := controller.ProvideCustomerDurationController(customerDurationService, authService)
+	bookingService := services.ProvideBookingService(trainingScheduleRepository, customerSessionRepository, customerLogRepository, sqlDB)
+	bookingController := controller.ProvideBookingController(bookingService)
+	memberService := services.ProvideMemberService(customerLogRepository, customerSessionRepository, trainingScheduleRepository, userRepository, authRepository, sqlDB)
+	memberController := controller.ProvideMemberController(memberService, authService)
+	customerLogService := services.ProvideCustomerLogService(customerLogRepository)
+	customerLogController := controller.ProvideCustomerLogController(customerLogService)
+	controllerController := controller.ProvideController(userController, managerDashboardController, authController, productController, trainerController, paymentController, staffController, customerController, customerSessionController, customerDurationController, bookingController, memberController, customerLogController)
+	return controllerController
 }

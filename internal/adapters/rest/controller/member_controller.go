@@ -1,24 +1,24 @@
-package rest
+package controller
 
 import (
 	"fmt"
 	"strings"
 
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
-	"github.com/WaritDev/private-fitness-backend/domain/usecases"
+	"github.com/WaritDev/private-fitness-backend/domain/services"
 	"github.com/gofiber/fiber/v2"
 )
 
-type MemberHandler struct {
-	MemberUC *usecases.MemberUseCase
-	AuthUC   *usecases.AuthUseCase
+type MemberController struct {
+	MemberUC *services.MemberService
+	AuthUC   *services.AuthService
 }
 
-func ProvideMemberHandler(
-	memberUC *usecases.MemberUseCase,
-	authUC *usecases.AuthUseCase,
-) *MemberHandler {
-	return &MemberHandler{
+func ProvideMemberController(
+	memberUC *services.MemberService,
+	authUC *services.AuthService,
+) *MemberController {
+	return &MemberController{
 		MemberUC: memberUC,
 		AuthUC:   authUC,
 	}
@@ -26,7 +26,7 @@ func ProvideMemberHandler(
 
 // GenerateQRCode - POST /api/member/qrcode
 // Use Case 5C: สร้าง QR Code สำหรับ Check-in
-func (h *MemberHandler) GenerateQRCode(c *fiber.Ctx) error {
+func (h *MemberController) GenerateQRCode(c *fiber.Ctx) error {
 	// Extract and verify token
 	token := c.Cookies("pf_auth")
 	if token == "" {
@@ -110,7 +110,7 @@ func (h *MemberHandler) GenerateQRCode(c *fiber.Ctx) error {
 
 // CheckIn - GET /api/checkin?token=xxx
 // Use Case 5C: สแกน QR Code เพื่อ Check-in
-func (h *MemberHandler) CheckIn(c *fiber.Ctx) error {
+func (h *MemberController) CheckIn(c *fiber.Ctx) error {
 	// Get token from query string
 	tokenString := c.Query("token")
 	if tokenString == "" {

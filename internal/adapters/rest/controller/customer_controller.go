@@ -1,4 +1,4 @@
-package rest
+package controller
 
 import (
 	"database/sql"
@@ -8,18 +8,18 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
-	"github.com/WaritDev/private-fitness-backend/domain/usecases"
+	"github.com/WaritDev/private-fitness-backend/domain/services"
 )
 
-type CustomerHandler struct {
-	uc *usecases.CustomerUsecase
+type CustomerController struct {
+	uc *services.CustomerService
 }
 
-func ProvideCustomerHandler(uc *usecases.CustomerUsecase) *CustomerHandler {
-	return &CustomerHandler{uc: uc}
+func ProvideCustomerController(uc *services.CustomerService) *CustomerController {
+	return &CustomerController{uc: uc}
 }
 
-func (h *CustomerHandler) ListCustomers(c *fiber.Ctx) error {
+func (h *CustomerController) ListCustomers(c *fiber.Ctx) error {
 	resp, err := h.uc.ListCustomers(c.Context())
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
@@ -27,7 +27,7 @@ func (h *CustomerHandler) ListCustomers(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(resp)
 }
 
-func (h *CustomerHandler) UpdateCustomer(c *fiber.Ctx) error {
+func (h *CustomerController) UpdateCustomer(c *fiber.Ctx) error {
 	username := c.Params("username")
 	var body requests.UpdateCustomerRequest
 	if err := c.BodyParser(&body); err != nil {
@@ -42,14 +42,14 @@ func (h *CustomerHandler) UpdateCustomer(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(resp)
 }
 
-func (h *CustomerHandler) DeleteCustomer(c *fiber.Ctx) error {
+func (h *CustomerController) DeleteCustomer(c *fiber.Ctx) error {
 	username := c.Params("username")
 	resp, err := h.uc.DeleteCustomer(c.Context(), username)
 	if err != nil { return fiber.NewError(fiber.StatusBadRequest, err.Error()) }
 	return c.Status(fiber.StatusOK).JSON(resp)
 }
 
-func (h *CustomerHandler) GetByUsername(c *fiber.Ctx) error {
+func (h *CustomerController) GetByUsername(c *fiber.Ctx) error {
 	username := strings.TrimSpace(c.Params("username"))
 	if username == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"message": "username required"})

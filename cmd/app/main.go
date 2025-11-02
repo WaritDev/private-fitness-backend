@@ -11,8 +11,8 @@ import (
 )
 
 func main() {
-	// Initialize handler
-	handler := wire.InitializeHandler()
+	// Initialize controller
+	controller := wire.InitializeController()
 
 	// Initialize Fiber server
 	cfg := config.ProvideConfig()
@@ -28,7 +28,7 @@ func main() {
 		AllowCredentials: true, // 👈 ต้องเปิดเพื่อให้ส่ง cookie ได้
 	}))
 
-	router.RegisterApiRouter(app, handler)
+	router.RegisterApiRouter(app, controller)
 
 	if err := app.Listen(fmt.Sprintf(":%s", cfg.Port)); err != nil {
 		panic(err)

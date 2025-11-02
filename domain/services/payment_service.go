@@ -1,4 +1,4 @@
-package usecases
+package services
 
 import (
 	"context"
@@ -19,13 +19,13 @@ import (
 	"github.com/WaritDev/private-fitness-backend/utils"
 )
 
-type PaymentUseCase struct {
+type PaymentService struct {
 	paymentRepo   repositories.PaymentAccountRepository
 	slip2goClient *slip2go.Slip2GoClient
 }
 
-func ProvidePaymentUseCase(paymentRepo repositories.PaymentAccountRepository, cfg *config.Config) *PaymentUseCase {
-	return &PaymentUseCase{
+func ProvidePaymentService(paymentRepo repositories.PaymentAccountRepository, cfg *config.Config) *PaymentService {
+	return &PaymentService{
 		paymentRepo:   paymentRepo,
 		slip2goClient: slip2go.NewSlip2GoClient(cfg.Slip2GoSecretKey, cfg.MockSlip2Go),
 	}
@@ -33,7 +33,7 @@ func ProvidePaymentUseCase(paymentRepo repositories.PaymentAccountRepository, cf
 
 // GetPaymentInfo - ดึงข้อมูลชำระเงินตาม Use Case 5S
 // รับ productID และ discountAmount (optional) จาก frontend
-func (u *PaymentUseCase) GetPaymentInfo(ctx context.Context, productID int32, discountAmount float64) (*responses.PaymentInfoResponse, error) {
+func (u *PaymentService) GetPaymentInfo(ctx context.Context, productID int32, discountAmount float64) (*responses.PaymentInfoResponse, error) {
 	// Get payment info from database
 	info, err := u.paymentRepo.GetPaymentInfoByProductId(ctx, productID)
 	if err != nil {
@@ -83,14 +83,14 @@ func (u *PaymentUseCase) GetPaymentInfo(ctx context.Context, productID int32, di
 	return response, nil
 }
 
-func (uc *PaymentUseCase) List(ctx context.Context) ([]dbmodel.ListPaymentAccountsRow, error) {
+func (uc *PaymentService) List(ctx context.Context) ([]dbmodel.ListPaymentAccountsRow, error) {
 	return uc.paymentRepo.List(ctx)
 }
 
 var reURL = regexp.MustCompile(`^(https?://)[^\s]+$`)
 var reAcctNo = regexp.MustCompile(`^[0-9\- ]{6,30}$`)
 
-func (uc *PaymentUseCase) Create(ctx context.Context, req requests.CreatePaymentAccountRequest) (responses.PaymentAccountCreatedResponse, error) {
+func (uc *PaymentService) Create(ctx context.Context, req requests.CreatePaymentAccountRequest) (responses.PaymentAccountCreatedResponse, error) {
 	if req.AccountName == "" {
 		return responses.PaymentAccountCreatedResponse{}, errors.New("accountName cannot be empty")
 	}
@@ -121,7 +121,7 @@ func (uc *PaymentUseCase) Create(ctx context.Context, req requests.CreatePayment
 	}, nil
 }
 
-func (uc *PaymentUseCase) Update(
+func (uc *PaymentService) Update(
 	ctx context.Context,
 	id int32,
 	req requests.UpdatePaymentAccountRequest,
@@ -151,7 +151,7 @@ func (uc *PaymentUseCase) Update(
 	}, nil
 }
 
-func (uc *PaymentUseCase) Delete(ctx context.Context, id int32) (responses.PaymentAccountDeletedResponse, error) {
+func (uc *PaymentService) Delete(ctx context.Context, id int32) (responses.PaymentAccountDeletedResponse, error) {
 	if err := uc.paymentRepo.Delete(ctx, id); err != nil {
 		if err == sql.ErrNoRows {
 			return responses.PaymentAccountDeletedResponse{}, fmt.Errorf("payment account not found")
@@ -166,7 +166,7 @@ func (uc *PaymentUseCase) Delete(ctx context.Context, id int32) (responses.Payme
 // ========== Payment Slip Verification ==========
 
 // VerifySlip verifies payment slip using Slip2Go API (stateless - no database storage)
-func (uc *PaymentUseCase) VerifySlip(ctx context.Context, payload requests.VerifySlipPayload, fileData io.Reader, filename string) (*responses.VerifySlipResponse, error) {
+func (uc *PaymentService) VerifySlip(ctx context.Context, payload requests.VerifySlipPayload, fileData io.Reader, filename string) (*responses.VerifySlipResponse, error) {
 	// Call Slip2Go API to verify slip
 	slip2goReq := slip2go.VerifySlipRequest{
 		FileData:      fileData,
@@ -212,7 +212,7 @@ func (uc *PaymentUseCase) VerifySlip(ctx context.Context, payload requests.Verif
 	}, nil
 }
 
-func (uc *PaymentUseCase) GetByID(ctx context.Context, paymentID string) (responses.PaymentAccount, error) {
+func (uc *PaymentService) GetByID(ctx context.Context, paymentID string) (responses.PaymentAccount, error) {
 	if strings.TrimSpace(paymentID) == "" {
 		return responses.PaymentAccount{}, errors.New("paymentId required")
 	}

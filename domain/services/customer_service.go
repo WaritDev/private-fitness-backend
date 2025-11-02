@@ -1,4 +1,4 @@
-package usecases
+package services
 
 import (
 	"context"
@@ -15,19 +15,19 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type CustomerUsecase struct {
+type CustomerService struct {
 	repo repositories.CustomerRepository
 }
 
-func ProvideCustomerUsecase(repo repositories.CustomerRepository) *CustomerUsecase {
-	return &CustomerUsecase{repo: repo}
+func ProvideCustomerService(repo repositories.CustomerRepository) *CustomerService {
+	return &CustomerService{repo: repo}
 }
 
-func (uc *CustomerUsecase) ListCustomers(ctx context.Context) ([]dbmodel.ListCustomersRow, error) {
+func (uc *CustomerService) ListCustomers(ctx context.Context) ([]dbmodel.ListCustomersRow, error) {
 	return uc.repo.List(ctx)
 }
 
-func (uc *CustomerUsecase) UpdateCustomer(ctx context.Context, targetUsername string, req requests.UpdateCustomerRequest) (responses.CustomerUpdatedResponse, error) {
+func (uc *CustomerService) UpdateCustomer(ctx context.Context, targetUsername string, req requests.UpdateCustomerRequest) (responses.CustomerUpdatedResponse, error) {
 	// validate พื้นฐาน
 	if strings.TrimSpace(targetUsername) == "" {
 		return responses.CustomerUpdatedResponse{}, errors.New("username required")
@@ -125,7 +125,7 @@ func (uc *CustomerUsecase) UpdateCustomer(ctx context.Context, targetUsername st
 	return responses.CustomerUpdatedResponse{Message: "Customer: " + targetUsername + " updated successfully"}, nil
 }
 
-func (uc *CustomerUsecase) DeleteCustomer(ctx context.Context, targetUsername string) (responses.CustomerDeletedResponse, error) {
+func (uc *CustomerService) DeleteCustomer(ctx context.Context, targetUsername string) (responses.CustomerDeletedResponse, error) {
 	if strings.TrimSpace(targetUsername) == "" {
 		return responses.CustomerDeletedResponse{}, errors.New("username required")
 	}
@@ -137,7 +137,7 @@ func (uc *CustomerUsecase) DeleteCustomer(ctx context.Context, targetUsername st
 	}, nil
 }
 
-func (uc *CustomerUsecase) GetCustomerByUsername(ctx context.Context, username string) (responses.Customer, error) {
+func (uc *CustomerService) GetCustomerByUsername(ctx context.Context, username string) (responses.Customer, error) {
 	if strings.TrimSpace(username) == "" {
 		return responses.Customer{}, errors.New("username required")
 	}

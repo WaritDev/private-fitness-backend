@@ -1,23 +1,23 @@
-package rest
+package controller
 
 import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
-	"github.com/WaritDev/private-fitness-backend/domain/usecases"
+	"github.com/WaritDev/private-fitness-backend/domain/services"
 )
 
-type CustomerLogHandler struct {
-	uc *usecases.CustomerLogUsecase
+type CustomerLogController struct {
+	uc *services.CustomerLogService
 }
 
-func ProvideCustomerLogHandler(uc *usecases.CustomerLogUsecase) *CustomerLogHandler {
-	return &CustomerLogHandler{uc: uc}
+func ProvideCustomerLogController(uc *services.CustomerLogService) *CustomerLogController {
+	return &CustomerLogController{uc: uc}
 }
 
 // GET /api/customer-logs?page=1&limit=10
-func (h *CustomerLogHandler) List(c *fiber.Ctx) error {
+func (h *CustomerLogController) List(c *fiber.Ctx) error {
 	res, err := h.uc.List(c.Context())
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
@@ -27,7 +27,7 @@ func (h *CustomerLogHandler) List(c *fiber.Ctx) error {
 }
 
 // POST /api/customer-logs/:id/update
-func (h *CustomerLogHandler) Update(c *fiber.Ctx) error {
+func (h *CustomerLogController) Update(c *fiber.Ctx) error {
 	idStr := c.Params("id")
 	id64, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
@@ -46,7 +46,7 @@ func (h *CustomerLogHandler) Update(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(res)
 }
 
-func (h *CustomerLogHandler) Delete(c *fiber.Ctx) error {
+func (h *CustomerLogController) Delete(c *fiber.Ctx) error {
 	idStr := c.Params("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -62,7 +62,7 @@ func (h *CustomerLogHandler) Delete(c *fiber.Ctx) error {
 }
 
 // GET /api/customer-logs/:id
-func (h *CustomerLogHandler) GetByID(c *fiber.Ctx) error {
+func (h *CustomerLogController) GetByID(c *fiber.Ctx) error {
 	id := c.Params("id", "")
 	resp, err := h.uc.GetByID(c.Context(), id)
 	if err != nil {

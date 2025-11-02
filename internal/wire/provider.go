@@ -3,9 +3,9 @@ package wire
 import (
 	"github.com/WaritDev/private-fitness-backend/config"
 	"github.com/WaritDev/private-fitness-backend/domain/repositories"
-	"github.com/WaritDev/private-fitness-backend/domain/usecases"
+	"github.com/WaritDev/private-fitness-backend/domain/services"
 	"github.com/WaritDev/private-fitness-backend/internal/adapters/repositories/sql"
-	"github.com/WaritDev/private-fitness-backend/internal/adapters/rest"
+	"github.com/WaritDev/private-fitness-backend/internal/adapters/rest/controller"
 	"github.com/WaritDev/private-fitness-backend/internal/infrastructure/db"
 
 	"github.com/google/wire"
@@ -42,35 +42,35 @@ var RepositorySet = wire.NewSet(
 )
 
 var ServiceSet = wire.NewSet(
-	usecases.ProvideUserUseCase,
-	usecases.ProvideAuthUseCase,
-	usecases.ProvideManagerDashboardUsecase,
-	usecases.ProvideProductUseCase,
-	usecases.ProvideStaffUsecase,
-	usecases.ProvideSessionUseCase,
-	usecases.ProvidePaymentUseCase,
-	usecases.ProvideCustomerUsecase,
-	usecases.ProvideCustomerDurationUseCase,
-	usecases.ProvideCustomerSessionUseCase,
-	usecases.ProvideBookingUseCase,
-	usecases.ProvideCustomerLogUsecase,
-	usecases.ProvideMemberUseCase,
-	usecases.ProvideTrainerUseCase, // Use Case 1P: Manage Working Hours
+	services.ProvideUserService,
+	services.ProvideAuthService,
+	services.ProvideManagerDashboardService,
+	services.ProvideProductService,
+	services.ProvideStaffService,
+	services.ProvideSessionService,
+	services.ProvidePaymentService,
+	services.ProvideCustomerService,
+	services.ProvideCustomerDurationService,
+	services.ProvideCustomerSessionService,
+	services.ProvideBookingService,
+	services.ProvideCustomerLogService,
+	services.ProvideMemberService,
+	services.ProvideTrainerService, // Use Case 1P: Manage Working Hours
 )
 
-var HandlerSet = wire.NewSet(
-	rest.ProvideUserHandler,
-	rest.ProvideAuthHandler,
-	rest.ProvideHandler,
-	rest.ProvideManagerDashboardHandler,
-	rest.ProvideProductHandler,
-	rest.ProvideStaffHandler,
-	rest.ProvideTrainerHandler,
-	rest.ProvidePaymentHandler,
-	rest.ProvideCustomerDurationHandler,
-	rest.ProvideCustomerHandler,
-	rest.ProvideCustomerSessionHandler,
-	rest.ProvideBookingHandler,
-	rest.ProvideCustomerLogHandler,
-	rest.ProvideMemberHandler,
+var ControllerSet = wire.NewSet(
+	controller.ProvideUserController,
+	controller.ProvideAuthController,
+	controller.ProvideController,
+	controller.ProvideManagerDashboardController,
+	controller.ProvideProductController,
+	controller.ProvideStaffController,
+	controller.ProvideTrainerController,
+	controller.ProvidePaymentController,
+	controller.ProvideCustomerDurationController,
+	controller.ProvideCustomerController,
+	controller.ProvideCustomerSessionController,
+	controller.ProvideBookingController,
+	controller.ProvideCustomerLogController,
+	controller.ProvideMemberController,
 )

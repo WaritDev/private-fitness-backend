@@ -1,23 +1,23 @@
-package rest
+package controller
 
 import (
 	"time"
 
 	req "github.com/WaritDev/private-fitness-backend/domain/requests"
-	uc "github.com/WaritDev/private-fitness-backend/domain/usecases"
+	sv "github.com/WaritDev/private-fitness-backend/domain/services"
 	"github.com/gofiber/fiber/v2"
 )
 
-type ManagerDashboardHandler struct {
-	uc uc.ManagerDashboardUsecase
+type ManagerDashboardController struct {
+	sv sv.ManagerDashboardService
 }
 
-func ProvideManagerDashboardHandler(u uc.ManagerDashboardUsecase) *ManagerDashboardHandler {
-	return &ManagerDashboardHandler{uc: u}
+func ProvideManagerDashboardController(u sv.ManagerDashboardService) *ManagerDashboardController {
+	return &ManagerDashboardController{sv: u}
 }
 
 // GET/POST /api/manager/dashboard?start=YYYY-MM-DD&end=YYYY-MM-DD
-func (h *ManagerDashboardHandler) GetDashboard(c *fiber.Ctx) error {
+func (h *ManagerDashboardController) GetDashboard(c *fiber.Ctx) error {
 	var (
 		start time.Time
 		end   time.Time
@@ -55,7 +55,7 @@ func (h *ManagerDashboardHandler) GetDashboard(c *fiber.Ctx) error {
 		}
 	}
 
-	resp, err := h.uc.Get(c.Context(), start, end)
+	resp, err := h.sv.Get(c.Context(), start, end)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}

@@ -1,4 +1,4 @@
-package usecases
+package services
 
 import (
 	"context"
@@ -15,19 +15,19 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type StaffUsecase struct {
+type StaffService struct {
 	repo repositories.StaffRepository
 }
 
-func ProvideStaffUsecase(repo repositories.StaffRepository) *StaffUsecase {
-	return &StaffUsecase{repo: repo}
+func ProvideStaffService(repo repositories.StaffRepository) *StaffService {
+	return &StaffService{repo: repo}
 }
 
-func (uc *StaffUsecase) ListStaffs(ctx context.Context) ([]dbmodel.ListStaffsRow, error) {
+func (uc *StaffService) ListStaffs(ctx context.Context) ([]dbmodel.ListStaffsRow, error) {
 	return uc.repo.List(ctx)
 }
 
-func (uc *StaffUsecase) CreateStaff(ctx context.Context, req requests.CreateStaffRequest) (responses.StaffCreatedResponse, error) {
+func (uc *StaffService) CreateStaff(ctx context.Context, req requests.CreateStaffRequest) (responses.StaffCreatedResponse, error) {
 	if !utils.IsValidUsername(req.Username) {
 		return responses.StaffCreatedResponse{}, errors.New("invalid username")
 	}
@@ -125,7 +125,7 @@ func age(dob time.Time) int {
 	return years
 }
 
-func (uc *StaffUsecase) UpdateStaff(ctx context.Context, targetUsername string, req requests.UpdateStaffRequest) (responses.StaffUpdatedResponse, error) {
+func (uc *StaffService) UpdateStaff(ctx context.Context, targetUsername string, req requests.UpdateStaffRequest) (responses.StaffUpdatedResponse, error) {
 	// 1) แปลง/ตรวจค่าพื้นฐาน
 	role := strings.ToUpper(strings.TrimSpace(req.Role))
 	switch role {
@@ -236,7 +236,7 @@ func getString(p *string) string {
 	return *p
 }
 
-func (uc *StaffUsecase) DeleteStaff(ctx context.Context, targetUsername string) (responses.StaffDeletedResponse, error) {
+func (uc *StaffService) DeleteStaff(ctx context.Context, targetUsername string) (responses.StaffDeletedResponse, error) {
 	if strings.TrimSpace(targetUsername) == "" {
 		return responses.StaffDeletedResponse{}, errors.New("username required")
 	}
@@ -248,7 +248,7 @@ func (uc *StaffUsecase) DeleteStaff(ctx context.Context, targetUsername string) 
 	}, nil
 }
 
-func (uc *StaffUsecase) GetStaffByUsername(ctx context.Context, username string) (responses.Staff, error) {
+func (uc *StaffService) GetStaffByUsername(ctx context.Context, username string) (responses.Staff, error) {
 	if strings.TrimSpace(username) == "" {
 		return responses.Staff{}, errors.New("username required")
 	}

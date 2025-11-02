@@ -1,4 +1,4 @@
-package usecases
+package services
 
 import (
 	"context"
@@ -15,16 +15,16 @@ import (
 	"github.com/WaritDev/private-fitness-backend/utils"
 )
 
-type ProductUseCase struct {
+type ProductService struct {
 	repo repositories.ProductRepository
 }
 
-func ProvideProductUseCase(repo repositories.ProductRepository) *ProductUseCase {
-	return &ProductUseCase{repo: repo}
+func ProvideProductService(repo repositories.ProductRepository) *ProductService {
+	return &ProductService{repo: repo}
 }
 
 // ListAllProducts returns all active products
-func (u *ProductUseCase) ListAllProducts(ctx context.Context) ([]responses.ProductResponse, error) {
+func (u *ProductService) ListAllProducts(ctx context.Context) ([]responses.ProductResponse, error) {
 	products, err := u.repo.ListAll(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list products: %w", err)
@@ -38,7 +38,7 @@ func (u *ProductUseCase) ListAllProducts(ctx context.Context) ([]responses.Produ
 }
 
 // GetProductByID returns a single product by ID
-func (u *ProductUseCase) GetProductByID(ctx context.Context, id int32) (responses.ProductResponse, error) {
+func (u *ProductService) GetProductByID(ctx context.Context, id int32) (responses.ProductResponse, error) {
 	product, err := u.repo.GetByID(ctx, id)
 	if err != nil {
 		return responses.ProductResponse{}, fmt.Errorf("product not found: %w", err)
@@ -48,7 +48,7 @@ func (u *ProductUseCase) GetProductByID(ctx context.Context, id int32) (response
 }
 
 // ListDurations returns all DURATION type products
-func (u *ProductUseCase) ListDurations(ctx context.Context) ([]responses.ProductResponse, error) {
+func (u *ProductService) ListDurations(ctx context.Context) ([]responses.ProductResponse, error) {
 	products, err := u.repo.ListDurations(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list durations: %w", err)
@@ -62,7 +62,7 @@ func (u *ProductUseCase) ListDurations(ctx context.Context) ([]responses.Product
 }
 
 // ListSessions returns all SESSION type products
-func (u *ProductUseCase) ListSessions(ctx context.Context) ([]responses.ProductResponse, error) {
+func (u *ProductService) ListSessions(ctx context.Context) ([]responses.ProductResponse, error) {
 	products, err := u.repo.ListSessions(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list sessions: %w", err)
@@ -76,7 +76,7 @@ func (u *ProductUseCase) ListSessions(ctx context.Context) ([]responses.ProductR
 }
 
 // Helper to convert repository model to response
-func (u *ProductUseCase) mapToResponse(p repositories.ProductInfo) responses.ProductResponse {
+func (u *ProductService) mapToResponse(p repositories.ProductInfo) responses.ProductResponse {
 	// Parse list price from string to float64
 	price, _ := strconv.ParseFloat(p.ListPrice, 64)
 
@@ -95,12 +95,12 @@ func (u *ProductUseCase) mapToResponse(p repositories.ProductInfo) responses.Pro
 	}
 }
 
-func (uc *ProductUseCase) List(ctx context.Context) ([]dbmodel.ListProductsRow, error) {
+func (uc *ProductService) List(ctx context.Context) ([]dbmodel.ListProductsRow, error) {
 	return uc.repo.List(ctx)
 }
 
 // usecases/product_usecase.go
-func (uc *ProductUseCase) Create(ctx context.Context, req requests.CreateProductRequest) (responses.ProductCreatedResponse, error) {
+func (uc *ProductService) Create(ctx context.Context, req requests.CreateProductRequest) (responses.ProductCreatedResponse, error) {
     name := strings.TrimSpace(req.Name)
     if name == "" {
         return responses.ProductCreatedResponse{}, errors.New("name is required")
@@ -202,7 +202,7 @@ func normalizeCategory(s string) string {
 	}
 }
 
-func (uc *ProductUseCase) Update(
+func (uc *ProductService) Update(
 	ctx context.Context,
 	id int32,
 	req requests.UpdateProductRequest,
@@ -253,7 +253,7 @@ func (uc *ProductUseCase) Update(
 	}, nil
 }
 
-func (uc *ProductUseCase) Delete(
+func (uc *ProductService) Delete(
     ctx context.Context,
     id int32,
 ) (responses.ProductDeletedResponse, error) {
@@ -277,7 +277,7 @@ func (uc *ProductUseCase) Delete(
     }, nil
 }
 
-func (uc *ProductUseCase) GetByID(ctx context.Context, id string) (responses.Product, error) {
+func (uc *ProductService) GetByID(ctx context.Context, id string) (responses.Product, error) {
 	if strings.TrimSpace(id) == "" {
 		return responses.Product{}, errors.New("id required")
 	}

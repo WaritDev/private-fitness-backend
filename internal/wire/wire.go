@@ -5,17 +5,17 @@ package wire
 
 import (
 	"github.com/google/wire"
-	"github.com/WaritDev/private-fitness-backend/internal/adapters/rest"
+	"github.com/WaritDev/private-fitness-backend/internal/adapters/rest/controller"
 )
 
-func InitializeHandler() *rest.Handler {
+func InitializeController() *controller.Controller {
 	wire.Build(
 		ConfigSet,
 		InfraSet,
 		ProvideContext,
 		RepositorySet,
 		ServiceSet,
-		HandlerSet,
+		ControllerSet,
 	)
-	return &rest.Handler{}
+	return &controller.Controller{}
 }

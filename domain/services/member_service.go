@@ -1,4 +1,4 @@
-package usecases
+package services
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-type MemberUseCase struct {
+type MemberService struct {
 	logRepo      repositories.CustomerLogRepository
 	sessionRepo  repositories.CustomerSessionRepository
 	scheduleRepo repositories.TrainingScheduleRepository
@@ -21,15 +21,15 @@ type MemberUseCase struct {
 	db           *sql.DB
 }
 
-func ProvideMemberUseCase(
+func ProvideMemberService(
 	logRepo repositories.CustomerLogRepository,
 	sessionRepo repositories.CustomerSessionRepository,
 	scheduleRepo repositories.TrainingScheduleRepository,
 	userRepo repositories.UserRepo,
 	authRepo repositories.AuthRepo,
 	db *sql.DB,
-) *MemberUseCase {
-	return &MemberUseCase{
+) *MemberService {
+	return &MemberService{
 		logRepo:      logRepo,
 		sessionRepo:  sessionRepo,
 		scheduleRepo: scheduleRepo,
@@ -47,7 +47,7 @@ type QRTokenPayload struct {
 }
 
 // getJWTSecret - ดึง JWT secret จาก environment variable
-func (u *MemberUseCase) getJWTSecret() string {
+func (u *MemberService) getJWTSecret() string {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		secret = "default-secret-key-change-in-production"
@@ -56,7 +56,7 @@ func (u *MemberUseCase) getJWTSecret() string {
 }
 
 // GenerateQRToken - Use Case 5C: สร้าง JWT token สำหรับ QR Code (หมดอายุใน 60 วินาที)
-func (u *MemberUseCase) GenerateQRToken(username, packageType string) (string, error) {
+func (u *MemberService) GenerateQRToken(username, packageType string) (string, error) {
 	// Validate package type
 	if packageType != "DURATION" && packageType != "SESSION" {
 		return "", fmt.Errorf("invalid package type: %s (must be DURATION or SESSION)", packageType)
@@ -83,7 +83,7 @@ func (u *MemberUseCase) GenerateQRToken(username, packageType string) (string, e
 }
 
 // VerifyQRToken - Use Case 5C: Verify JWT token จาก QR Code
-func (u *MemberUseCase) VerifyQRToken(tokenString string) (*QRTokenPayload, error) {
+func (u *MemberService) VerifyQRToken(tokenString string) (*QRTokenPayload, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &QRTokenPayload{}, func(token *jwt.Token) (interface{}, error) {
 		// Validate signing method
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -104,7 +104,7 @@ func (u *MemberUseCase) VerifyQRToken(tokenString string) (*QRTokenPayload, erro
 }
 
 // CheckIn - Use Case 5C: บันทึกการเข้าใช้งานฟิตเนส (Hybrid Flow - สร้าง PENDING log)
-func (u *MemberUseCase) CheckIn(ctx context.Context, username, packageType string) (*responses.CheckInResponse, error) {
+func (u *MemberService) CheckIn(ctx context.Context, username, packageType string) (*responses.CheckInResponse, error) {
 	// ดึงข้อมูลผู้ใช้
 	user, err := u.userRepo.GetByUsername(ctx, username)
 	if err != nil {

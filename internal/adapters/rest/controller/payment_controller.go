@@ -1,4 +1,4 @@
-package rest
+package controller
 
 import (
 	"database/sql"
@@ -6,23 +6,23 @@ import (
 	"strconv"
 
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
-	"github.com/WaritDev/private-fitness-backend/domain/usecases"
+	"github.com/WaritDev/private-fitness-backend/domain/services"
 	"github.com/gofiber/fiber/v2"
 )
 
-type PaymentHandler struct {
-	paymentUC *usecases.PaymentUseCase
+type PaymentController struct {
+	paymentUC *services.PaymentService
 }
 
-func ProvidePaymentHandler(paymentUC *usecases.PaymentUseCase) *PaymentHandler {
-	return &PaymentHandler{
+func ProvidePaymentController(paymentUC *services.PaymentService) *PaymentController {
+	return &PaymentController{
 		paymentUC: paymentUC,
 	}
 }
 
 // GET /api/payments/info/:productId - ดึงข้อมูลชำระเงินตาม Use Case 5S
 // Query params (optional): ?discountAmount=100.00
-func (h *PaymentHandler) GetPaymentInfo(c *fiber.Ctx) error {
+func (h *PaymentController) GetPaymentInfo(c *fiber.Ctx) error {
 	// Get product ID from path
 	productIDStr := c.Params("productId")
 	productID, err := strconv.ParseInt(productIDStr, 10, 32)
@@ -69,7 +69,7 @@ func (h *PaymentHandler) GetPaymentInfo(c *fiber.Ctx) error {
 	})
 }
 
-func (h *PaymentHandler) List(c *fiber.Ctx) error {
+func (h *PaymentController) List(c *fiber.Ctx) error {
 	res, err := h.paymentUC.List(c.Context())
 	if err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
@@ -77,7 +77,7 @@ func (h *PaymentHandler) List(c *fiber.Ctx) error {
 	return c.Status(http.StatusOK).JSON(res)
 }
 
-func (h *PaymentHandler) Create(c *fiber.Ctx) error {
+func (h *PaymentController) Create(c *fiber.Ctx) error {
 	var req requests.CreatePaymentAccountRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
@@ -91,7 +91,7 @@ func (h *PaymentHandler) Create(c *fiber.Ctx) error {
 }
 
 // POST /api/payments/:id/update
-func (h *PaymentHandler) Update(c *fiber.Ctx) error {
+func (h *PaymentController) Update(c *fiber.Ctx) error {
 	idStr := c.Params("id")
 	id64, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
@@ -112,7 +112,7 @@ func (h *PaymentHandler) Update(c *fiber.Ctx) error {
 }
 
 // DELETE /api/payments/:id
-func (h *PaymentHandler) Delete(c *fiber.Ctx) error {
+func (h *PaymentController) Delete(c *fiber.Ctx) error {
 	idStr := c.Params("id")
 	id64, err := strconv.ParseInt(idStr, 10, 32)
 	if err != nil {
@@ -127,7 +127,7 @@ func (h *PaymentHandler) Delete(c *fiber.Ctx) error {
 }
 
 // POST /api/payment/verify-slip - Verify payment slip using Slip2Go API
-func (h *PaymentHandler) VerifySlip(c *fiber.Ctx) error {
+func (h *PaymentController) VerifySlip(c *fiber.Ctx) error {
 	// Step 1: Get file from multipart/form-data
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
@@ -182,7 +182,7 @@ func (h *PaymentHandler) VerifySlip(c *fiber.Ctx) error {
 }
 
 
-func (h *PaymentHandler) GetByID(c *fiber.Ctx) error {
+func (h *PaymentController) GetByID(c *fiber.Ctx) error {
 	id := c.Params("id")
 	resp, err := h.paymentUC.GetByID(c.Context(), id)
 	if err != nil {

@@ -1,4 +1,4 @@
-package usecases
+package services
 
 import (
 	"context"
@@ -18,20 +18,20 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type CustomerDurationUseCase struct {
+type CustomerDurationService struct {
 	durationRepo repositories.CustomerDurationRepository
 	productRepo  repositories.ProductRepository
 	userRepo     repositories.UserRepo
 	db           *sql.DB
 }
 
-func ProvideCustomerDurationUseCase(
+func ProvideCustomerDurationService(
 	durationRepo repositories.CustomerDurationRepository,
 	productRepo repositories.ProductRepository,
 	userRepo repositories.UserRepo,
 	db *sql.DB,
-) *CustomerDurationUseCase {
-	return &CustomerDurationUseCase{
+) *CustomerDurationService {
+	return &CustomerDurationService{
 		durationRepo: durationRepo,
 		productRepo:  productRepo,
 		userRepo:     userRepo,
@@ -41,7 +41,7 @@ func ProvideCustomerDurationUseCase(
 
 // PurchaseDuration creates a new customer duration purchase
 // Flow: ตรง use case description step 4
-func (u *CustomerDurationUseCase) PurchaseDuration(ctx context.Context, username string, req requests.PurchaseDurationRequest) (int32, error) {
+func (u *CustomerDurationService) PurchaseDuration(ctx context.Context, username string, req requests.PurchaseDurationRequest) (int32, error) {
 	// Get product details to calculate end date
 	product, err := u.productRepo.GetByID(ctx, req.ProductID)
 	if err != nil {
@@ -89,7 +89,7 @@ func (u *CustomerDurationUseCase) PurchaseDuration(ctx context.Context, username
 }
 
 // GetCustomerDurations returns all durations for a customer
-func (u *CustomerDurationUseCase) GetCustomerDurations(ctx context.Context, username string) ([]responses.CustomerDurationResponse, error) {
+func (u *CustomerDurationService) GetCustomerDurations(ctx context.Context, username string) ([]responses.CustomerDurationResponse, error) {
 	durations, err := u.durationRepo.GetByUsername(ctx, username)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get customer durations: %w", err)
@@ -103,7 +103,7 @@ func (u *CustomerDurationUseCase) GetCustomerDurations(ctx context.Context, user
 }
 
 // Helper to convert repository model to response
-func (u *CustomerDurationUseCase) mapToResponse(d repositories.CustomerDurationInfo) responses.CustomerDurationResponse {
+func (u *CustomerDurationService) mapToResponse(d repositories.CustomerDurationInfo) responses.CustomerDurationResponse {
 	pricePaid, _ := strconv.ParseFloat(d.PricePaid, 64)
 	discountAmount, _ := strconv.ParseFloat(d.DiscountAmount, 64)
 
@@ -124,7 +124,7 @@ func (u *CustomerDurationUseCase) mapToResponse(d repositories.CustomerDurationI
 }
 
 // GetCustomerActiveDuration - ดึงข้อมูล Duration packages ที่ ACTIVE ของลูกค้า (คล้าย GetCustomerActiveSessions)
-func (u *CustomerDurationUseCase) GetCustomerActiveDuration(ctx context.Context, username string) ([]responses.CustomerDurationPackageResponse, error) {
+func (u *CustomerDurationService) GetCustomerActiveDuration(ctx context.Context, username string) ([]responses.CustomerDurationPackageResponse, error) {
 	// เรียก repository เพื่อดึงข้อมูล
 	packages, err := u.durationRepo.GetCustomerActiveDuration(ctx, username)
 	if err != nil {
@@ -159,11 +159,11 @@ func (u *CustomerDurationUseCase) GetCustomerActiveDuration(ctx context.Context,
 	return result, nil
 }
 
-func (uc *CustomerDurationUseCase) List(ctx context.Context) ([]dbmodel.ListCustomerDurationsRow, error) {
+func (uc *CustomerDurationService) List(ctx context.Context) ([]dbmodel.ListCustomerDurationsRow, error) {
 	return uc.durationRepo.List(ctx)
 }
 
-func (uc *CustomerDurationUseCase) UpdateDuration(
+func (uc *CustomerDurationService) UpdateDuration(
 	ctx context.Context,
 	id int32,
 	req requests.UpdateCustomerDurationRequest,
@@ -205,7 +205,7 @@ func round2(f float64) float64 {
 	return math.Round(f*100) / 100
 }
 
-func (uc *CustomerDurationUseCase) Delete(
+func (uc *CustomerDurationService) Delete(
 	ctx context.Context,
 	id int32,
 ) (responses.CustomerDurationDeletedResponse, error) {
@@ -223,7 +223,7 @@ func (uc *CustomerDurationUseCase) Delete(
 }
 
 // RegisterCustomerDuration - Use Case 2.1C: ลงทะเบียนผู้ใช้งานสำหรับแพ็กเกจ Duration
-func (u *CustomerDurationUseCase) RegisterCustomerDuration(ctx context.Context, req requests.RegisterCustomerDurationRequest) (*responses.RegisterCustomerDurationResponse, error) {
+func (u *CustomerDurationService) RegisterCustomerDuration(ctx context.Context, req requests.RegisterCustomerDurationRequest) (*responses.RegisterCustomerDurationResponse, error) {
 	// Validate username not exists (Q2.1C.1)
 	exists, err := u.userRepo.CheckUsernameExists(ctx, req.Username)
 	if err != nil {
@@ -322,7 +322,7 @@ func (u *CustomerDurationUseCase) RegisterCustomerDuration(ctx context.Context, 
 	}, nil
 }
 
-func (uc *CustomerDurationUseCase) GetByID(ctx context.Context, id string) (responses.CustomerDuration, error) {
+func (uc *CustomerDurationService) GetByID(ctx context.Context, id string) (responses.CustomerDuration, error) {
 	if strings.TrimSpace(id) == "" {
 		return responses.CustomerDuration{}, errors.New("id required")
 	}
@@ -364,7 +364,7 @@ func parseToFloat2(s string) float64 {
 }
 
 // RenewDuration - Customer self-purchase duration package (ลูกค้าซื้อเพิ่มเอง)
-func (u *CustomerDurationUseCase) RenewDuration(ctx context.Context, customerUsername string, req requests.RenewDurationRequest) (*responses.RenewDurationResponse, error) {
+func (u *CustomerDurationService) RenewDuration(ctx context.Context, customerUsername string, req requests.RenewDurationRequest) (*responses.RenewDurationResponse, error) {
 	// Step 1: Validate product exists and is DURATION type
 	product, err := u.productRepo.GetByID(ctx, req.ProductID)
 	if err != nil {

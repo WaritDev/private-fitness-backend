@@ -1,4 +1,4 @@
-package usecases
+package services
 
 import (
 	"context"
@@ -23,8 +23,8 @@ func getThailandLocation() *time.Location {
 	return loc
 }
 
-// TrainerUseCase handles trainer-related business logic
-type TrainerUseCase struct {
+// TrainerService handles trainer-related business logic
+type TrainerService struct {
 	trainerRepo          repositories.TrainerRepository
 	trainingScheduleRepo repositories.TrainingScheduleRepository
 	customerLogRepo      repositories.CustomerLogRepository
@@ -32,15 +32,15 @@ type TrainerUseCase struct {
 	db                   *sql.DB
 }
 
-// ProvideTrainerUseCase creates a new TrainerUseCase
-func ProvideTrainerUseCase(
+// ProvideTrainerService creates a new TrainerService
+func ProvideTrainerService(
 	trainerRepo repositories.TrainerRepository,
 	trainingScheduleRepo repositories.TrainingScheduleRepository,
 	customerLogRepo repositories.CustomerLogRepository,
 	customerSessionRepo repositories.CustomerSessionRepository,
 	db *sql.DB,
-) *TrainerUseCase {
-	return &TrainerUseCase{
+) *TrainerService {
+	return &TrainerService{
 		trainerRepo:          trainerRepo,
 		trainingScheduleRepo: trainingScheduleRepo,
 		customerLogRepo:      customerLogRepo,
@@ -52,7 +52,7 @@ func ProvideTrainerUseCase(
 // Use Case 1P: Manage Working Hours
 
 // GetWorkingHours retrieves all working hours for a trainer (Q1P.1)
-func (u *TrainerUseCase) GetWorkingHours(ctx context.Context, trainerUsername string) (*responses.WorkingHoursResponse, error) {
+func (u *TrainerService) GetWorkingHours(ctx context.Context, trainerUsername string) (*responses.WorkingHoursResponse, error) {
 	// Q1P.1: ดึงข้อมูลเวลาทำงานทั้งหมดของเทรนเนอร์
 	availabilities, err := u.trainerRepo.GetTrainerAvailability(ctx, trainerUsername)
 	if err != nil {
@@ -83,7 +83,7 @@ func (u *TrainerUseCase) GetWorkingHours(ctx context.Context, trainerUsername st
 }
 
 // AddWorkingTime adds a new working time slot for a trainer with validation (Q1P.2 + Q1P.3)
-func (u *TrainerUseCase) AddWorkingTime(ctx context.Context, trainerUsername string, req requests.AddWorkingTimeRequest) (*responses.AddWorkingTimeResponse, error) {
+func (u *TrainerService) AddWorkingTime(ctx context.Context, trainerUsername string, req requests.AddWorkingTimeRequest) (*responses.AddWorkingTimeResponse, error) {
 	// Step 7.1: ตรวจสอบค่าว่างและรูปแบบ (Model Validation)
 	// Note: Fiber validator จะตรวจสอบ required fields และ oneof ให้แล้ว
 
@@ -195,7 +195,7 @@ func (u *TrainerUseCase) AddWorkingTime(ctx context.Context, trainerUsername str
 }
 
 // UpdateWorkingTime updates an existing working time slot with validation (Q1P.4)
-func (u *TrainerUseCase) UpdateWorkingTime(ctx context.Context, trainerUsername string, id int32, req requests.UpdateWorkingTimeRequest) (*responses.UpdateWorkingTimeResponse, error) {
+func (u *TrainerService) UpdateWorkingTime(ctx context.Context, trainerUsername string, id int32, req requests.UpdateWorkingTimeRequest) (*responses.UpdateWorkingTimeResponse, error) {
 	// Step 1: Validate ownership - ensure this working hour belongs to the trainer
 	availabilities, err := u.trainerRepo.GetTrainerAvailability(ctx, trainerUsername)
 	if err != nil {
@@ -308,7 +308,7 @@ func (u *TrainerUseCase) UpdateWorkingTime(ctx context.Context, trainerUsername 
 }
 
 // DeleteWorkingTime deletes a working time slot (Q1P.5)
-func (u *TrainerUseCase) DeleteWorkingTime(ctx context.Context, trainerUsername string, id int32) (*responses.DeleteWorkingTimeResponse, error) {
+func (u *TrainerService) DeleteWorkingTime(ctx context.Context, trainerUsername string, id int32) (*responses.DeleteWorkingTimeResponse, error) {
 	// Step 1: Validate ownership - ensure this working hour belongs to the trainer
 	availabilities, err := u.trainerRepo.GetTrainerAvailability(ctx, trainerUsername)
 	if err != nil {
@@ -346,7 +346,7 @@ func (u *TrainerUseCase) DeleteWorkingTime(ctx context.Context, trainerUsername 
 // ========== Use Case 3P: Manage Day-Offs ==========
 
 // GetDayOffs retrieves all day-offs for a trainer (Q3P.1)
-func (u *TrainerUseCase) GetDayOffs(ctx context.Context, trainerUsername string) (*responses.DayOffsListResponse, error) {
+func (u *TrainerService) GetDayOffs(ctx context.Context, trainerUsername string) (*responses.DayOffsListResponse, error) {
 	// Q3P.1: ดึงรายการวันหยุดทั้งหมดของ Trainer
 	dayOffs, err := u.trainingScheduleRepo.GetTrainerDayOffs(ctx, trainerUsername)
 	if err != nil {
@@ -374,7 +374,7 @@ func (u *TrainerUseCase) GetDayOffs(ctx context.Context, trainerUsername string)
 }
 
 // AddDayOff adds a new day-off with validation (Q3P.2, Q3P.3, Q3P.4)
-func (u *TrainerUseCase) AddDayOff(ctx context.Context, trainerUsername string, req requests.AddDayOffRequest) (*responses.AddDayOffResponse, error) {
+func (u *TrainerService) AddDayOff(ctx context.Context, trainerUsername string, req requests.AddDayOffRequest) (*responses.AddDayOffResponse, error) {
 	// Step 1: Parse Day_Off_Date (YYYY-MM-DD format)
 	dayOffDate, err := time.Parse("2006-01-02", req.DayOffDate)
 	if err != nil {
@@ -445,7 +445,7 @@ func (u *TrainerUseCase) AddDayOff(ctx context.Context, trainerUsername string, 
 }
 
 // DeleteDayOff deletes a day-off (Q3P.5)
-func (u *TrainerUseCase) DeleteDayOff(ctx context.Context, trainerUsername string, scheduleID int32) (*responses.DeleteDayOffResponse, error) {
+func (u *TrainerService) DeleteDayOff(ctx context.Context, trainerUsername string, scheduleID int32) (*responses.DeleteDayOffResponse, error) {
 	// Step 1: Validate ownership - ensure this day-off belongs to the trainer
 	dayOffs, err := u.trainingScheduleRepo.GetTrainerDayOffs(ctx, trainerUsername)
 	if err != nil {
@@ -483,7 +483,7 @@ func (u *TrainerUseCase) DeleteDayOff(ctx context.Context, trainerUsername strin
 // ========== Use Case: Trainer Calendar & Check-in Confirmation ==========
 
 // GetCalendar - ดึง appointments พร้อม pending check-ins สำหรับ Trainer
-func (u *TrainerUseCase) GetCalendar(ctx context.Context, trainerUsername string) (*responses.TrainerCalendarResponse, error) {
+func (u *TrainerService) GetCalendar(ctx context.Context, trainerUsername string) (*responses.TrainerCalendarResponse, error) {
 	// ดึง appointments พร้อม pending check-ins
 	appointments, err := u.trainingScheduleRepo.GetTrainerAppointmentsWithPendingCheckIns(ctx, trainerUsername)
 	if err != nil {
@@ -517,7 +517,7 @@ func (u *TrainerUseCase) GetCalendar(ctx context.Context, trainerUsername string
 }
 
 // ConfirmCheckIn - Trainer confirm check-in และหัก session (Q3P.2 + Q3P.3)
-func (u *TrainerUseCase) ConfirmCheckIn(ctx context.Context, trainerUsername string, req requests.ConfirmCheckInRequest) (*responses.ConfirmCheckInResponse, error) {
+func (u *TrainerService) ConfirmCheckIn(ctx context.Context, trainerUsername string, req requests.ConfirmCheckInRequest) (*responses.ConfirmCheckInResponse, error) {
 	// Step 1: ตรวจสอบว่า schedule นี้เป็นของ trainer นี้จริงหรือไม่
 	appointments, err := u.trainingScheduleRepo.GetTrainerAppointmentsWithPendingCheckIns(ctx, trainerUsername)
 	if err != nil {
