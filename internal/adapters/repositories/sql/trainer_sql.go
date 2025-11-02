@@ -3,6 +3,7 @@ package sql
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/WaritDev/private-fitness-backend/domain/repositories"
@@ -21,11 +22,16 @@ func ProvideTrainerRepository(q *dbmodel.Queries) repositories.TrainerRepository
 
 // FindAvailableTrainers finds trainers available on specific day and time
 func (r *TrainerRepository) FindAvailableTrainers(ctx context.Context, dayOfWeek string, startTime, endTime time.Time) ([]repositories.TrainerInfo, error) {
+	fmt.Println("dayOfWeek", dayOfWeek)
+	fmt.Println("startTime", startTime)
+	fmt.Println("endTime", endTime)
 	rows, err := r.q.FindAvailableTrainers(ctx, dbmodel.FindAvailableTrainersParams{
 		DayOfWeek: dbmodel.TrainingAvailabilitiesDayOfWeek(dayOfWeek),
 		TIME:      startTime,
 		TIME_2:    endTime,
 	})
+	fmt.Println("err", err)
+	fmt.Println("rows", rows)
 	if err != nil {
 		return nil, err
 	}

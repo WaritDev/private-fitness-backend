@@ -30,6 +30,7 @@ func ProvideSessionUseCase(trainerRepo repositories.TrainerRepository) *SessionU
 func (u *SessionUseCase) MatchTrainer(ctx context.Context, req requests.MatchTrainerRequest) (*responses.TrainerMatchResponse, error) {
 	// Step 1: Find available trainers by day and time
 	availableTrainers, err := u.trainerRepo.FindAvailableTrainers(ctx, req.DayOfWeek, req.StartTime, req.EndTime)
+	fmt.Println("availableTrainers", availableTrainers)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find available trainers: %w", err)
 	}
@@ -57,6 +58,7 @@ func (u *SessionUseCase) MatchTrainer(ctx context.Context, req requests.MatchTra
 			count: count,
 		})
 	}
+	fmt.Println("trainersWithCounts", trainersWithCounts)
 
 	// Sort by appointment count (ASC), then by created_at (ASC)
 	sort.Slice(trainersWithCounts, func(i, j int) bool {
@@ -65,10 +67,13 @@ func (u *SessionUseCase) MatchTrainer(ctx context.Context, req requests.MatchTra
 		}
 		return trainersWithCounts[i].info.CreatedAt.Before(trainersWithCounts[j].info.CreatedAt)
 	})
+	fmt.Println("trainersWithCounts sorted", trainersWithCounts)
 
 	// Step 4 & 5: Check for overlaps and return first available
 	for _, tc := range trainersWithCounts {
 		hasOverlap, err := u.trainerRepo.CheckScheduleOverlap(ctx, tc.info.Username, req.StartTime, req.EndTime)
+		fmt.Println("hasOverlap", hasOverlap)
+		fmt.Println("err", err)
 		if err != nil {
 			// If error checking overlap, skip this trainer
 			continue
@@ -76,6 +81,7 @@ func (u *SessionUseCase) MatchTrainer(ctx context.Context, req requests.MatchTra
 
 		if !hasOverlap {
 			// Found a trainer without overlap!
+			fmt.Println("tc", tc)
 			return &responses.TrainerMatchResponse{
 				TrainerUsername: tc.info.Username,
 				TrainerName:     fmt.Sprintf("%s %s", tc.info.FirstName, tc.info.LastName),

@@ -3,7 +3,7 @@ package rest
 import (
 	"strings"
 	"time"
-
+	"fmt"
 	"github.com/WaritDev/private-fitness-backend/domain/requests"
 	"github.com/WaritDev/private-fitness-backend/domain/usecases"
 	"github.com/gofiber/fiber/v2"
@@ -143,6 +143,7 @@ func (h *TrainerHandler) MatchTrainer(c *fiber.Ctx) error {
 
 	// Call use case
 	result, err := h.sessionUC.MatchTrainer(c.Context(), req)
+	fmt.Println("result", result)
 	if err != nil {
 		if strings.Contains(err.Error(), "NO_TRAINER_AVAILABLE") {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{

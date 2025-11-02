@@ -87,6 +87,7 @@ func RegisterApiRouter(app *fiber.App, handler *rest.Handler) {
 	users := apiGroup.Group("/users")
 	users.Get("/check-phone", handler.User.CheckPhoneNumber)
 	users.Get("/check-gmail", handler.User.CheckGmail)
+	users.Get("/check-username", handler.User.CheckUsername)
 
 	// Trainer routes (for Use Case: กรอกข้อมูลสมัครคอร์ส Sessions)
 	trainers := apiGroup.Group("/trainers")

@@ -29,5 +29,8 @@ func (u *UserUseCase) CheckGmailExistsUser(ctx context.Context, gmail string) (b
 	return u.repo.CheckGmailExistsUser(ctx, gmail)
 }
 
+func (u *UserUseCase) CheckUsernameExists(ctx context.Context, username string) (bool, error) {
+	return u.repo.CheckUsernameExists(ctx, username)
+}
 
 
